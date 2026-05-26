@@ -1,0 +1,17 @@
+# Dev overlay — applied automatically by `docker compose up`.
+# Drop or rename this file in CI/prod to use docker-compose.yml unchanged.
+
+services:
+  api:
+    command: ["pnpm", "--filter", "@app/api", "dev"]
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./apps/api/src:/repo/apps/api/src
+      - ./apps/api/prisma:/repo/apps/api/prisma
+      - ./packages:/repo/packages
+
+  extraction:
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+    volumes:
+      - ./apps/extraction/app:/app/app

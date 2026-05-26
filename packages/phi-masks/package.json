@@ -1,0 +1,5 @@
+{
+  "name": "@app/phi-masks",
+  "version": "1.0.0",
+  "main": "src/patterns.ts"
+}
