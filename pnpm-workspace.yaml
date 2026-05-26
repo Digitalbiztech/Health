@@ -1,0 +1,11 @@
+# pnpm-workspace.yaml
+packages:
+  - "apps/*"
+  - "packages/*"
+allowBuilds:
+  '@prisma/engines': true
+  core-js: true
+  esbuild: true
+  msgpackr-extract: true
+  prisma: true
+  puppeteer: true

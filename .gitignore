@@ -1,0 +1,13 @@
+node_modules
+.env
+.DS_Store
+dist
+python_venv
+__pycache__
+api/dist
+apps/web/dist
+.env
+build.log
+setup.sh
+upload_testing_guide.md
+apps/web/FrontendSpecificationBreakdownandColorScheme.md

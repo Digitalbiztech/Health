@@ -1,0 +1,18 @@
+{
+    "name": "healthlab-monorepo",
+    "private": true,
+    "packageManager": "pnpm@9.1.0",
+    "scripts": {
+        "dev": "turbo run dev",
+        "build": "turbo run build",
+        "lint": "turbo run lint",
+        "test": "turbo run test",
+        "typecheck": "turbo run typecheck",
+        "db:generate": "turbo run db:generate --filter=@app/api",
+        "db:migrate": "turbo run db:migrate --filter=@app/api"
+    },
+    "devDependencies": {
+        "turbo": "^2.0.0",
+        "typescript": "^5.4.0"
+    }
+}
