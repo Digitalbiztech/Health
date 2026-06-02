@@ -37,6 +37,11 @@ import {
   ListTodo,
   X,
   Eye,
+  SplitSquareVertical,
+  ArrowUp,
+  ArrowDown,
+  ArrowRight,
+  Minus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
@@ -227,13 +232,24 @@ export default function Dashboard() {
   const [comparisonReports, setComparisonReports] = useState<CompleteReportData[]>([]);
 
   // Workspace sub-navigation state
-  const [activeTab, setActiveTab] = useState<'current' | 'trends' | 'ai-chat'>('current');
+  const [activeTab, setActiveTab] = useState<'current' | 'trends' | 'ai-chat' | 'compare'>('current');
   const [selectedPanel, setSelectedPanel] = useState<string>('All');
   const [selectedBiomarkerDetail, setSelectedBiomarkerDetail] = useState<Biomarker | null>(null);
+
+  // ─── Report Comparison ───────────────────────────────────────
+  const [compareReportA, setCompareReportA] = useState<CompleteReportData | null>(null);
+  const [compareReportB, setCompareReportB] = useState<CompleteReportData | null>(null);
+  // null = not in upload mode; 'A'/'B' = which slot is currently uploading/polling
+  const [compareUploadSlot, setCompareUploadSlot] = useState<'A' | 'B' | null>(null);
+  const [compareUploading, setCompareUploading] = useState(false);
+  const [compareDragging, setCompareDragging] = useState<'A' | 'B' | null>(null);
 
   // Poll intervals
   const pollTimerRef = useRef<any | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const compareFileInputRef = useRef<HTMLInputElement>(null);
+  // Tracks which slot (A or B) the shared file input is targeting
+  const pendingCompareSlotRef = useRef<'A' | 'B'>('A');
 
   // ─── Clinician Dashboard States ──────────────────────────────
   const [patients, setPatients] = useState<any[]>([]);
@@ -242,7 +258,7 @@ export default function Dashboard() {
   const [clinicianTab, setClinicianTab] = useState<'directory' | 'activity'>('directory');
   const [searchTerm, setSearchTerm] = useState('');
   const [allUploads, setAllUploads] = useState<any[]>([]);
-  const [patientSubTab, setPatientSubTab] = useState<'reports' | 'trends'>('reports');
+  const [patientSubTab, setPatientSubTab] = useState<'reports' | 'trends' | 'compare'>('reports');
   const [selectedPatientReports, setSelectedPatientReports] = useState<CompleteReportData[]>([]);
   const [trendsLoading, setTrendsLoading] = useState(false);
 
@@ -534,7 +550,7 @@ export default function Dashboard() {
 
   // ─── FILE UPLOAD HANDLERS ────────────────────────────────────
 
-  async function handleFileUpload(file: File) {
+  async function handleFileUpload(file: File, compareSlot: 'A' | 'B' | null = null) {
     if (file.type !== 'application/pdf') {
       toast.error('Only PDF documents are supported for clinical processing.');
       return;
@@ -544,9 +560,16 @@ export default function Dashboard() {
       return;
     }
 
-    setUploading(true);
-    setErrorMessage('');
-    const toastId = toast.loading('Uploading lab report to secure storage...');
+    if (compareSlot) {
+      setCompareUploading(true);
+    } else {
+      setUploading(true);
+      setErrorMessage('');
+    }
+
+    const toastId = toast.loading(
+      compareSlot ? `Uploading Report ${compareSlot}...` : 'Uploading lab report to secure storage...',
+    );
 
     try {
       const formData = new FormData();
@@ -560,27 +583,40 @@ export default function Dashboard() {
         body: formData,
       });
 
-      toast.success('File stored successfully. Initializing AI parsing engines...', { id: toastId });
-      setCurrentFileName(file.name);
-      setViewState('LOADING');
-      
-      // Start polling status
-      startStatusPolling(res.data.upload.id);
+      toast.success(
+        compareSlot ? `Report ${compareSlot} uploaded. Analyzing...` : 'File stored. Initializing AI parsing engines...',
+        { id: toastId },
+      );
+
+      if (compareSlot) {
+        setCompareUploadSlot(compareSlot);
+        startStatusPolling(res.data.upload.id, compareSlot);
+      } else {
+        setCurrentFileName(file.name);
+        setViewState('LOADING');
+        startStatusPolling(res.data.upload.id, null);
+      }
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || 'File upload failed.', { id: toastId });
-      setErrorMessage(err.message || 'An error occurred during secure transport.');
-      setViewState('ERROR');
+      if (!compareSlot) {
+        setErrorMessage(err.message || 'An error occurred during secure transport.');
+        setViewState('ERROR');
+      }
     } finally {
-      setUploading(false);
+      if (compareSlot) {
+        setCompareUploading(false);
+      } else {
+        setUploading(false);
+      }
     }
   }
 
   // ─── POLLING / EXTRACTION JOB STATE ORCHESTRATOR ─────────────
 
-  function startStatusPolling(uploadId: string) {
+  function startStatusPolling(uploadId: string, compareSlot: 'A' | 'B' | null = null) {
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-    
+
     pollTimerRef.current = setInterval(async () => {
       try {
         const res = await apiFetch<{ data: { uploads: UploadRecord[] } }>('/reports/uploads');
@@ -588,30 +624,52 @@ export default function Dashboard() {
 
         if (!upload) {
           clearInterval(pollTimerRef.current!);
-          setErrorMessage('Processing job tracking reference was lost.');
-          setViewState('ERROR');
+          if (compareSlot) {
+            toast.error(`Report ${compareSlot} upload reference was lost.`);
+            setCompareUploadSlot(null);
+          } else {
+            setErrorMessage('Processing job tracking reference was lost.');
+            setViewState('ERROR');
+          }
           return;
         }
 
         if (upload.status === 'COMPLETED') {
           clearInterval(pollTimerRef.current!);
-          // Fetch final completed diagnostic report data
           const reportRes = await apiFetch<{ data: { upload: CompleteReportData } }>(`/reports/upload/${uploadId}`);
-          setReportData(reportRes.data.upload);
-          toast.success('Clinical analysis successfully rendered!');
-          setViewState('REPORT');
-          fetchUploadsHistory();
-          if (principal?.accountType === 'STAFF') {
-            fetchPatients();
-            fetchOrgUploads();
-            if (selectedPatient) {
-              loadPatientTrendsAndDetails(selectedPatient);
+
+          if (compareSlot === 'A') {
+            setCompareReportA(reportRes.data.upload);
+            setCompareUploadSlot(null);
+            toast.success('Report A ready!');
+            setActiveTab('compare');
+          } else if (compareSlot === 'B') {
+            setCompareReportB(reportRes.data.upload);
+            setCompareUploadSlot(null);
+            toast.success('Report B ready!');
+            setActiveTab('compare');
+          } else {
+            setReportData(reportRes.data.upload);
+            toast.success('Clinical analysis successfully rendered!');
+            setViewState('REPORT');
+            fetchUploadsHistory();
+            if (principal?.accountType === 'STAFF') {
+              fetchPatients();
+              fetchOrgUploads();
+              if (selectedPatient) {
+                loadPatientTrendsAndDetails(selectedPatient);
+              }
             }
           }
         } else if (upload.status === 'FAILED') {
           clearInterval(pollTimerRef.current!);
-          setErrorMessage('Lab extraction failed. The PDF structure or biomarker scanning layout is unsupported.');
-          setViewState('ERROR');
+          if (compareSlot) {
+            toast.error(`Report ${compareSlot} extraction failed.`);
+            setCompareUploadSlot(null);
+          } else {
+            setErrorMessage('Lab extraction failed. The PDF structure or biomarker scanning layout is unsupported.');
+            setViewState('ERROR');
+          }
         }
       } catch (err: any) {
         console.error('Polling error:', err);
@@ -1433,24 +1491,29 @@ export default function Dashboard() {
         </section>
 
         {/* ── Workspace Tab Selector ─────────────────────────── */}
-        <section className="flex gap-2 p-1.5 rounded-xl border border-border/40 mb-8 max-w-md" style={{ background: 'var(--card)' }}>
+        <section className="flex gap-2 p-1.5 rounded-xl border border-border/40 mb-8" style={{ background: 'var(--card)' }}>
           {[
             { id: 'current', label: 'Current Report', icon: FileText },
             { id: 'trends', label: 'Trends', icon: TrendingUp },
-            { id: 'ai-chat', label: 'Personalized Medical Care', icon: MessageSquare },
+            { id: 'ai-chat', label: 'AI Care', icon: MessageSquare },
+            { id: 'compare', label: 'Compare', icon: SplitSquareVertical },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                // Reset compare state when switching away
+                if (tab.id !== 'compare') { setCompareReportA(null); setCompareReportB(null); }
+              }}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer',
                 activeTab === tab.id
                   ? 'bg-[#D4BDAD]/15 text-[#8a7a6a] shadow-sm font-bold'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <tab.icon className="w-3.5 h-3.5" />
-              {tab.label === 'Personalized Medical Care' ? 'AI Care' : tab.label}
+              {tab.label}
             </button>
           ))}
         </section>
@@ -1459,6 +1522,9 @@ export default function Dashboard() {
         {activeTab === 'current' && renderCurrentReportTab(pieData)}
         {activeTab === 'trends' && <TrendAnalysisChart biomarkers={biomarkers} comparisonReports={comparisonReports} />}
         {activeTab === 'ai-chat' && <AIChat biomarkers={biomarkers} patient={patient} />}
+        {activeTab === 'compare' && renderCompareTab(
+          [reportData, ...comparisonReports].filter((r): r is CompleteReportData => r !== null).filter((r, i, a) => a.findIndex(x => x.id === r.id) === i)
+        )}
       </div>
     );
   }
@@ -1699,6 +1765,249 @@ export default function Dashboard() {
     );
   }
 
+  // ─── TAB 4: REPORT COMPARISON ────────────────────────────────
+
+  function renderCompareTab(available: CompleteReportData[]) {
+    const bothReady = compareReportA !== null && compareReportB !== null;
+
+    // ── Shared hidden file input (slot determined by pendingCompareSlotRef) ──
+    const fileInput = (
+      <input
+        type="file"
+        ref={compareFileInputRef}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleFileUpload(f, pendingCompareSlotRef.current);
+          e.target.value = '';
+        }}
+        accept=".pdf"
+        className="hidden"
+      />
+    );
+
+    // ── Slot picker helper ────────────────────────────────────────
+    function SlotPicker({ slot, selected, onSelect, onClear }: {
+      slot: 'A' | 'B';
+      selected: CompleteReportData | null;
+      onSelect: (r: CompleteReportData) => void;
+      onClear: () => void;
+    }) {
+      const otherSelected = slot === 'A' ? compareReportB : compareReportA;
+      const isUploading = compareUploading && compareUploadSlot === slot;
+      const isPolling = !compareUploading && compareUploadSlot === slot;
+      const dragActive = compareDragging === slot;
+
+      return (
+        <div className="flex flex-col gap-3 flex-1 min-w-0">
+          {/* Slot header */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <span
+                className="w-5 h-5 rounded-md flex items-center justify-center text-white text-[10px] font-black"
+                style={{ background: slot === 'A' ? '#8a7a6a' : '#D4BDAD' }}
+              >
+                {slot}
+              </span>
+              Report {slot}
+            </p>
+            {selected && (
+              <button
+                onClick={onClear}
+                className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1 hover:underline"
+              >
+                <X className="w-3 h-3" /> Clear
+              </button>
+            )}
+          </div>
+
+          {/* Polling spinner */}
+          {isPolling && (
+            <div className="glass-card rounded-xl p-4 border-border/40 flex items-center gap-3 border">
+              <Loader2 className="w-5 h-5 animate-spin text-[#8a7a6a] shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-foreground">Analyzing Report {slot}…</p>
+                <p className="text-[10px] text-muted-foreground">Usually 15–30 seconds.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Selected report pill */}
+          {selected && !isPolling && (
+            <div
+              className="flex items-center gap-2.5 p-3 rounded-xl border-2 text-xs"
+              style={{ borderColor: slot === 'A' ? '#8a7a6a' : '#D4BDAD', background: slot === 'A' ? 'rgba(138,122,106,0.08)' : 'rgba(212,189,173,0.1)' }}
+            >
+              <FileText className="w-4 h-4 shrink-0" style={{ color: slot === 'A' ? '#8a7a6a' : '#D4BDAD' }} />
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground truncate">{selected.fileName}</p>
+                {selected.reports?.[0]?.createdAt && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {new Date(selected.reports[0].createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </p>
+                )}
+              </div>
+              <CheckCircle2 className="w-4 h-4 shrink-0 ml-auto" style={{ color: slot === 'A' ? '#8a7a6a' : '#D4BDAD' }} />
+            </div>
+          )}
+
+          {/* Available reports list */}
+          {!isPolling && (
+            <div className="flex flex-col gap-2">
+              {available.map((r) => {
+                const isSelected = selected?.id === r.id;
+                const isUsedByOther = otherSelected?.id === r.id;
+                return (
+                  <button
+                    key={r.id}
+                    disabled={isUsedByOther}
+                    onClick={() => onSelect(r)}
+                    className={cn(
+                      'flex items-center gap-2.5 p-3 rounded-xl border text-xs text-left transition-all cursor-pointer w-full',
+                      isSelected
+                        ? 'border-[#D4BDAD] bg-[#D4BDAD]/10 text-foreground'
+                        : isUsedByOther
+                        ? 'border-border/30 opacity-40 cursor-not-allowed'
+                        : 'border-border/50 hover:border-[#D4BDAD]/60 hover:bg-[#D4BDAD]/5 text-foreground',
+                    )}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: isSelected ? 'rgba(212,189,173,0.2)' : 'rgba(212,189,173,0.1)' }}
+                    >
+                      <FileText className="w-4 h-4 text-[#8a7a6a]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold truncate">{r.fileName}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {r.extraction?.biomarkers?.length ?? 0} markers
+                        {r.reports?.[0]?.createdAt
+                          ? ' · ' + new Date(r.reports[0].createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                          : ''}
+                      </p>
+                    </div>
+                    {isSelected && <CheckCircle2 className="w-4 h-4 text-[#8a7a6a] shrink-0" />}
+                    {isUsedByOther && <span className="text-[9px] text-muted-foreground shrink-0">In use</span>}
+                  </button>
+                );
+              })}
+
+              {/* Upload new option */}
+              <div
+                className={cn(
+                  'flex items-center gap-2.5 p-3 rounded-xl border-2 border-dashed text-xs transition-all cursor-pointer group',
+                  dragActive ? 'border-[#D4BDAD] bg-[#D4BDAD]/10' : 'border-border/50 hover:border-[#D4BDAD]/60 hover:bg-[#D4BDAD]/5',
+                )}
+                onClick={() => {
+                  pendingCompareSlotRef.current = slot;
+                  compareFileInputRef.current?.click();
+                }}
+                onDragOver={(e) => { e.preventDefault(); setCompareDragging(slot); }}
+                onDragLeave={() => setCompareDragging(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setCompareDragging(null);
+                  const f = e.dataTransfer.files?.[0];
+                  if (f) handleFileUpload(f, slot);
+                }}
+              >
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
+                  style={{ background: 'rgba(212,189,173,0.15)' }}
+                >
+                  {isUploading
+                    ? <Loader2 className="w-4 h-4 animate-spin text-[#8a7a6a]" />
+                    : <Upload className="w-4 h-4 text-[#8a7a6a]" />
+                  }
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">
+                    {isUploading ? 'Uploading…' : 'Upload new PDF'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">PDF only · Max 20MB</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ── Comparison result ─────────────────────────────────────────
+    if (bothReady) {
+      return (
+        <div className="flex flex-col gap-3 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <h4 className="text-base font-bold text-foreground flex items-center gap-2">
+              <SplitSquareVertical className="w-5 h-5 text-[#8a7a6a]" />
+              Report Comparison
+            </h4>
+            <button
+              onClick={() => { setCompareReportA(null); setCompareReportB(null); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border/60 text-muted-foreground hover:text-foreground cursor-pointer hover:bg-border/20 transition-all"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Change Reports
+            </button>
+          </div>
+          <ComparisonView reportA={compareReportA} reportB={compareReportB} />
+        </div>
+      );
+    }
+
+    // ── Picker UI (one or both slots still empty) ─────────────────
+    return (
+      <div className="flex flex-col gap-5 animate-fade-in">
+        {fileInput}
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: 'linear-gradient(135deg, #D4BDAD, #B8A89A)' }}
+          >
+            <SplitSquareVertical className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-foreground">Select Two Reports to Compare</h4>
+            <p className="text-xs text-muted-foreground">
+              Pick from previous uploads or drop a new PDF. Both slots must be filled to run the comparison.
+            </p>
+          </div>
+        </div>
+
+        {/* Progress indicator */}
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-border/10 border border-border/40">
+          <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: compareReportA ? '#1A9966' : 'var(--muted-foreground)' }}>
+            {compareReportA ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />} Report A
+          </span>
+          <div className="flex-1 h-0.5 rounded-full bg-border" />
+          <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: compareReportB ? '#1A9966' : 'var(--muted-foreground)' }}>
+            {compareReportB ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />} Report B
+          </span>
+          <div className="flex-1 h-0.5 rounded-full bg-border" />
+          <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+            <SplitSquareVertical className="w-4 h-4" /> Compare
+          </span>
+        </div>
+
+        {/* Two slot pickers */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          <SlotPicker
+            slot="A"
+            selected={compareReportA}
+            onSelect={setCompareReportA}
+            onClear={() => setCompareReportA(null)}
+          />
+          <SlotPicker
+            slot="B"
+            selected={compareReportB}
+            onSelect={setCompareReportB}
+            onClear={() => setCompareReportB(null)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   // ─── RENDERS — CLINICIAN PORTAL DASHBOARD ───────────────────
 
   function renderClinicianDashboard() {
@@ -1868,14 +2177,18 @@ export default function Dashboard() {
               <div className="lg:col-span-8 flex flex-col gap-6">
                 
                 {/* Case File Sub-Tab Selector */}
-                <div className="flex gap-2 p-1 rounded-xl border border-border/40 max-w-xs" style={{ background: 'var(--card)' }}>
+                <div className="flex gap-2 p-1 rounded-xl border border-border/40" style={{ background: 'var(--card)' }}>
                   {[
-                    { id: 'reports', label: 'Uploads & Reports', icon: FileText },
-                    { id: 'trends', label: 'Biomarker Trends', icon: TrendingUp },
+                    { id: 'reports', label: 'Uploads', icon: FileText },
+                    { id: 'trends', label: 'Trends', icon: TrendingUp },
+                    { id: 'compare', label: 'Compare', icon: SplitSquareVertical },
                   ].map((subTab) => (
                     <button
                       key={subTab.id}
-                      onClick={() => setPatientSubTab(subTab.id as any)}
+                      onClick={() => {
+                        setPatientSubTab(subTab.id as any);
+                        if (subTab.id !== 'compare') { setCompareReportA(null); setCompareReportB(null); }
+                      }}
                       className={cn(
                         'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer',
                         patientSubTab === subTab.id
@@ -1998,7 +2311,7 @@ export default function Dashboard() {
                       </div>
                     )}
                   </div>
-                ) : (
+                ) : patientSubTab === 'trends' ? (
                   <div>
                     {trendsLoading ? (
                       <div className="glass-card rounded-2xl p-8 border-border/40 shadow-sm flex flex-col items-center justify-center min-h-[220px]">
@@ -2011,6 +2324,26 @@ export default function Dashboard() {
                         comparisonReports={selectedPatientReports}
                       />
                     )}
+                  </div>
+                ) : (
+                  /* Compare sub-tab in patient case file */
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                        <SplitSquareVertical className="w-4 h-4 text-[#8a7a6a]" />
+                        Compare Reports
+                      </h4>
+                      {(compareReportA || compareReportB) && (
+                        <button
+                          onClick={() => { setCompareReportA(null); setCompareReportB(null); }}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-border/60 text-muted-foreground hover:text-foreground cursor-pointer hover:bg-border/20"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                    {renderCompareTab(selectedPatientReports)}
                   </div>
                 )}
 
@@ -3523,6 +3856,279 @@ function TaskSidebar({ tasks, loading, onCreate, onToggle, onDelete }: TaskSideb
               </div>
             );
           })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── REPORT COMPARISON VIEW ───────────────────────────────────
+
+type ChangeKind = 'improved' | 'worsened' | 'stable' | 'new' | 'resolved';
+
+interface DeltaRow {
+  canonicalName: string;
+  displayName: string;
+  category: string;
+  aValue: number | null;
+  bValue: number | null;
+  aStatus: Biomarker['status'] | null;
+  bStatus: Biomarker['status'] | null;
+  unit: string;
+  delta: number | null;
+  change: ChangeKind;
+}
+
+function classifyChange(a: Biomarker | undefined, b: Biomarker | undefined): ChangeKind {
+  if (!a) return 'new';
+  if (!b) return 'resolved';
+  const aFlagged = a.status !== 'NORMAL';
+  const bFlagged = b.status !== 'NORMAL';
+  if (aFlagged && !bFlagged) return 'improved';
+  if (!aFlagged && bFlagged) return 'worsened';
+  return 'stable';
+}
+
+const CHANGE_STYLE: Record<ChangeKind, { label: string; bg: string; text: string; icon: any }> = {
+  improved:  { label: 'Improved',  bg: 'rgba(26,153,102,0.1)',  text: '#1A9966', icon: ArrowDown   },
+  worsened:  { label: 'Worsened',  bg: 'rgba(240,78,20,0.1)',   text: '#F04E14', icon: ArrowUp     },
+  stable:    { label: 'Stable',    bg: 'rgba(212,189,173,0.15)', text: '#8a7a6a', icon: ArrowRight  },
+  new:       { label: 'New',       bg: 'rgba(201,125,10,0.12)', text: '#C97D0A', icon: Plus        },
+  resolved:  { label: 'Resolved',  bg: 'rgba(26,153,102,0.12)', text: '#1A9966', icon: Minus       },
+};
+
+interface ComparisonViewProps {
+  reportA: CompleteReportData;
+  reportB: CompleteReportData;
+}
+
+function ComparisonView({ reportA, reportB }: ComparisonViewProps) {
+  const [categoryFilter, setCategoryFilter] = useState<string>('All');
+  const [changeFilter, setChangeFilter] = useState<ChangeKind | 'All'>('All');
+
+  const bmsA = reportA.extraction?.biomarkers ?? [];
+  const bmsB = reportB.extraction?.biomarkers ?? [];
+
+  // Determine which is chronologically earlier
+  const dateA = new Date(reportA.reports?.[0]?.createdAt || reportA.fileName);
+  const dateB = new Date(reportB.reports?.[0]?.createdAt || reportB.fileName);
+  const isANewer = dateA >= dateB;
+  // Always label as Before → After
+  const [before, after] = isANewer ? [bmsB, bmsA] : [bmsA, bmsB];
+  const [beforeReport, afterReport] = isANewer ? [reportB, reportA] : [reportA, reportB];
+
+  // Build delta rows from the full marker union
+  const allNames = Array.from(new Set([...before.map(b => b.canonicalName), ...after.map(b => b.canonicalName)]));
+  const rows: DeltaRow[] = allNames.map(name => {
+    const bm = before.find(b => b.canonicalName === name);
+    const am = after.find(b => b.canonicalName === name);
+    const ref = am ?? bm!;
+    const delta = (am && bm) ? am.value - bm.value : null;
+    return {
+      canonicalName: name,
+      displayName: ref.displayName,
+      category: ref.category,
+      aValue: bm?.value ?? null,
+      bValue: am?.value ?? null,
+      aStatus: bm?.status ?? null,
+      bStatus: am?.status ?? null,
+      unit: ref.unit,
+      delta,
+      change: classifyChange(bm, am),
+    };
+  });
+
+  // Summary counts
+  const counts = { improved: 0, worsened: 0, stable: 0, new: 0, resolved: 0 };
+  rows.forEach(r => counts[r.change]++);
+
+  const categories = ['All', ...Array.from(new Set(rows.map(r => r.category)))];
+  const filtered = rows.filter(r =>
+    (categoryFilter === 'All' || r.category === categoryFilter) &&
+    (changeFilter === 'All' || r.change === changeFilter),
+  );
+
+  // Sort: worsened first, then improved, then new, then stable, then resolved
+  const SORT_ORDER: Record<ChangeKind, number> = { worsened: 0, improved: 1, new: 2, stable: 3, resolved: 4 };
+  filtered.sort((a, b) => SORT_ORDER[a.change] - SORT_ORDER[b.change]);
+
+  const statusBadge = (status: Biomarker['status'] | null) => {
+    if (!status) return null;
+    const c = STATUS_COLORS[status];
+    return (
+      <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-full" style={{ background: c.bg, color: c.text }}>
+        {status}
+      </span>
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-4 animate-fade-in">
+      {/* Report headers */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { report: beforeReport, label: 'Before' },
+          { report: afterReport, label: 'After' },
+        ].map(({ report, label }) => (
+          <div
+            key={report.id}
+            className="glass-card rounded-xl p-4 border-border/40 shadow-sm flex items-center gap-3"
+          >
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: label === 'After' ? 'rgba(26,153,102,0.15)' : 'rgba(212,189,173,0.2)' }}
+            >
+              <FileText className="w-4.5 h-4.5" style={{ color: label === 'After' ? '#1A9966' : '#8a7a6a' }} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+              <p className="text-xs font-semibold text-foreground truncate">{report.fileName}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {report.reports?.[0]?.createdAt
+                  ? new Date(report.reports[0].createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                  : '—'}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Summary chips */}
+      <div className="flex flex-wrap gap-2">
+        {(Object.entries(counts) as [ChangeKind, number][]).map(([kind, count]) => {
+          const s = CHANGE_STYLE[kind];
+          const Icon = s.icon;
+          const active = changeFilter === kind;
+          return (
+            <button
+              key={kind}
+              onClick={() => setChangeFilter(active ? 'All' : kind)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all border"
+              style={{
+                background: active ? s.bg : 'transparent',
+                color: active ? s.text : 'var(--muted-foreground)',
+                borderColor: active ? s.text + '55' : 'var(--border)',
+              }}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {s.label}
+              <span
+                className="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                style={{ background: s.bg, color: s.text }}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+        {changeFilter !== 'All' && (
+          <button
+            onClick={() => setChangeFilter('All')}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs text-muted-foreground border border-border/60 cursor-pointer hover:text-foreground"
+          >
+            <X className="w-3 h-3" />
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Category filter pills */}
+      <div className="flex flex-wrap gap-2">
+        {categories.map(cat => (
+          <button
+            key={cat}
+            onClick={() => setCategoryFilter(cat)}
+            className={cn(
+              'px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all border',
+              categoryFilter === cat
+                ? 'bg-[#D4BDAD] text-white border-[#D4BDAD]'
+                : 'border-border/60 text-muted-foreground hover:text-foreground hover:bg-border/20',
+            )}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Delta table */}
+      <div className="glass-card rounded-2xl border-border/40 shadow-sm overflow-hidden">
+        {/* Table header */}
+        <div className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1fr] gap-0 border-b border-border/40 px-4 py-3 bg-border/10">
+          {['Biomarker', 'Before', 'After', 'Δ Change', 'Status'].map(h => (
+            <p key={h} className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{h}</p>
+          ))}
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-8">No biomarkers match your filters.</p>
+        ) : (
+          <div className="divide-y divide-border/30 max-h-[520px] overflow-y-auto custom-scrollbar">
+            {filtered.map((row, idx) => {
+              const s = CHANGE_STYLE[row.change];
+              const Icon = s.icon;
+              const deltaAbs = row.delta !== null ? Math.abs(row.delta) : null;
+              const deltaSign = row.delta !== null ? (row.delta > 0 ? '+' : row.delta < 0 ? '' : '±') : null;
+              return (
+                <div
+                  key={row.canonicalName}
+                  className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1fr] gap-0 px-4 py-3 items-center hover:bg-border/10 transition-colors animate-fade-in-up"
+                  style={{ animationDelay: `${idx * 0.025}s` }}
+                >
+                  {/* Biomarker name + category */}
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-foreground truncate">{row.displayName}</p>
+                    <p className="text-[10px] text-muted-foreground">{row.category}</p>
+                  </div>
+
+                  {/* Before value */}
+                  <div>
+                    {row.aValue !== null ? (
+                      <p className="text-xs font-mono text-foreground">
+                        {row.aValue} <span className="text-muted-foreground">{row.unit}</span>
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground italic">—</p>
+                    )}
+                    {statusBadge(row.aStatus)}
+                  </div>
+
+                  {/* After value */}
+                  <div>
+                    {row.bValue !== null ? (
+                      <p className="text-xs font-mono text-foreground">
+                        {row.bValue} <span className="text-muted-foreground">{row.unit}</span>
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground italic">—</p>
+                    )}
+                    {statusBadge(row.bStatus)}
+                  </div>
+
+                  {/* Delta */}
+                  <div>
+                    {row.delta !== null ? (
+                      <p className="text-xs font-mono font-semibold" style={{ color: s.text }}>
+                        {deltaSign}{deltaAbs?.toFixed(2)} {row.unit}
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground">N/A</p>
+                    )}
+                  </div>
+
+                  {/* Change badge */}
+                  <div>
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                      style={{ background: s.bg, color: s.text }}
+                    >
+                      <Icon className="w-2.5 h-2.5" />
+                      {s.label}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
