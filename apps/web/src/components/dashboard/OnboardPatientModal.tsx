@@ -24,15 +24,15 @@ export function OnboardPatientModal({ isOpen, onClose, onSuccess }: OnboardPatie
     e.preventDefault();
     setLoading(true);
     try {
-      await apiFetch('/users/onboard-patient', {
+      await apiFetch('/patients', {
         method: 'POST',
         body: JSON.stringify({
           email,
           firstName,
           lastName,
-          dateOfBirth: new Date(dob).toISOString(),
+          dateOfBirth: dob,
           gender,
-          notes: note.trim() || undefined,
+          note: note.trim() || undefined,
         }),
       });
       toast.success(`Successfully registered profile for ${firstName} ${lastName}.`);
