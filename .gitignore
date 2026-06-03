@@ -11,3 +11,4 @@ build.log
 setup.sh
 upload_testing_guide.md
 apps/web/FrontendSpecificationBreakdownandColorScheme.md
+.turbo/
