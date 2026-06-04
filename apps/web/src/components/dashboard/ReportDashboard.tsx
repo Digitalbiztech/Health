@@ -13,6 +13,11 @@ import {
   Circle,
   Upload,
   RotateCcw,
+  Info,
+  Heart,
+  AlertTriangle,
+  Activity,
+  BarChart2,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -24,6 +29,13 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import type { CompleteReportData } from '@/types/dashboard';
@@ -58,6 +70,7 @@ export function ReportDashboard({
   setCompareReportB,
 }: ReportDashboardProps) {
   const [activeTab, setActiveTab] = useState<'current' | 'trends' | 'ai-chat' | 'compare'>('current');
+  const [currentSubTab, setCurrentSubTab] = useState<'clinical' | 'biomarker-analysis'>('clinical');
   const [selectedPanel, setSelectedPanel] = useState<string>('All');
   const [selectedBiomarkerDetail, setSelectedBiomarkerDetail] = useState<any>(null);
   const [compareDragging, setCompareDragging] = useState<'A' | 'B' | null>(null);
@@ -85,7 +98,38 @@ export function ReportDashboard({
   ].filter((s) => s.value > 0);
 
   function renderCurrentReportTab() {
+    // ── Sub-tab switcher ─────────────────────────────────────
+    const subTabBar = (
+      <div className="flex gap-2 p-1.5 rounded-xl border border-border/40 max-w-sm mb-6" style={{ background: 'var(--card)' }}>
+        {[
+          { id: 'clinical', label: 'Clinical Report', icon: FileText },
+          { id: 'biomarker-analysis', label: 'Biomarker Analysis', icon: BarChart2 },
+        ].map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setCurrentSubTab(t.id as any)}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border-0 bg-transparent',
+              currentSubTab === t.id
+                ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] shadow-sm font-bold'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <t.icon className="w-3.5 h-3.5" />
+            {t.label}
+          </button>
+        ))}
+      </div>
+    );
+
+    if (currentSubTab === 'biomarker-analysis') {
+      return renderBiomarkerAnalysis(subTabBar);
+    }
+
+    // ── Clinical Report (original grid) ─────────────────────
     return (
+      <div className="flex flex-col gap-0">
+        {subTabBar}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Side — Flagged Summary & Pie Chart */}
         <div className="lg:col-span-4 flex flex-col gap-6">
@@ -93,7 +137,7 @@ export function ReportDashboard({
             <h4 className="text-sm font-bold uppercase tracking-wider mb-4" style={{ color: 'var(--muted-foreground)' }}>
               Diagnostics Summary
             </h4>
-            
+
             {/* Pie Chart */}
             <div className="h-44 w-full relative flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
@@ -239,80 +283,414 @@ export function ReportDashboard({
               </div>
             )}
 
-            {/* Biomarker list view */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredBiomarkers.map((b) => {
-                const colors = STATUS_COLORS[b.status];
-                const Icon = CATEGORY_ICONS[b.category] || Droplet;
-                const effectivePct = getEffectivePct(b);
+            {/* Biomarker list view — grouped by category */}
+            {selectedPanel === 'All' ? (
+              // Show categories grouped
+              <div className="flex flex-col gap-8">
+                {panels.filter(p => p !== 'All').map((category) => {
+                  const catMarkers = biomarkers.filter(b => b.category === category);
+                  if (catMarkers.length === 0) return null;
+                  const catFlagged = catMarkers.filter(b => b.status !== 'NORMAL').length;
+                  const CatIcon = CATEGORY_ICONS[category] || Droplet;
+                  const catScore = Math.round(((catMarkers.length - catFlagged) / catMarkers.length) * 100);
 
-                return (
-                  <div
-                    key={b.id}
-                    onClick={() => setSelectedBiomarkerDetail(b)}
-                    className="p-4 rounded-xl border border-border/40 hover:border-[var(--primary)]/60 hover:shadow-md cursor-pointer transition-all flex flex-col gap-3 group bg-card"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105"
-                          style={{ background: colors.bg }}
-                        >
-                          <Icon className="w-4 h-4" style={{ color: colors.text }} />
+                  return (
+                    <div key={category}>
+                      {/* Category header */}
+                      <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/30">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--primary-glow)' }}>
+                            <CatIcon className="w-3.5 h-3.5" style={{ color: 'var(--primary-text)' }} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-foreground">{category}</p>
+                            <p className="text-[10px] text-muted-foreground">{catMarkers.length} marker{catMarkers.length !== 1 ? 's' : ''}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-xs" style={{ color: 'var(--foreground)' }}>
-                            {b.displayName}
-                          </p>
-                          <p className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
-                            {b.category}
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
+                            <div className="w-16 h-1.5 rounded-full bg-border/30 overflow-hidden">
+                              <div
+                                className="h-full rounded-full"
+                                style={{
+                                  width: `${catScore}%`,
+                                  background: catScore >= 80 ? '#1A9966' : catScore >= 60 ? '#C97D0A' : '#F04E14',
+                                }}
+                              />
+                            </div>
+                            <span className={catScore >= 80 ? 'text-green-500' : catScore >= 60 ? 'text-yellow-500' : 'text-red-500'}>
+                              {catScore}%
+                            </span>
+                          </div>
+                          {catFlagged > 0 && (
+                            <span className="text-[9px] bg-[#F04E14]/10 text-[#F04E14] px-2 py-0.5 rounded-full font-bold">
+                              {catFlagged} alert{catFlagged > 1 ? 's' : ''}
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      <div className="text-right">
-                        <span
-                          className="text-[9px] uppercase px-2 py-0.5 rounded-full font-bold"
-                          style={{ background: colors.bg, color: colors.text }}
-                        >
+                      {/* Cards grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {catMarkers.map((b) => {
+                          const colors = STATUS_COLORS[b.status];
+                          const Icon = CATEGORY_ICONS[b.category] || Droplet;
+                          const effectivePct = getEffectivePct(b);
+                          return (
+                            <div
+                              key={b.id}
+                              className="p-4 rounded-xl border border-border/40 hover:border-[var(--primary)]/60 hover:shadow-md transition-all flex flex-col gap-3 group bg-card"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: colors.bg }}>
+                                    <Icon className="w-4 h-4" style={{ color: colors.text }} />
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-xs" style={{ color: 'var(--foreground)' }}>{b.displayName}</p>
+                                    <p className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>{b.value} {b.unit}</p>
+                                  </div>
+                                </div>
+                                <span className="text-[9px] uppercase px-2 py-0.5 rounded-full font-bold" style={{ background: colors.bg, color: colors.text }}>
+                                  {b.status}
+                                </span>
+                              </div>
+
+                              {/* Zone slider bar */}
+                              <div>
+                                <div className="flex justify-between text-[9px] mb-1" style={{ color: 'var(--muted-foreground)' }}>
+                                  <span>Low</span>
+                                  <span className="font-semibold" style={{ color: 'var(--foreground)' }}>{b.value} {b.unit}</span>
+                                  <span>High</span>
+                                </div>
+                                <div className="relative h-2 rounded-full overflow-hidden bg-border/40 flex">
+                                  <div className="h-full w-[20%]" style={{ background: 'rgba(201, 125, 10, 0.25)' }} />
+                                  <div className="h-full w-[60%] border-x border-border/40" style={{ background: 'rgba(26, 153, 102, 0.25)' }} />
+                                  <div className="h-full w-[20%]" style={{ background: 'rgba(240, 78, 20, 0.25)' }} />
+                                  <div
+                                    className="absolute w-3.5 h-3.5 -top-0.5 rounded-full border border-white shadow transition-all duration-500"
+                                    style={{ left: `calc(${effectivePct}% - 7px)`, background: colors.text }}
+                                  />
+                                </div>
+                                <div className="flex justify-between text-[8px] mt-1" style={{ color: 'var(--muted-foreground)' }}>
+                                  <span>Min: {b.referenceMin ?? '0'}</span>
+                                  <span>Ref: {b.referenceRange}</span>
+                                  <span>Max: {b.referenceMax ?? 'N/A'}</span>
+                                </div>
+                              </div>
+
+                              {/* Details button */}
+                              <button
+                                onClick={() => setSelectedBiomarkerDetail(b)}
+                                className="w-full py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border border-border/40 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 transition-all bg-transparent text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5"
+                              >
+                                <Info className="w-3 h-3" />
+                                View Details
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              // Single panel selected
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredBiomarkers.map((b) => {
+                  const colors = STATUS_COLORS[b.status];
+                  const Icon = CATEGORY_ICONS[b.category] || Droplet;
+                  const effectivePct = getEffectivePct(b);
+
+                  return (
+                    <div
+                      key={b.id}
+                      className="p-4 rounded-xl border border-border/40 hover:border-[var(--primary)]/60 hover:shadow-md transition-all flex flex-col gap-3 group bg-card"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105"
+                            style={{ background: colors.bg }}
+                          >
+                            <Icon className="w-4 h-4" style={{ color: colors.text }} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-xs" style={{ color: 'var(--foreground)' }}>{b.displayName}</p>
+                            <p className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>{b.category}</p>
+                          </div>
+                        </div>
+                        <span className="text-[9px] uppercase px-2 py-0.5 rounded-full font-bold" style={{ background: colors.bg, color: colors.text }}>
                           {b.status}
                         </span>
                       </div>
-                    </div>
 
-                    {/* Zone slider bar */}
-                    <div>
-                      <div className="flex justify-between text-[9px] mb-1" style={{ color: 'var(--muted-foreground)' }}>
-                        <span>Low</span>
-                        <span className="font-semibold" style={{ color: 'var(--foreground)' }}>
-                          {b.value} {b.unit}
-                        </span>
-                        <span>High</span>
+                      {/* Zone slider bar */}
+                      <div>
+                        <div className="flex justify-between text-[9px] mb-1" style={{ color: 'var(--muted-foreground)' }}>
+                          <span>Low</span>
+                          <span className="font-semibold" style={{ color: 'var(--foreground)' }}>{b.value} {b.unit}</span>
+                          <span>High</span>
+                        </div>
+                        <div className="relative h-2 rounded-full overflow-hidden bg-border/40 flex">
+                          <div className="h-full w-[20%]" style={{ background: 'rgba(201, 125, 10, 0.25)' }} />
+                          <div className="h-full w-[60%] border-x border-border/40" style={{ background: 'rgba(26, 153, 102, 0.25)' }} />
+                          <div className="h-full w-[20%]" style={{ background: 'rgba(240, 78, 20, 0.25)' }} />
+                          <div
+                            className="absolute w-3.5 h-3.5 -top-0.5 rounded-full border border-white shadow transition-all duration-500"
+                            style={{ left: `calc(${effectivePct}% - 7px)`, background: colors.text }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[8px] mt-1" style={{ color: 'var(--muted-foreground)' }}>
+                          <span>Min: {b.referenceMin ?? '0'}</span>
+                          <span>Optimal: {b.referenceRange}</span>
+                          <span>Max: {b.referenceMax ?? 'N/A'}</span>
+                        </div>
                       </div>
-                      <div className="relative h-2 rounded-full overflow-hidden bg-border/40 flex">
-                        <div className="h-full w-[20%]" style={{ background: 'rgba(201, 125, 10, 0.25)' }} />
-                        <div className="h-full w-[60%] border-x border-border/40" style={{ background: 'rgba(26, 153, 102, 0.25)' }} />
-                        <div className="h-full w-[20%]" style={{ background: 'rgba(240, 78, 20, 0.25)' }} />
-                        
-                        {/* Needle dot */}
-                        <div
-                          className="absolute w-3.5 h-3.5 -top-0.5 rounded-full border border-white shadow transition-all duration-500"
-                          style={{
-                            left: `calc(${effectivePct}% - 7px)`,
-                            background: colors.text,
-                          }}
-                        />
+
+                      {/* Details button */}
+                      <button
+                        onClick={() => setSelectedBiomarkerDetail(b)}
+                        className="w-full py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border border-border/40 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 transition-all bg-transparent text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5"
+                      >
+                        <Info className="w-3 h-3" />
+                        View Details
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+    );
+  }
+
+  function renderBiomarkerAnalysis(subTabBar: React.ReactNode) {
+    // Data processing
+    const categories = panels.filter(p => p !== 'All');
+    const systemMap: Record<string, { color: string }> = {
+      CBC: { color: '#10b981' }, Blood: { color: '#10b981' },
+      Metabolic: { color: '#f59e0b' }, 'Lipid Panel': { color: '#3b82f6' },
+      Hormones: { color: '#8b5cf6' }, Thyroid: { color: '#8b5cf6' },
+      'Vitamins & Minerals': { color: '#ec4899' }, Nutrients: { color: '#ec4899' },
+    };
+    const systemBars = categories.map(cat => {
+      const catM = biomarkers.filter(b => b.category === cat);
+      const score = catM.length ? Math.round((catM.filter(b => b.status === 'NORMAL').length / catM.length) * 100) : 0;
+      const color = systemMap[cat]?.color || 'var(--primary-text)';
+      const blocks = 14;
+      return { label: cat.toUpperCase(), score, color, filled: Math.round((score / 100) * blocks), blocks };
+    });
+    const catColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+    const catPieData = categories.map((cat, i) => ({
+      name: cat, value: biomarkers.filter(b => b.category === cat).length, color: catColors[i % catColors.length],
+    }));
+
+    // Normalized systemic profile data
+    const profileData = biomarkers.map(b => {
+      let yVal = 2.2;
+      if (b.status === 'LOW') yVal = 1.1;
+      else if (b.status === 'HIGH') yVal = 3.1;
+      else if (b.status === 'CRITICAL') {
+        yVal = (b.referenceMin != null && b.value < b.referenceMin) ? 0.5 : 3.6;
+      }
+      const catColor = systemMap[b.category]?.color || 'var(--primary-text)';
+      return { name: b.displayName, val: yVal, color: catColor, status: b.status };
+    });
+
+    return (
+      <div className="flex flex-col gap-6 animate-fade-in">
+        {subTabBar}
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { label: 'HEALTH SCORE', val: healthScore, unit: '/100', Icon: Heart, color: healthScore >= 80 ? '#1A9966' : healthScore >= 60 ? '#C97D0A' : '#F04E14', sub: 'OVERALL' },
+            { label: 'BIOMARKERS', val: biomarkers.length, unit: `/${categories.length} panels`, Icon: Activity, color: 'var(--primary-text)', sub: 'TESTED' },
+            { label: 'FLAGGED', val: flaggedBiomarkers.length, unit: `/${biomarkers.length}`, Icon: AlertTriangle, color: flaggedBiomarkers.length === 0 ? '#1A9966' : '#F04E14', sub: 'NEEDS REVIEW' },
+          ].map(kpi => (
+            <div key={kpi.label} className="glass-card rounded-2xl p-5 border border-border/40 flex flex-col gap-2 shadow-sm">
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{kpi.label}</p>
+                <kpi.Icon className="w-4 h-4" style={{ color: kpi.color }} />
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl font-extrabold" style={{ color: kpi.color }}>{kpi.val}</span>
+                <span className="text-xs text-muted-foreground">{kpi.unit}</span>
+              </div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{kpi.sub}</p>
+              <div className="h-1 rounded-full mt-1" style={{ background: `linear-gradient(90deg, ${kpi.color}, transparent)`, opacity: 0.5 }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Body System Status */}
+        <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h4 className="text-sm font-bold text-foreground">Body System Status</h4>
+              <p className="text-[10px] text-muted-foreground">Wellness score across each diagnostic panel</p>
+            </div>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">SCORE BY PANEL</span>
+          </div>
+          <div className="flex flex-col gap-4">
+            {systemBars.map(sys => (
+              <div key={sys.label} className="flex items-center gap-4">
+                <span className="text-[9px] font-bold w-32 shrink-0 tracking-wider" style={{ color: 'var(--muted-foreground)' }}>{sys.label}</span>
+                <div className="flex gap-[3px] flex-1">
+                  {Array.from({ length: sys.blocks }).map((_, idx) => (
+                    <div key={idx} className="flex-1 h-3.5 rounded-sm transition-all" style={{ background: idx < sys.filled ? sys.color : 'rgba(255,255,255,0.05)' }} />
+                  ))}
+                </div>
+                <span className="text-xs font-bold w-10 text-right" style={{ color: sys.color }}>{sys.score}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Categories + Things to Watch */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Categories Donut */}
+          <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm">
+            <h4 className="text-sm font-bold text-foreground mb-4">Categories</h4>
+            <div className="flex items-center gap-4">
+              <div className="w-32 h-32 relative flex items-center justify-center flex-shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={catPieData} cx="50%" cy="50%" innerRadius={42} outerRadius={54} paddingAngle={3} dataKey="value">
+                      {catPieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute text-center">
+                  <span className="text-xl font-extrabold block text-foreground">{biomarkers.length}</span>
+                  <span className="text-[9px] font-bold uppercase text-muted-foreground">Markers</span>
+                </div>
+              </div>
+              <div className="flex-1 flex flex-col gap-2">
+                {catPieData.map((item, i) => (
+                  <div key={i} className="flex justify-between items-center text-[11px]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: item.color }} />
+                      <span className="text-muted-foreground truncate max-w-[110px]">{item.name}</span>
+                    </div>
+                    <span className="font-bold text-foreground">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="border-t border-border/20 mt-4 pt-3 flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-xs">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                <span className="text-muted-foreground"><strong className="text-foreground">{normalBiomarkers.length} markers</strong> within normal range</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
+                <span className="text-muted-foreground"><strong className="text-foreground">{flaggedBiomarkers.length} markers</strong> require attention</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Things to Watch */}
+          <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col gap-3">
+            <h4 className="text-sm font-bold text-foreground">Things to Watch</h4>
+            {flaggedBiomarkers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-8">
+                <CheckCircle2 className="w-10 h-10 text-green-400" />
+                <p className="text-xs text-muted-foreground text-center">Excellent! All biomarkers are within optimal range.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 overflow-y-auto max-h-[280px] custom-scrollbar">
+                {flaggedBiomarkers.map(b => {
+                  const color = b.status === 'CRITICAL' ? '#D41717' : b.status === 'HIGH' ? '#F04E14' : '#C97D0A';
+                  const pct = b.referenceMin != null && b.referenceMax != null
+                    ? Math.max(5, Math.min(95, ((b.value - b.referenceMin) / (b.referenceMax - b.referenceMin)) * 100))
+                    : b.status === 'HIGH' ? 85 : 15;
+                  return (
+                    <div key={b.id} className="p-3.5 rounded-xl border border-border/40 bg-card/60 flex flex-col gap-2.5">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="w-3.5 h-3.5" style={{ color }} />
+                          <span className="font-extrabold text-xs text-foreground">{b.displayName}</span>
+                        </div>
+                        <span className="font-extrabold text-xs" style={{ color }}>{b.value} {b.unit}</span>
                       </div>
-                      <div className="flex justify-between text-[8px] mt-1" style={{ color: 'var(--muted-foreground)' }}>
-                        <span>Min: {b.referenceMin ?? '0'}</span>
-                        <span>Optimal: {b.referenceRange}</span>
-                        <span>Max: {b.referenceMax ?? 'N/A'}</span>
+                      <div>
+                        <div className="flex justify-between text-[8px] mb-1 text-muted-foreground">
+                          <span>Low</span><span className="font-semibold text-foreground">Normal</span><span>High</span>
+                        </div>
+                        <div className="relative h-2 rounded-full bg-border/30 flex overflow-hidden">
+                          <div className="h-full w-[25%]" style={{ background: 'rgba(201,125,10,0.2)' }} />
+                          <div className="h-full w-[50%]" style={{ background: 'rgba(26,153,102,0.2)' }} />
+                          <div className="h-full w-[25%]" style={{ background: 'rgba(240,78,20,0.2)' }} />
+                          <div className="absolute w-3.5 h-3.5 -top-[3px] rounded-full border border-white shadow" style={{ left: `calc(${pct}% - 7px)`, background: color }} />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Systemic Biomarker Profile */}
+        <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <h4 className="text-sm font-bold text-foreground">Systemic Biomarker Profile & Reference Zones</h4>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold mt-0.5">NORMALIZED RANGE PROFILES ACROSS {categories.length} DIAGNOSTIC CATEGORIES</p>
             </div>
+            <div className="flex items-center gap-4 flex-wrap justify-end">
+              {['#10b981','#3b82f6','#f59e0b','#8b5cf6','#ec4899'].map((c, i) => (
+                <span key={i} className="flex items-center gap-1.5 text-[9px] font-semibold text-muted-foreground">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
+                  {['Blood','Metabolic','Lipid','Hormones','Nutrients'][i]}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="h-52 mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={profileData} margin={{ top: 8, right: 16, left: 0, bottom: 24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
+                <XAxis dataKey="name" tick={{ fill: 'var(--muted-foreground)', fontSize: 8 }} angle={-35} textAnchor="end" interval={0} />
+                <YAxis domain={[0, 4]} tick={{ fill: 'var(--muted-foreground)', fontSize: 9 }}
+                  tickFormatter={(v) => (['','Very Low','Low','','Optimal','','High','Elevated'][Math.round(v * 2)] || '')}
+                  ticks={[0.5, 1.1, 2.2, 3.1, 3.6]}
+                />
+                <Tooltip
+                  content={({ active, payload }) =>
+                    active && payload?.length ? (
+                      <div className="glass-card rounded-xl p-2.5 border border-border/40 shadow text-xs bg-card">
+                        <p className="font-bold text-foreground">{payload[0]?.payload?.name}</p>
+                        <p className="text-muted-foreground mt-0.5">Status: <span className="font-semibold text-foreground">{payload[0]?.payload?.status}</span></p>
+                      </div>
+                    ) : null
+                  }
+                />
+                <ReferenceLine y={0.5} stroke="rgba(239,68,68,0.15)" strokeDasharray="3 3" />
+                <ReferenceLine y={1.1} stroke="rgba(245,158,11,0.15)" strokeDasharray="3 3" />
+                <ReferenceLine y={2.2} stroke="rgba(16,185,129,0.2)" strokeDasharray="3 3" label={{ value: 'Optimal', position: 'right', fill: '#10b981', fontSize: 8 }} />
+                <ReferenceLine y={3.1} stroke="rgba(245,158,11,0.15)" strokeDasharray="3 3" />
+                <ReferenceLine y={3.6} stroke="rgba(239,68,68,0.15)" strokeDasharray="3 3" />
+                <Line type="monotone" dataKey="val" stroke="var(--primary-text)" strokeWidth={2.5} dot={(props: any) => {
+                  const c = props.payload?.color || 'var(--primary-text)';
+                  return <circle key={props.key} cx={props.cx} cy={props.cy} r={4} fill={c} stroke="white" strokeWidth={1.5} />;
+                }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/20">
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+              <span><strong className="text-foreground">Clinical Guide:</strong> Dots represent normalized status. The Optimal zone (center band) is the target reference region.</span>
+            </div>
+            <span className="text-[9px] font-bold px-2.5 py-1 rounded-full" style={{ background: 'var(--primary-glow)', color: 'var(--primary-text)' }}>100% NORMALIZED</span>
           </div>
         </div>
       </div>
@@ -415,8 +793,8 @@ export function ReportDashboard({
                       isSelected
                         ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-foreground'
                         : isUsedByOther
-                        ? 'border-border/30 opacity-40 cursor-not-allowed'
-                        : 'border-border/50 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 text-foreground'
+                          ? 'border-border/30 opacity-40 cursor-not-allowed'
+                          : 'border-border/50 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 text-foreground'
                     )}
                   >
                     <div
@@ -431,11 +809,11 @@ export function ReportDashboard({
                         {r.extraction?.biomarkers?.length ?? 0} markers
                         {r.reports?.[0]?.createdAt
                           ? ' · ' +
-                            new Date(r.reports[0].createdAt).toLocaleDateString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })
+                          new Date(r.reports[0].createdAt).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })
                           : ''}
                       </p>
                     </div>

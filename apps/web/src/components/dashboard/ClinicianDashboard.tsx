@@ -20,7 +20,11 @@ import {
   CalendarDays,
   Activity,
   Users,
+  Heart,
+  AlertTriangle,
+  BarChart2,
 } from 'lucide-react';
+import { ResponsiveContainer as RC2, PieChart, Pie, Cell } from 'recharts';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
@@ -53,8 +57,8 @@ interface ClinicianDashboardProps {
   patientsLoading: boolean;
   selectedPatientReports: CompleteReportData[];
   trendsLoading: boolean;
-  patientSubTab: 'reports' | 'trends' | 'compare';
-  setPatientSubTab: (tab: 'reports' | 'trends' | 'compare') => void;
+  patientSubTab: 'reports' | 'trends' | 'compare' | 'insights';
+  setPatientSubTab: (tab: 'reports' | 'trends' | 'compare' | 'insights') => void;
   clinicianTab: 'directory' | 'activity';
   setClinicianTab: (tab: 'directory' | 'activity') => void;
   fetchOrgUploads: () => Promise<void>;
@@ -523,6 +527,7 @@ export function ClinicianDashboard({
           <div className="flex gap-2 p-1 rounded-xl border border-border/40" style={{ background: 'var(--card)' }}>
             {[
               { id: 'reports', label: 'Uploads', icon: FileText },
+              { id: 'insights', label: 'Lab Insights', icon: BarChart2 },
               { id: 'trends', label: 'Trends', icon: TrendingUp },
               { id: 'compare', label: 'Compare', icon: SplitSquareVertical },
             ].map((subTab) => (
@@ -673,6 +678,180 @@ export function ClinicianDashboard({
                 </div>
               )}
             </div>
+          ) : patientSubTab === 'insights' ? (
+            (() => {
+              const report = selectedPatientReports[0];
+              if (!report) return (
+                <div className="glass-card rounded-2xl p-12 border-border/40 flex flex-col items-center justify-center gap-3 text-center">
+                  <BarChart2 className="w-10 h-10 text-muted-foreground" />
+                  <p className="text-sm font-semibold text-foreground">No Lab Data Yet</p>
+                  <p className="text-xs text-muted-foreground max-w-xs">Upload and process a lab PDF to unlock the Lab Insights dashboard.</p>
+                </div>
+              );
+              const biomarkers = report.extraction?.biomarkers || [];
+              const normal = biomarkers.filter(b => b.status === 'NORMAL');
+              const flagged = biomarkers.filter(b => b.status !== 'NORMAL');
+              const healthScore = Math.max(0, Math.min(100, Math.round(100 - (flagged.length * 12.5))));
+              const categories = Array.from(new Set(biomarkers.map(b => b.category)));
+
+              // System bars data
+              const systemMap: Record<string, { color: string }> = {
+                CBC: { color: '#10b981' }, Blood: { color: '#10b981' },
+                Metabolic: { color: '#f59e0b' }, 'Lipid Panel': { color: '#3b82f6' },
+                Hormones: { color: '#8b5cf6' }, Thyroid: { color: '#8b5cf6' },
+                'Vitamins & Minerals': { color: '#ec4899' }, Nutrients: { color: '#ec4899' },
+              };
+              const systemBars = categories.map(cat => {
+                const catMarkers = biomarkers.filter(b => b.category === cat);
+                const catNormal = catMarkers.filter(b => b.status === 'NORMAL').length;
+                const score = Math.round((catNormal / catMarkers.length) * 100);
+                const color = systemMap[cat]?.color || 'var(--primary-text)';
+                const blocks = 14;
+                const filled = Math.round((score / 100) * blocks);
+                return { label: cat.toUpperCase(), score, color, blocks, filled };
+              });
+
+              // Pie donut data
+              const catColors = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4'];
+              const pieData = categories.map((cat, i) => ({
+                name: cat, value: biomarkers.filter(b => b.category === cat).length, color: catColors[i % catColors.length],
+              }));
+
+              return (
+                <div className="flex flex-col gap-5 animate-fade-in">
+                  {/* KPI Row */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { label: 'HEALTH SCORE', val: healthScore, unit: '/100', icon: Heart, color: healthScore >= 80 ? '#1A9966' : healthScore >= 60 ? '#C97D0A' : '#F04E14', sub: 'OVERALL' },
+                      { label: 'BIOMARKERS', val: biomarkers.length, unit: `/${categories.length} panels`, icon: Activity, color: 'var(--primary-text)', sub: 'TESTED' },
+                      { label: 'FLAGGED', val: flagged.length, unit: `/${biomarkers.length}`, icon: AlertTriangle, color: flagged.length === 0 ? '#1A9966' : '#F04E14', sub: 'NEEDS REVIEW' },
+                    ].map(kpi => (
+                      <div key={kpi.label} className="glass-card rounded-xl p-4 border border-border/40 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{kpi.label}</p>
+                          <kpi.icon className="w-3.5 h-3.5" style={{ color: kpi.color }} />
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-2xl font-extrabold" style={{ color: kpi.color }}>{kpi.val}</span>
+                          <span className="text-[10px] text-muted-foreground">{kpi.unit}</span>
+                        </div>
+                        <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{kpi.sub}</p>
+                        <div className="h-0.5 rounded-full" style={{ background: kpi.color, opacity: 0.4 }} />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Body System Status */}
+                  <div className="glass-card rounded-xl p-5 border border-border/40">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-bold text-foreground">Body System Status</h4>
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">SCORE BY PANEL</span>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      {systemBars.map(sys => (
+                        <div key={sys.label} className="flex items-center gap-3">
+                          <span className="text-[9px] font-bold w-28 shrink-0 tracking-wider" style={{ color: 'var(--muted-foreground)' }}>{sys.label}</span>
+                          <div className="flex gap-[3px] flex-1">
+                            {Array.from({ length: sys.blocks }).map((_, idx) => (
+                              <div key={idx} className="flex-1 h-3 rounded-sm" style={{ background: idx < sys.filled ? sys.color : 'rgba(255,255,255,0.06)' }} />
+                            ))}
+                          </div>
+                          <span className="text-xs font-bold w-10 text-right" style={{ color: sys.color }}>{sys.score}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Categories + Things to Watch */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Categories donut */}
+                    <div className="glass-card rounded-xl p-5 border border-border/40">
+                      <h4 className="text-sm font-bold text-foreground mb-4">Categories</h4>
+                      <div className="flex items-center gap-4">
+                        <div className="w-28 h-28 relative flex items-center justify-center flex-shrink-0">
+                          <RC2 width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={pieData} cx="50%" cy="50%" innerRadius={36} outerRadius={48} paddingAngle={3} dataKey="value">
+                                {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                              </Pie>
+                            </PieChart>
+                          </RC2>
+                          <div className="absolute text-center">
+                            <span className="text-lg font-extrabold block text-foreground">{biomarkers.length}</span>
+                            <span className="text-[8px] font-bold uppercase text-muted-foreground">Markers</span>
+                          </div>
+                        </div>
+                        <div className="flex-1 flex flex-col gap-1.5">
+                          {pieData.map((item, i) => (
+                            <div key={i} className="flex justify-between items-center text-[10px]">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full" style={{ background: item.color }} />
+                                <span className="text-muted-foreground truncate max-w-[90px]">{item.name}</span>
+                              </div>
+                              <span className="font-bold text-foreground">{item.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="border-t border-border/20 mt-3 pt-3 flex flex-col gap-1.5">
+                        <div className="flex items-center gap-2 text-xs">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+                          <span className="text-muted-foreground"><strong className="text-foreground">{normal.length} markers</strong> normal</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
+                          <span className="text-muted-foreground"><strong className="text-foreground">{flagged.length} markers</strong> need attention</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Things to Watch */}
+                    <div className="glass-card rounded-xl p-5 border border-border/40 flex flex-col gap-3 overflow-hidden">
+                      <h4 className="text-sm font-bold text-foreground">Things to Watch</h4>
+                      {flagged.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center flex-1 gap-2 py-4">
+                          <CheckCircle2 className="w-8 h-8 text-green-400" />
+                          <p className="text-xs text-muted-foreground text-center">All markers within optimal range.</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[240px] custom-scrollbar">
+                          {flagged.map(b => {
+                            const isCritical = b.status === 'CRITICAL';
+                            const isHigh = b.status === 'HIGH';
+                            const color = isCritical ? '#D41717' : isHigh ? '#F04E14' : '#C97D0A';
+                            const pct = b.referenceMin != null && b.referenceMax != null
+                              ? Math.max(5, Math.min(95, ((b.value - b.referenceMin) / (b.referenceMax - b.referenceMin)) * 100))
+                              : b.status === 'HIGH' ? 85 : 15;
+                            return (
+                              <div key={b.id} className="p-3 rounded-xl border border-border/40 bg-card/60 flex flex-col gap-2">
+                                <div className="flex justify-between items-center">
+                                  <div className="flex items-center gap-1.5">
+                                    <AlertTriangle className="w-3 h-3" style={{ color }} />
+                                    <span className="font-bold text-xs text-foreground">{b.displayName}</span>
+                                  </div>
+                                  <span className="font-extrabold text-xs" style={{ color }}>{b.value} {b.unit}</span>
+                                </div>
+                                <div>
+                                  <div className="flex justify-between text-[8px] mb-1 text-muted-foreground">
+                                    <span>Low</span><span className="font-semibold text-foreground">Normal</span><span>High</span>
+                                  </div>
+                                  <div className="relative h-1.5 rounded-full bg-border/30 flex overflow-hidden">
+                                    <div className="h-full w-[25%]" style={{ background: 'rgba(201,125,10,0.2)' }} />
+                                    <div className="h-full w-[50%]" style={{ background: 'rgba(26,153,102,0.2)' }} />
+                                    <div className="h-full w-[25%]" style={{ background: 'rgba(240,78,20,0.2)' }} />
+                                    <div className="absolute w-3 h-3 -top-[3px] rounded-full border border-white shadow" style={{ left: `calc(${pct}% - 6px)`, background: color }} />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
           ) : patientSubTab === 'trends' ? (
             <div>
               {trendsLoading ? (

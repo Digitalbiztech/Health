@@ -1,6 +1,8 @@
-import { jsPDF } from 'jspdf';
 import { toast } from 'sonner';
 import type { Biomarker, CompleteReportData } from '@/types/dashboard';
+import { pdf } from '@react-pdf/renderer';
+import { PremiumPDFDocument } from '../PremiumPDFDocument';
+import type { LabReport } from '../../types/lab';
 
 export function calculateAge(dobString: string): number {
   const birthDate = new Date(dobString);
@@ -52,7 +54,7 @@ export function exportCSV(reportData: CompleteReportData) {
   const rows = reportData.extraction.biomarkers
     .map(
       (b) =>
-        `"${b.displayName}",${b.value},"${b.unit}","${b.referenceRange}","${b.status}","${b.category}"`
+          `"${b.displayName}",${b.value},"${b.unit}","${b.referenceRange}","${b.status}","${b.category}"`
     )
     .join('\n');
   
@@ -66,127 +68,79 @@ export function exportCSV(reportData: CompleteReportData) {
   toast.success('Successfully exported flat CSV matrix.');
 }
 
-export function exportPDF(reportData: CompleteReportData, healthScore: number) {
+function convertToLabReport(reportData: CompleteReportData, _healthScore: number): LabReport {
+  const patient = reportData.patient;
+  const activeReport = reportData.reports?.[0];
+  const biomarkers = reportData.extraction?.biomarkers || [];
+
+  // Group biomarkers by category
+  const categories = Array.from(new Set(biomarkers.map((b) => b.category)));
+  const panels = categories.map((cat) => {
+    const catBiomarkers = biomarkers.filter((b) => b.category === cat);
+    return {
+      name: cat,
+      biomarkers: catBiomarkers.map((b) => ({
+        name: b.displayName,
+        value: b.value,
+        unit: b.unit,
+        status: b.status.toLowerCase() as 'normal' | 'high' | 'low' | 'critical' | 'unknown',
+        min: b.referenceMin ?? undefined,
+        max: b.referenceMax ?? undefined,
+        confidenceScore: b.confidence,
+        clinicalInterpretation: b.description || b.detailedAnalysis,
+      })),
+    };
+  });
+
+  const pName = `${patient?.firstName || ''} ${patient?.lastName || ''}`.trim() || 'Patient';
+  const age = patient?.dateOfBirth ? calculateAge(patient.dateOfBirth) : undefined;
+
+  return {
+    id: reportData.id,
+    patientName: pName,
+    patientAge: age,
+    patientGender: patient?.gender || 'male',
+    labDate: activeReport?.createdAt,
+    collectionDate: activeReport?.createdAt,
+    orderedBy: 'Auriem Clinical Suite',
+    summary: activeReport?.summary,
+    aiInsights: activeReport?.insights?.recommendations || [],
+    panels,
+  };
+}
+
+export async function exportPDF(reportData: CompleteReportData, healthScore: number) {
   if (!reportData || !reportData.extraction) return;
   const activeReport = reportData.reports?.[0];
   if (!activeReport) return;
-  
-  const patient = reportData.patient;
-  const doc = new jsPDF();
-  const pName = `${patient?.firstName || ''} ${patient?.lastName || ''}`.trim() || 'Patient';
-  const analyzedAt = new Date(activeReport.createdAt || Date.now()).toLocaleDateString();
 
-  // Dark Slate Header Banner
-  doc.setFillColor(18, 22, 28);
-  doc.rect(0, 0, 210, 38, 'F');
+  const toastId = toast.loading('Generating premium clinical PDF...');
 
-  // Accent Stripe YC Gold
-  doc.setFillColor(212, 189, 173);
-  doc.rect(0, 38, 210, 2, 'F');
+  try {
+    const labReport = convertToLabReport(reportData, healthScore);
+    const logoUrl = window.location.origin + '/logo/041323 YC LogoDeck_Main-WG copy.png';
+    const iconLogoUrl = window.location.origin + '/logo/040523 YC LogoDeck_Main-FC.jpg';
 
-  // Title
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text('AURIEM CLINICAL SUITE — DIAGNOSTICS SUMMARY', 14, 24);
+    const doc = <PremiumPDFDocument report={labReport} logoUrl={logoUrl} iconLogoUrl={iconLogoUrl} />;
+    const blob = await pdf(doc).toBlob();
 
-  // Profile Details
-  doc.setTextColor(50, 50, 50);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  
-  doc.text(`Patient Name: ${pName}`, 14, 52);
-  doc.text(`DOB: ${patient?.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString() : 'N/A'}`, 14, 58);
-  doc.text(`Gender: ${patient?.gender || 'N/A'}`, 14, 64);
-  
-  doc.text(`Report Title: ${activeReport.title}`, 120, 52);
-  doc.text(`Analysis Date: ${analyzedAt}`, 120, 58);
-  doc.text(`Health Score: ${healthScore}%`, 120, 64);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const patient = reportData.patient;
+    const pName = `${patient?.firstName || ''} ${patient?.lastName || ''}`.trim() || 'Patient';
+    link.setAttribute('download', `Clinical_Insights_${pName.replace(/\s+/g, '_')}.pdf`);
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
-  // Divider Line
-  doc.setDrawColor(210, 210, 210);
-  doc.line(14, 70, 196, 70);
-
-  // AI Summary
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('CLINICAL ASSESSMENT SUMMARY', 14, 78);
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
-  const splitSummary = doc.splitTextToSize(activeReport.summary, 182);
-  doc.text(splitSummary, 14, 84);
-
-  // Recommendations Section
-  let yPos = 84 + (splitSummary.length * 5) + 6;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('CLINICAL RECOMMENDATIONS', 14, yPos);
-  yPos += 6;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  activeReport.insights.recommendations.forEach((rec, idx) => {
-    const splitRec = doc.splitTextToSize(`${idx + 1}. ${rec}`, 182);
-    doc.text(splitRec, 14, yPos);
-    yPos += (splitRec.length * 4.5) + 1;
-  });
-
-  yPos += 5;
-  doc.line(14, yPos, 196, yPos);
-  yPos += 8;
-
-  // Biomarkers Table
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('BIOMARKER EXTRACTIONS PANEL', 14, yPos);
-  yPos += 6;
-
-  // Table Headers
-  doc.setFillColor(235, 235, 235);
-  doc.rect(14, yPos, 182, 7, 'F');
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 30, 30);
-  doc.text('Biomarker Name', 16, yPos + 5);
-  doc.text('Value', 85, yPos + 5);
-  doc.text('Reference Range', 115, yPos + 5);
-  doc.text('Status', 165, yPos + 5);
-  yPos += 7;
-
-  doc.setFont('helvetica', 'normal');
-  reportData.extraction.biomarkers.forEach((b, idx) => {
-    // Row coloring alternate
-    if (idx % 2 === 1) {
-      doc.setFillColor(248, 248, 248);
-      doc.rect(14, yPos, 182, 7, 'F');
-    }
-
-    // Highlight abnormal
-    if (b.status !== 'NORMAL') {
-      doc.setTextColor(210, 40, 40);
-      doc.setFont('helvetica', 'bold');
-    } else {
-      doc.setTextColor(50, 50, 50);
-      doc.setFont('helvetica', 'normal');
-    }
-
-    doc.text(b.displayName, 16, yPos + 5);
-    doc.text(`${b.value} ${b.unit}`, 85, yPos + 5);
-    doc.text(b.referenceRange || 'N/A', 115, yPos + 5);
-    doc.text(b.status, 165, yPos + 5);
-    yPos += 7;
-  });
-
-  // Disclaimer
-  yPos += 12;
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(7.5);
-  doc.setTextColor(120, 120, 120);
-  const disclaimer = 'Disclaimer: This report is an AI-assisted translation of physical diagnostic materials for educational review. All diagnostic evaluations must be performed by a fully qualified board physician.';
-  const splitDisc = doc.splitTextToSize(disclaimer, 182);
-  doc.text(splitDisc, 14, yPos);
-
-  doc.save(`Clinical_Insights_${pName.replace(/\s+/g, '_')}.pdf`);
-  toast.success('Premium laboratory insights PDF downloaded!');
+    toast.success('Premium laboratory insights PDF downloaded!', { id: toastId });
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    toast.error('Failed to generate PDF. Please try again.', { id: toastId });
+  }
 }
+
