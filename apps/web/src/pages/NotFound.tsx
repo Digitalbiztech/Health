@@ -14,7 +14,7 @@ export default function NotFound() {
           className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6"
           style={{ background: 'rgba(212, 189, 173, 0.1)' }}
         >
-          <FileQuestion className="w-10 h-10" style={{ color: '#D4BDAD' }} />
+          <FileQuestion className="w-10 h-10" style={{ color: 'var(--primary)' }} />
         </div>
 
         <h1
@@ -31,7 +31,7 @@ export default function NotFound() {
           onClick={() => navigate('/', { replace: true })}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer hover:opacity-90"
           style={{
-            background: 'linear-gradient(135deg, #D4BDAD, #B8A89A)',
+            background: 'linear-gradient(135deg, var(--primary), var(--accent))',
             color: 'white',
             boxShadow: '0 4px 14px rgba(212, 189, 173, 0.35)',
           }}
