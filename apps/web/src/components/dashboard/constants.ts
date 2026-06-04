@@ -40,7 +40,7 @@ export const PRIORITY_COLORS: Record<TaskRecord['priority'], string> = {
 
 // Appointment status → badge palette
 export const APPT_STATUS_COLORS: Record<AppointmentRecord['status'], { text: string; bg: string }> = {
-  SCHEDULED: { text: '#8a7a6a', bg: 'rgba(212, 189, 173, 0.18)' },
+  SCHEDULED: { text: 'var(--primary-text)', bg: 'var(--primary-glow)' },
   COMPLETED: { text: '#1A9966', bg: 'rgba(26, 153, 102, 0.12)' },
   CANCELLED: { text: '#D41717', bg: 'rgba(212, 23, 23, 0.12)' },
   NO_SHOW: { text: '#C97D0A', bg: 'rgba(201, 125, 10, 0.12)' },
