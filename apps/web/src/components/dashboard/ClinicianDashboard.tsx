@@ -169,7 +169,7 @@ export function ClinicianDashboard({
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <span
                 className="w-5 h-5 rounded-md flex items-center justify-center text-white text-[10px] font-black"
-                style={{ background: slot === 'A' ? '#8a7a6a' : '#D4BDAD' }}
+                style={{ background: slot === 'A' ? 'var(--primary-text)' : 'var(--primary)' }}
               >
                 {slot}
               </span>
@@ -187,7 +187,7 @@ export function ClinicianDashboard({
 
           {isPolling && (
             <div className="glass-card rounded-xl p-4 border-border/40 flex items-center gap-3 border">
-              <Loader2 className="w-5 h-5 animate-spin text-[#8a7a6a] shrink-0" />
+              <Loader2 className="w-5 h-5 animate-spin text-[var(--primary-text)] shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-foreground">Analyzing Report {slot}…</p>
                 <p className="text-[10px] text-muted-foreground">Usually 15–30 seconds.</p>
@@ -199,11 +199,11 @@ export function ClinicianDashboard({
             <div
               className="flex items-center gap-2.5 p-3 rounded-xl border-2 text-xs"
               style={{
-                borderColor: slot === 'A' ? '#8a7a6a' : '#D4BDAD',
-                background: slot === 'A' ? 'rgba(138,122,106,0.08)' : 'rgba(212,189,173,0.1)',
+                borderColor: slot === 'A' ? 'var(--primary-text)' : 'var(--primary)',
+                background: slot === 'A' ? 'rgba(138,122,106,0.08)' : 'var(--primary-glow)',
               }}
             >
-              <FileText className="w-4 h-4 shrink-0" style={{ color: slot === 'A' ? '#8a7a6a' : '#D4BDAD' }} />
+              <FileText className="w-4 h-4 shrink-0" style={{ color: slot === 'A' ? 'var(--primary-text)' : 'var(--primary)' }} />
               <div className="min-w-0">
                 <p className="font-semibold text-foreground truncate">{selected.fileName}</p>
                 {selected.reports?.[0]?.createdAt && (
@@ -216,7 +216,7 @@ export function ClinicianDashboard({
                   </p>
                 )}
               </div>
-              <CheckCircle2 className="w-4 h-4 shrink-0 ml-auto" style={{ color: slot === 'A' ? '#8a7a6a' : '#D4BDAD' }} />
+              <CheckCircle2 className="w-4 h-4 shrink-0 ml-auto" style={{ color: slot === 'A' ? 'var(--primary-text)' : 'var(--primary)' }} />
             </div>
           )}
 
@@ -233,17 +233,17 @@ export function ClinicianDashboard({
                     className={cn(
                       'flex items-center gap-2.5 p-3 rounded-xl border text-xs text-left transition-all cursor-pointer w-full',
                       isSelected
-                        ? 'border-[#D4BDAD] bg-[#D4BDAD]/10 text-foreground'
+                        ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-foreground'
                         : isUsedByOther
                         ? 'border-border/30 opacity-40 cursor-not-allowed'
-                        : 'border-border/50 hover:border-[#D4BDAD]/60 hover:bg-[#D4BDAD]/5 text-foreground'
+                        : 'border-border/50 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 text-foreground'
                     )}
                   >
                     <div
                       className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: isSelected ? 'rgba(212,189,173,0.2)' : 'rgba(212,189,173,0.1)' }}
+                      style={{ background: isSelected ? 'var(--primary-glow)' : 'var(--primary-glow)' }}
                     >
-                      <FileText className="w-4 h-4 text-[#8a7a6a]" />
+                      <FileText className="w-4 h-4 text-[var(--primary-text)]" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold truncate">{r.fileName}</p>
@@ -259,7 +259,7 @@ export function ClinicianDashboard({
                           : ''}
                       </p>
                     </div>
-                    {isSelected && <CheckCircle2 className="w-4 h-4 text-[#8a7a6a] shrink-0" />}
+                    {isSelected && <CheckCircle2 className="w-4 h-4 text-[var(--primary-text)] shrink-0" />}
                     {isUsedByOther && <span className="text-[9px] text-muted-foreground shrink-0">In use</span>}
                   </button>
                 );
@@ -268,7 +268,7 @@ export function ClinicianDashboard({
               <div
                 className={cn(
                   'flex items-center gap-2.5 p-3 rounded-xl border-2 border-dashed text-xs transition-all cursor-pointer group',
-                  dragActive ? 'border-[#D4BDAD] bg-[#D4BDAD]/10' : 'border-border/50 hover:border-[#D4BDAD]/60 hover:bg-[#D4BDAD]/5'
+                  dragActive ? 'border-[var(--primary)] bg-[var(--primary)]/10' : 'border-border/50 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5'
                 )}
                 onClick={() => {
                   pendingCompareSlotRef.current = slot;
@@ -288,12 +288,12 @@ export function ClinicianDashboard({
               >
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
-                  style={{ background: 'rgba(212, 189, 173, 0.15)' }}
+                  style={{ background: 'var(--primary-glow)' }}
                 >
                   {isUploading ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-[#8a7a6a]" />
+                    <Loader2 className="w-4 h-4 animate-spin text-[var(--primary-text)]" />
                   ) : (
-                    <Upload className="w-4 h-4 text-[#8a7a6a]" />
+                    <Upload className="w-4 h-4 text-[var(--primary-text)]" />
                   )}
                 </div>
                 <div>
@@ -372,7 +372,7 @@ export function ClinicianDashboard({
   const summaryCards = (
     <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       {[
-        { label: 'Registered Patients', val: totalPatients, icon: User, color: '#8a7a6a' },
+        { label: 'Registered Patients', val: totalPatients, icon: User, color: 'var(--primary-text)' },
         { label: 'Total Lab Reports', val: totalReports, icon: FileText, color: 'var(--primary)' },
         { label: 'Processing Queue', val: processingQueue, icon: Loader2, color: '#C97D0A', animate: processingQueue > 0 },
         { label: 'Failed Extractions', val: failedReports, icon: ShieldAlert, color: '#D41717' },
@@ -388,7 +388,7 @@ export function ClinicianDashboard({
           </div>
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: 'rgba(212, 189, 173, 0.15)' }}
+            style={{ background: 'var(--primary-glow)' }}
           >
             <stat.icon
               className={cn('w-5 h-5', stat.animate ? 'animate-spin' : '')}
@@ -416,7 +416,7 @@ export function ClinicianDashboard({
           </button>
           <div
             className="w-14 h-14 rounded-xl flex items-center justify-center font-bold text-lg text-white"
-            style={{ background: 'linear-gradient(135deg, #D4BDAD, #B8A89A)' }}
+            style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
           >
             {selectedPatient.firstName?.[0] || ''}
             {selectedPatient.lastName?.[0] || ''}
@@ -426,7 +426,7 @@ export function ClinicianDashboard({
               {selectedPatient.firstName} {selectedPatient.lastName}
               <span
                 className="text-xs font-semibold px-2 py-0.5 rounded-full uppercase"
-                style={{ background: 'rgba(212, 189, 173, 0.15)', color: '#8a7a6a' }}
+                style={{ background: 'var(--primary-glow)', color: 'var(--primary-text)' }}
               >
                 {selectedPatient.gender}
               </span>
@@ -453,7 +453,7 @@ export function ClinicianDashboard({
           <button
             onClick={() => fileInputRef.current?.click()}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer border-0"
-            style={{ background: '#8a7a6a' }}
+            style={{ background: 'var(--primary-text)' }}
           >
             <Upload className="w-3.5 h-3.5" />
             Upload Lab PDF
@@ -485,8 +485,8 @@ export function ClinicianDashboard({
               </p>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-[#D4BDAD]/5 border border-[#D4BDAD]/20 rounded-xl">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-[#8a7a6a] bg-[#D4BDAD]/20">
+                <div className="flex items-center gap-3 p-3 bg-[var(--primary)]/5 border border-[var(--primary)]/20 rounded-xl">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-[var(--primary-text)] bg-[var(--primary)]/20">
                     {selectedPatientReports[0].reports?.[0]?.insights?.recommendations?.length || 0}
                   </div>
                   <div>
@@ -540,7 +540,7 @@ export function ClinicianDashboard({
                 className={cn(
                   'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer border-0 bg-transparent',
                   patientSubTab === subTab.id
-                    ? 'bg-[#D4BDAD]/15 text-[#8a7a6a] font-bold shadow-sm'
+                    ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] font-bold shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >
@@ -663,7 +663,7 @@ export function ClinicianDashboard({
                                   }
                                 }}
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white shadow-sm hover:opacity-90 cursor-pointer border-0"
-                                style={{ background: '#8a7a6a' }}
+                                style={{ background: 'var(--primary-text)' }}
                               >
                                 Review
                               </button>
@@ -679,7 +679,7 @@ export function ClinicianDashboard({
             <div>
               {trendsLoading ? (
                 <div className="glass-card rounded-2xl p-8 border-border/40 shadow-sm flex flex-col items-center justify-center min-h-[220px]">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#8a7a6a] mb-2" />
+                  <Loader2 className="w-6 h-6 animate-spin text-[var(--primary-text)] mb-2" />
                   <span className="text-xs text-muted-foreground">Aggregating historical biomarkers...</span>
                 </div>
               ) : (
@@ -693,7 +693,7 @@ export function ClinicianDashboard({
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <SplitSquareVertical className="w-4 h-4 text-[#8a7a6a]" />
+                  <SplitSquareVertical className="w-4 h-4 text-[var(--primary-text)]" />
                   Compare Reports
                 </h4>
                 {(compareReportA || compareReportB) && (
@@ -728,7 +728,7 @@ export function ClinicianDashboard({
             className={cn(
               'px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all border-0 bg-transparent',
               clinicianTab === 'directory'
-                ? 'bg-[#D4BDAD]/15 text-[#8a7a6a] font-bold shadow-sm'
+                ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] font-bold shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -742,7 +742,7 @@ export function ClinicianDashboard({
             className={cn(
               'px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all border-0 bg-transparent',
               clinicianTab === 'activity'
-                ? 'bg-[#D4BDAD]/15 text-[#8a7a6a] font-bold shadow-sm'
+                ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] font-bold shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -754,7 +754,7 @@ export function ClinicianDashboard({
         <button
           onClick={() => setIsOnboardingOpen(true)}
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer border-0"
-          style={{ background: '#8a7a6a' }}
+          style={{ background: 'var(--primary-text)' }}
         >
           <UserPlus className="w-4 h-4" />
           Onboard Patient
@@ -772,13 +772,13 @@ export function ClinicianDashboard({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search patients by name or email..."
-              className="w-full text-xs pl-9 pr-4 py-2.5 rounded-xl border border-border/60 bg-card text-foreground outline-none focus:border-[#D4BDAD] transition-colors"
+              className="w-full text-xs pl-9 pr-4 py-2.5 rounded-xl border border-border/60 bg-card text-foreground outline-none focus:border-[var(--primary)] transition-colors"
             />
           </div>
 
           {patientsLoading ? (
             <div className="min-h-[200px] flex flex-col items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-[#8a7a6a]" />
+              <Loader2 className="w-8 h-8 animate-spin text-[var(--primary-text)]" />
               <p className="text-xs text-muted-foreground mt-2">Loading patients directory...</p>
             </div>
           ) : filteredPatients.length === 0 ? (
@@ -802,12 +802,12 @@ export function ClinicianDashboard({
                   <div
                     key={patient.id}
                     onClick={() => loadPatientTrendsAndDetails(patient)}
-                    className="glass-card rounded-xl p-5 border-border/40 hover:border-[#D4BDAD]/65 hover:shadow-md cursor-pointer transition-all flex flex-col gap-4 bg-card group"
+                    className="glass-card rounded-xl p-5 border-border/40 hover:border-[var(--primary)]/65 hover:shadow-md cursor-pointer transition-all flex flex-col gap-4 bg-card group"
                   >
                     <div className="flex items-center gap-3">
                       <div
                         className="w-11 h-11 rounded-lg flex items-center justify-center font-bold text-white text-sm transition-transform group-hover:scale-105"
-                        style={{ background: 'linear-gradient(135deg, #D4BDAD, #B8A89A)' }}
+                        style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
                       >
                         {patient.firstName?.[0] || ''}
                         {patient.lastName?.[0] || ''}
@@ -826,7 +826,7 @@ export function ClinicianDashboard({
                         Age: <strong className="text-foreground">{age}</strong> · {patient.gender}
                       </span>
                       <span>
-                        Reports: <strong className="text-[#8a7a6a]">{totalUploadsCount}</strong>
+                        Reports: <strong className="text-[var(--primary-text)]">{totalUploadsCount}</strong>
                       </span>
                     </div>
 
@@ -991,10 +991,10 @@ export function ClinicianDashboard({
               </div>
               <div className="flex items-center gap-3 text-[10px] font-semibold">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#8a7a6a' }} /> Male
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--primary-text)' }} /> Male
                 </span>
                 <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#D4BDAD' }} /> Female
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--primary)' }} /> Female
                 </span>
               </div>
             </div>
@@ -1037,7 +1037,7 @@ export function ClinicianDashboard({
                       type="monotone"
                       dataKey="male"
                       name="Male"
-                      stroke="#8a7a6a"
+                      stroke="var(--primary-text)"
                       strokeWidth={3}
                       dot={{ r: 3 }}
                       activeDot={{ r: 6 }}
@@ -1046,7 +1046,7 @@ export function ClinicianDashboard({
                       type="monotone"
                       dataKey="female"
                       name="Female"
-                      stroke="#D4BDAD"
+                      stroke="var(--primary)"
                       strokeWidth={3}
                       dot={{ r: 3 }}
                       activeDot={{ r: 6 }}
@@ -1076,7 +1076,7 @@ export function ClinicianDashboard({
               <button
                 onClick={() => setIsApptModalOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white cursor-pointer shadow hover:opacity-90 border-0"
-                style={{ background: '#8a7a6a' }}
+                style={{ background: 'var(--primary-text)' }}
               >
                 New
               </button>
@@ -1141,7 +1141,7 @@ export function ClinicianDashboard({
           <button
             onClick={() => setIsApptModalOpen(true)}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer border-0"
-            style={{ background: '#8a7a6a' }}
+            style={{ background: 'var(--primary-text)' }}
           >
             New Appointment
           </button>
@@ -1149,7 +1149,7 @@ export function ClinicianDashboard({
 
         {appointmentsLoading ? (
           <div className="min-h-[200px] flex flex-col items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-[#8a7a6a]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--primary-text)]" />
             <p className="text-xs text-muted-foreground mt-2">Loading schedule...</p>
           </div>
         ) : (
@@ -1206,7 +1206,7 @@ export function ClinicianDashboard({
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer text-left border-0 bg-transparent',
                   active
-                    ? 'bg-[#D4BDAD]/15 text-[#8a7a6a] shadow-sm font-bold'
+                    ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] shadow-sm font-bold'
                     : 'text-muted-foreground hover:text-foreground hover:bg-border/20'
                 )}
               >
@@ -1220,7 +1220,7 @@ export function ClinicianDashboard({
         <button
           onClick={() => setIsOnboardingOpen(true)}
           className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer border-0"
-          style={{ background: '#8a7a6a' }}
+          style={{ background: 'var(--primary-text)' }}
         >
           <UserPlus className="w-4 h-4" />
           Onboard Patient
@@ -1247,7 +1247,7 @@ export function ClinicianDashboard({
                   }}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border',
-                    active ? 'bg-[#D4BDAD]/15 text-[#8a7a6a] border-transparent shadow-sm' : 'border-border/50 text-muted-foreground bg-transparent'
+                    active ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] border-transparent shadow-sm' : 'border-border/50 text-muted-foreground bg-transparent'
                   )}
                 >
                   <item.icon className="w-3.5 h-3.5" />
