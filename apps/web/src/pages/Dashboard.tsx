@@ -62,7 +62,7 @@ export default function Dashboard() {
   const [selectedPatient, setSelectedPatient] = useState<PatientRecord | null>(null);
   const [clinicianTab, setClinicianTab] = useState<'directory' | 'activity'>('directory');
   const [allUploads, setAllUploads] = useState<UploadRecord[]>([]);
-  const [patientSubTab, setPatientSubTab] = useState<'reports' | 'trends' | 'compare'>('reports');
+  const [patientSubTab, setPatientSubTab] = useState<'reports' | 'trends' | 'compare' | 'insights'>('reports');
   const [selectedPatientReports, setSelectedPatientReports] = useState<CompleteReportData[]>([]);
   const [trendsLoading, setTrendsLoading] = useState(false);
 
@@ -657,6 +657,13 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {/* Footer */}
+      <footer className="relative z-10 flex items-center justify-center py-4 border-t border-border/20 mt-8">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40" style={{ color: 'var(--muted-foreground)' }}>
+          Powered by Huumanize
+        </p>
+      </footer>
     </div>
   );
 }
