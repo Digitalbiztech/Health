@@ -47,7 +47,7 @@ export function PatientHome({
         <div className="flex flex-col sm:flex-row sm:items-center gap-5">
           <div
             className="w-16 h-16 rounded-xl flex items-center justify-center font-bold text-xl text-white shrink-0"
-            style={{ background: 'linear-gradient(135deg, #D4BDAD, #B8A89A)' }}
+            style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
           >
             {patientPrincipal?.firstName?.[0] || ''}{patientPrincipal?.lastName?.[0] || ''}
           </div>
@@ -67,7 +67,7 @@ export function PatientHome({
                 </span>
               )}
               {patientPrincipal?.gender && (
-                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(212, 189, 173, 0.15)', color: '#8a7a6a' }}>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full" style={{ background: 'var(--primary-glow)', color: 'var(--primary-text)' }}>
                   {patientPrincipal.gender}
                 </span>
               )}
@@ -76,7 +76,7 @@ export function PatientHome({
           <button
             onClick={() => setPatientView('upload')}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer shrink-0"
-            style={{ background: '#8a7a6a' }}
+            style={{ background: 'var(--primary-text)' }}
           >
             <Upload className="w-3.5 h-3.5" />
             Upload New Report
@@ -87,7 +87,7 @@ export function PatientHome({
       {/* ── Stats Cards ───────────────────────────────────── */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Reports', val: totalUploads, icon: FileText, color: '#8a7a6a' },
+          { label: 'Total Reports', val: totalUploads, icon: FileText, color: 'var(--primary-text)' },
           { label: 'Analyzed', val: completedUploads, icon: CheckCircle2, color: '#1A9966' },
           { label: 'Processing', val: pendingUploads, icon: Loader2, color: '#C97D0A', animate: pendingUploads > 0 },
           { label: 'Normal Markers', val: normalCount, icon: Heart, color: '#1A9966' },
@@ -100,7 +100,7 @@ export function PatientHome({
               <p className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>{stat.val}</p>
               <p className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">{stat.label}</p>
             </div>
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(212, 189, 173, 0.15)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--primary-glow)' }}>
               <stat.icon className={cn('w-5 h-5', stat.animate ? 'animate-spin' : '')} style={{ color: stat.color }} />
             </div>
           </div>
@@ -139,12 +139,12 @@ export function PatientHome({
                   </div>
                 </div>
                 {latestReport.reports?.[0]?.insights?.recommendations?.length > 0 && (
-                  <div className="flex items-center gap-3 p-3 bg-[#D4BDAD]/5 border border-[#D4BDAD]/20 rounded-xl">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-[#8a7a6a] bg-[#D4BDAD]/20">
+                  <div className="flex items-center gap-3 p-3 bg-[var(--primary)]/5 border border-[var(--primary)]/20 rounded-xl">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-[var(--primary-text)] bg-[var(--primary)]/20">
                       {latestReport.reports[0].insights.recommendations.length}
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-[#8a7a6a]">AI Recommendations</p>
+                      <p className="text-xs font-bold text-[var(--primary-text)]">AI Recommendations</p>
                       <p className="text-[10px] text-muted-foreground">Personalized action items.</p>
                     </div>
                   </div>
@@ -162,13 +162,13 @@ export function PatientHome({
           {latestReport?.reports?.[0]?.insights?.summaryPoints?.length > 0 && (
             <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
               <h4 className="text-sm font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--muted-foreground)' }}>
-                <Sparkles className="w-3.5 h-3.5 inline mr-1.5" style={{ color: '#8a7a6a' }} />
+                <Sparkles className="w-3.5 h-3.5 inline mr-1.5" style={{ color: 'var(--primary-text)' }} />
                 AI Summary
               </h4>
               <ul className="space-y-2">
                 {latestReport.reports[0].insights.summaryPoints.slice(0, 4).map((point, i) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-foreground">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#D4BDAD] mt-1.5 shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] mt-1.5 shrink-0" />
                     {point}
                   </li>
                 ))}
@@ -194,7 +194,7 @@ export function PatientHome({
 
             {patientUploadsLoading ? (
               <div className="min-h-[200px] flex flex-col items-center justify-center">
-                <Loader2 className="w-6 h-6 animate-spin text-[#8a7a6a]" />
+                <Loader2 className="w-6 h-6 animate-spin text-[var(--primary-text)]" />
                 <p className="text-xs text-muted-foreground mt-2">Loading your reports...</p>
               </div>
             ) : patientUploads.length === 0 ? (
@@ -209,7 +209,7 @@ export function PatientHome({
                 <button
                   onClick={() => setPatientView('upload')}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white shadow hover:opacity-90 cursor-pointer mt-2"
-                  style={{ background: '#8a7a6a' }}
+                  style={{ background: 'var(--primary-text)' }}
                 >
                   <Upload className="w-3.5 h-3.5" />
                   Upload Report
@@ -294,7 +294,7 @@ export function PatientHome({
                               }
                             }}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white shadow-sm hover:opacity-90 cursor-pointer"
-                            style={{ background: '#8a7a6a' }}
+                            style={{ background: 'var(--primary-text)' }}
                           >
                             Review
                           </button>
