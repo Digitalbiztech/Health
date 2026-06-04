@@ -124,7 +124,7 @@ export function AppointmentModal({ isOpen, onClose, patients, onSuccess }: Appoi
               type="submit"
               disabled={loading}
               className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-white shadow-md hover:opacity-90 disabled:opacity-60 transition-opacity cursor-pointer flex items-center justify-center gap-1.5"
-              style={{ background: '#8a7a6a' }}
+              style={{ background: 'var(--primary-text)' }}
             >
               {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Schedule
