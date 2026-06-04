@@ -22,7 +22,7 @@ export function UploadScreen({
       <div
         className="w-24 h-24 rounded-2xl flex items-center justify-center mb-6 animate-fade-in-up animate-float"
         style={{
-          background: 'linear-gradient(135deg, #D4BDAD, #B8A89A)',
+          background: 'linear-gradient(135deg, var(--primary), var(--accent))',
           boxShadow: '0 12px 40px rgba(212, 189, 173, 0.3)',
         }}
       >
@@ -57,7 +57,7 @@ export function UploadScreen({
       <div
         className={cn(
           "w-full min-h-[220px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-4 p-8 transition-all duration-300 cursor-pointer group animate-fade-in-up",
-          isDragging ? "border-[#D4BDAD] bg-[#D4BDAD]/10" : "border-border hover:bg-[#D4BDAD]/5 hover:border-[#D4BDAD]"
+          isDragging ? "border-[var(--primary)] bg-[var(--primary)]/10" : "border-border hover:bg-[var(--primary)]/5 hover:border-[var(--primary)]"
         )}
         style={{ animationDelay: '0.15s' }}
         onClick={() => fileInputRef.current?.click()}
@@ -75,12 +75,12 @@ export function UploadScreen({
       >
         <div
           className="w-16 h-16 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
-          style={{ background: 'rgba(212, 189, 173, 0.2)' }}
+          style={{ background: 'var(--primary-glow)' }}
         >
           {uploading ? (
-            <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#8a7a6a' }} />
+            <Loader2 className="w-7 h-7 animate-spin" style={{ color: 'var(--primary-text)' }} />
           ) : (
-            <Upload className="w-7 h-7" style={{ color: '#8a7a6a' }} />
+            <Upload className="w-7 h-7" style={{ color: 'var(--primary-text)' }} />
           )}
         </div>
         <div>
@@ -94,7 +94,7 @@ export function UploadScreen({
         <span
           className="px-4 py-2 rounded-lg text-sm font-medium pointer-events-none transition-all"
           style={{
-            background: '#8a7a6a',
+            background: 'var(--primary-text)',
             color: 'white',
             cursor: 'pointer',
           }}
@@ -122,7 +122,7 @@ export function UploadScreen({
           {
             icon: Lightbulb,
             title: 'AI Insights',
-            color: '#8a7a6a',
+            color: 'var(--primary-text)',
           },
         ].map((feature, i) => (
           <div
