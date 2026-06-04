@@ -133,25 +133,12 @@ export default function Login() {
       </div>
 
       {/* Logo */}
-      <div className="mb-8 animate-fade-in-up">
-        <div
-          className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto"
-          style={{
-            background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-            boxShadow: 'var(--glow-primary)',
-          }}
-        >
-          <Stethoscope className="w-10 h-10 text-white" />
-        </div>
-        <h1
-          className="mt-4 text-2xl font-semibold tracking-tight text-center"
-          style={{ color: 'var(--foreground)' }}
-        >
-          Auriem
-        </h1>
-        <p className="text-sm text-center mt-1" style={{ color: 'var(--muted-foreground)' }}>
-          Clinical Suite
-        </p>
+      <div className="mb-8 animate-fade-in-up flex flex-col items-center">
+        <img
+          src="/logo/041323 YC LogoDeck_Main-WG copy.png"
+          alt="Auriem Logo"
+          className="h-24 w-auto object-contain"
+        />
       </div>
 
       {/* Card */}

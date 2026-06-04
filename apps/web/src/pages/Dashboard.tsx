@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Stethoscope, LogOut, ChevronLeft, Eye, RotateCcw, Download, Loader2 } from 'lucide-react';
+import { LogOut, ChevronLeft, Eye, RotateCcw, Download, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
@@ -424,7 +424,7 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           {/* Left — Logo */}
           <div
-            className="flex items-center gap-3 cursor-pointer"
+            className="flex items-center cursor-pointer"
             onClick={() => {
               setViewState('UPLOAD');
               setSelectedPatient(null);
@@ -433,15 +433,11 @@ export default function Dashboard() {
               }
             }}
           >
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
-            >
-              <Stethoscope className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-semibold text-lg" style={{ color: 'var(--foreground)' }}>
-              Auriem
-            </span>
+            <img
+              src="/logo/041323 YC LogoDeck_Main-WG copy.png"
+              alt="Auriem Logo"
+              className="h-10 w-auto object-contain"
+            />
           </div>
 
           {/* Right — Actions */}
