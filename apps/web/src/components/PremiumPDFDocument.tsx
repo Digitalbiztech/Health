@@ -1,5 +1,5 @@
 import { Document, Page, Text, View, StyleSheet, Font, Image, Svg, Circle, Path, Line, Polyline, Defs, LinearGradient, Stop, Rect } from '@react-pdf/renderer';
-import type { LabReport, LabPanel } from '../types/lab';
+import type { LabReport, LabPanel } from '@/types/lab';
 function resolveRange(_name: string, minVal: number | undefined, maxVal: number | undefined, value: number, _gender: string) {
   const min = typeof minVal === 'number' ? minVal : 0;
   const max = typeof maxVal === 'number' ? maxVal : (value > 0 ? value * 1.5 : 100);
