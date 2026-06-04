@@ -24,7 +24,7 @@ import {
   AlertTriangle,
   BarChart2,
 } from 'lucide-react';
-import { ResponsiveContainer as RC2, PieChart, Pie, Cell } from 'recharts';
+
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
@@ -711,11 +711,7 @@ export function ClinicianDashboard({
                 return { label: cat.toUpperCase(), score, color, blocks, filled };
               });
 
-              // Pie donut data
-              const catColors = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4'];
-              const pieData = categories.map((cat, i) => ({
-                name: cat, value: biomarkers.filter(b => b.category === cat).length, color: catColors[i % catColors.length],
-              }));
+
 
               return (
                 <div className="flex flex-col gap-5 animate-fade-in">
@@ -764,43 +760,58 @@ export function ClinicianDashboard({
 
                   {/* Categories + Things to Watch */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Categories donut */}
-                    <div className="glass-card rounded-xl p-5 border border-border/40">
-                      <h4 className="text-sm font-bold text-foreground mb-4">Categories</h4>
-                      <div className="flex items-center gap-4">
-                        <div className="w-28 h-28 relative flex items-center justify-center flex-shrink-0">
-                          <RC2 width="100%" height="100%">
-                            <PieChart>
-                              <Pie data={pieData} cx="50%" cy="50%" innerRadius={36} outerRadius={48} paddingAngle={3} dataKey="value">
-                                {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                              </Pie>
-                            </PieChart>
-                          </RC2>
-                          <div className="absolute text-center">
-                            <span className="text-lg font-extrabold block text-foreground">{biomarkers.length}</span>
-                            <span className="text-[8px] font-bold uppercase text-muted-foreground">Markers</span>
-                          </div>
+                    {/* Category Health Breakdown */}
+                    <div className="glass-card rounded-xl p-5 border border-border/40 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-sm font-bold text-foreground">Category Health Breakdown</h4>
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Normal / Flagged</span>
                         </div>
-                        <div className="flex-1 flex flex-col gap-1.5">
-                          {pieData.map((item, i) => (
-                            <div key={i} className="flex justify-between items-center text-[10px]">
-                              <div className="flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full" style={{ background: item.color }} />
-                                <span className="text-muted-foreground truncate max-w-[90px]">{item.name}</span>
+                        <div className="flex flex-col gap-3 overflow-y-auto max-h-[160px] pr-1.5 custom-scrollbar">
+                          {categories.map((cat) => {
+                            const catMarkers = biomarkers.filter(b => b.category === cat);
+                            const catNormal = catMarkers.filter(b => b.status === 'NORMAL').length;
+                            const catFlagged = catMarkers.length - catNormal;
+                            const normalPct = (catNormal / catMarkers.length) * 100;
+                            const flaggedPct = (catFlagged / catMarkers.length) * 100;
+
+                            return (
+                              <div key={cat} className="flex flex-col gap-1">
+                                <div className="flex justify-between items-center text-[10px]">
+                                  <span className="font-bold text-foreground truncate max-w-[120px]">{cat}</span>
+                                  <span className="text-[9px] text-muted-foreground font-medium">
+                                    {catNormal}/{catMarkers.length} Normal
+                                  </span>
+                                </div>
+                                <div className="relative h-2 rounded-full bg-border/20 overflow-hidden flex">
+                                  {catNormal > 0 && (
+                                    <div 
+                                      className="h-full bg-emerald-500/85 transition-all duration-500" 
+                                      style={{ width: `${normalPct}%` }}
+                                      title={`${catNormal} Normal`}
+                                    />
+                                  )}
+                                  {catFlagged > 0 && (
+                                    <div 
+                                      className="h-full bg-rose-500/85 transition-all duration-500" 
+                                      style={{ width: `${flaggedPct}%` }}
+                                      title={`${catFlagged} Flagged`}
+                                    />
+                                  )}
+                                </div>
                               </div>
-                              <span className="font-bold text-foreground">{item.value}</span>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
-                      <div className="border-t border-border/20 mt-3 pt-3 flex flex-col gap-1.5">
-                        <div className="flex items-center gap-2 text-xs">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                          <span className="text-muted-foreground"><strong className="text-foreground">{normal.length} markers</strong> normal</span>
+                      <div className="border-t border-border/20 mt-4 pt-3 flex justify-between text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-muted-foreground"><strong className="text-foreground">{normal.length}</strong> Optimal</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs">
-                          <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
-                          <span className="text-muted-foreground"><strong className="text-foreground">{flagged.length} markers</strong> need attention</span>
+                        <div className="flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                          <span className="text-muted-foreground"><strong className="text-foreground">{flagged.length}</strong> Attention</span>
                         </div>
                       </div>
                     </div>
