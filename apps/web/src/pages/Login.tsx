@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { apiFetch, BYPASS_AUTH } from '@/lib/api';
 import { useAuth, type AccountType } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -123,16 +124,21 @@ export default function Login() {
 
   return (
     <div
-      className="flex flex-col items-center justify-center min-h-screen px-4 py-8"
+      className="flex flex-col items-center justify-center min-h-screen px-4 py-8 relative"
       style={{ background: 'var(--background)' }}
     >
+      {/* Theme Switcher */}
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
+
       {/* Logo */}
       <div className="mb-8 animate-fade-in-up">
         <div
           className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto"
           style={{
-            background: 'linear-gradient(135deg, #D4BDAD, #B8A89A)',
-            boxShadow: '0 8px 32px rgba(212, 189, 173, 0.3)',
+            background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+            boxShadow: 'var(--glow-primary)',
           }}
         >
           <Stethoscope className="w-10 h-10 text-white" />
@@ -183,16 +189,16 @@ export default function Login() {
                   'flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium',
                   'border transition-all duration-200 cursor-pointer',
                   active
-                    ? 'border-[#D4BDAD] bg-[#D4BDAD]/15 text-[#8a7a6a]'
-                    : 'border-transparent bg-transparent hover:bg-[#D4BDAD]/5',
+                    ? 'border-primary bg-primary/10 text-primary-text'
+                    : 'border-transparent bg-transparent hover:bg-primary/5',
                 )}
                 style={{
                   borderColor: active
-                    ? '#D4BDAD'
+                    ? 'var(--primary)'
                     : 'color-mix(in srgb, var(--border) 40%, transparent)',
-                  color: active ? '#8a7a6a' : 'var(--muted-foreground)',
+                  color: active ? 'var(--primary-text)' : 'var(--muted-foreground)',
                   background: active
-                    ? 'rgba(212, 189, 173, 0.15)'
+                    ? 'var(--primary-glow)'
                     : 'color-mix(in srgb, var(--background) 50%, transparent)',
                 }}
               >
@@ -233,7 +239,7 @@ export default function Login() {
                     color: 'var(--foreground)',
                     border: '1px solid var(--border)',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = '#D4BDAD')}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
                 />
               </div>
@@ -258,7 +264,7 @@ export default function Login() {
                     color: 'var(--foreground)',
                     border: '1px solid var(--border)',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = '#D4BDAD')}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
                 />
               </div>
@@ -289,7 +295,7 @@ export default function Login() {
                       color: 'var(--foreground)',
                       border: '1px solid var(--border)',
                     }}
-                    onFocus={(e) => (e.target.style.borderColor = '#D4BDAD')}
+                    onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
                     onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
                   />
                   <CalendarDays
@@ -318,7 +324,7 @@ export default function Login() {
                     color: gender ? 'var(--foreground)' : 'var(--muted-foreground)',
                     border: '1px solid var(--border)',
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = '#D4BDAD')}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
                 >
                   <option value="" disabled>
@@ -354,7 +360,7 @@ export default function Login() {
                 color: 'var(--foreground)',
                 border: '1px solid var(--border)',
               }}
-              onFocus={(e) => (e.target.style.borderColor = '#D4BDAD')}
+              onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
               onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
             />
           </div>
@@ -383,7 +389,7 @@ export default function Login() {
                   color: 'var(--foreground)',
                   border: '1px solid var(--border)',
                 }}
-                onFocus={(e) => (e.target.style.borderColor = '#D4BDAD')}
+                onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
                 onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
               />
               <button
@@ -408,9 +414,9 @@ export default function Login() {
               'hover:opacity-90 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed',
             )}
             style={{
-              background: 'linear-gradient(135deg, #D4BDAD, #B8A89A)',
-              color: 'white',
-              boxShadow: '0 4px 14px rgba(212, 189, 173, 0.35)',
+              background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+              color: 'var(--primary-foreground)',
+              boxShadow: 'var(--glow-primary)',
             }}
           >
             {loading ? (
@@ -432,8 +438,8 @@ export default function Login() {
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="font-medium transition-colors cursor-pointer hover:underline"
-            style={{ color: '#8a7a6a' }}
+            className="font-medium transition-colors cursor-pointer hover:underline text-primary-text"
+            style={{ color: 'var(--primary-text)' }}
           >
             {isSignUp ? 'Sign In' : 'Sign Up'}
           </button>
