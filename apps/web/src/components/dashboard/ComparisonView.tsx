@@ -32,7 +32,7 @@ function classifyChange(a: Biomarker | undefined, b: Biomarker | undefined): Cha
 const CHANGE_STYLE: Record<ChangeKind, { label: string; bg: string; text: string; icon: any }> = {
   improved:  { label: 'Improved',  bg: 'rgba(26,153,102,0.1)',  text: '#1A9966', icon: ArrowDown   },
   worsened:  { label: 'Worsened',  bg: 'rgba(240,78,20,0.1)',   text: '#F04E14', icon: ArrowUp     },
-  stable:    { label: 'Stable',    bg: 'rgba(212,189,173,0.15)', text: '#8a7a6a', icon: ArrowRight  },
+  stable:    { label: 'Stable',    bg: 'var(--primary-glow)', text: 'var(--primary-text)', icon: ArrowRight  },
   new:       { label: 'New',       bg: 'rgba(201,125,10,0.12)', text: '#C97D0A', icon: Plus        },
   resolved:  { label: 'Resolved',  bg: 'rgba(26,153,102,0.12)', text: '#1A9966', icon: Minus       },
 };
@@ -116,9 +116,9 @@ export function ComparisonView({ reportA, reportB }: ComparisonViewProps) {
           >
             <div
               className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: label === 'After' ? 'rgba(26,153,102,0.15)' : 'rgba(212,189,173,0.2)' }}
+              style={{ background: label === 'After' ? 'rgba(26,153,102,0.15)' : 'var(--primary-glow)' }}
             >
-              <FileText className="w-4.5 h-4.5" style={{ color: label === 'After' ? '#1A9966' : '#8a7a6a' }} />
+              <FileText className="w-4.5 h-4.5" style={{ color: label === 'After' ? '#1A9966' : 'var(--primary-text)' }} />
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
@@ -181,7 +181,7 @@ export function ComparisonView({ reportA, reportB }: ComparisonViewProps) {
             className={cn(
               'px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all border',
               categoryFilter === cat
-                ? 'bg-[#D4BDAD] text-white border-[#D4BDAD]'
+                ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
                 : 'border-border/60 text-muted-foreground hover:text-foreground hover:bg-border/20',
             )}
           >
