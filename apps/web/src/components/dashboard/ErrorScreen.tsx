@@ -25,7 +25,7 @@ export function ErrorScreen({ errorMessage, onTryAgain }: ErrorScreenProps) {
       <button
         onClick={onTryAgain}
         className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white transition-all shadow-md hover:scale-[1.02] cursor-pointer"
-        style={{ background: '#8a7a6a' }}
+        style={{ background: 'var(--primary-text)' }}
       >
         <RotateCcw className="w-4 h-4" />
         Try Again
