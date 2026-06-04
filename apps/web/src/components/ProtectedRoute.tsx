@@ -16,8 +16,8 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
           <div
             className="w-10 h-10 rounded-full border-3 border-transparent animate-spin"
             style={{
-              borderTopColor: '#D4BDAD',
-              borderRightColor: '#D4BDAD',
+              borderTopColor: 'var(--primary)',
+              borderRightColor: 'var(--primary)',
             }}
           />
           <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
