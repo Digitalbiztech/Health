@@ -24,6 +24,7 @@ export function TrendAnalysisChart({ biomarkers, comparisonReports }: TrendProps
     if (biomarkers.length > 0 && !selectedMarker) {
       setSelectedMarker(biomarkers[0].canonicalName);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [biomarkers]);
 
   // Gather trend points across comparison reports
@@ -32,7 +33,7 @@ export function TrendAnalysisChart({ biomarkers, comparisonReports }: TrendProps
       const marker = report.extraction?.biomarkers.find(b => b.canonicalName === selectedMarker);
       if (!marker) return null;
       return {
-        date: new Date(report.reports[0]?.createdAt || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        date: new Date(report.reports[0]?.createdAt || 0).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
         value: Number(marker.value),
         min: marker.referenceMin,
         max: marker.referenceMax,
@@ -87,7 +88,7 @@ export function TrendAnalysisChart({ biomarkers, comparisonReports }: TrendProps
                   return (
                     <div className="glass-card rounded-xl p-3 border border-border/40 shadow-md text-xs bg-card">
                       <p className="font-bold text-foreground">{payload[0].payload.date}</p>
-                      <p className="mt-1 font-semibold text-[#8a7a6a]">
+                      <p className="mt-1 font-semibold text-[var(--primary-text)]">
                         Value: {payload[0].value} {currentMarkerInfo?.unit}
                       </p>
                     </div>
@@ -109,7 +110,7 @@ export function TrendAnalysisChart({ biomarkers, comparisonReports }: TrendProps
               <Line
                 type="monotone"
                 dataKey="value"
-                stroke="#8a7a6a"
+                stroke="var(--primary-text)"
                 strokeWidth={3}
                 activeDot={{ r: 6 }}
               />
