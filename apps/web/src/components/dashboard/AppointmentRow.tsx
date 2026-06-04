@@ -19,7 +19,7 @@ export function AppointmentRow({ appt, compact, onStatus }: AppointmentRowProps)
       <div className="flex items-center gap-3 min-w-0">
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-xs shrink-0"
-          style={{ background: 'linear-gradient(135deg, #D4BDAD, #B8A89A)' }}
+          style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
         >
           {initials}
         </div>
