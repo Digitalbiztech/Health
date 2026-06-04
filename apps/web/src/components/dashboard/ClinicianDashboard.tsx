@@ -414,13 +414,11 @@ export function ClinicianDashboard({
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <div
-            className="w-14 h-14 rounded-xl flex items-center justify-center font-bold text-lg text-white"
-            style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
-          >
-            {selectedPatient.firstName?.[0] || ''}
-            {selectedPatient.lastName?.[0] || ''}
-          </div>
+          <img
+            src="/logo/040523 YC LogoDeck_Icon-GS.jpg"
+            alt="YC Logo"
+            className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border/40"
+          />
           <div>
             <h3 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--foreground)' }}>
               {selectedPatient.firstName} {selectedPatient.lastName}
@@ -805,13 +803,11 @@ export function ClinicianDashboard({
                     className="glass-card rounded-xl p-5 border-border/40 hover:border-[var(--primary)]/65 hover:shadow-md cursor-pointer transition-all flex flex-col gap-4 bg-card group"
                   >
                     <div className="flex items-center gap-3">
-                      <div
-                        className="w-11 h-11 rounded-lg flex items-center justify-center font-bold text-white text-sm transition-transform group-hover:scale-105"
-                        style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
-                      >
-                        {patient.firstName?.[0] || ''}
-                        {patient.lastName?.[0] || ''}
-                      </div>
+                      <img
+                        src="/logo/040523 YC LogoDeck_Main-FC.jpg"
+                        alt="YC Logo"
+                        className="w-11 h-11 rounded-lg object-cover transition-transform group-hover:scale-105 border border-border/40 shrink-0"
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-xs text-foreground truncate">
                           {patient.firstName} {patient.lastName}

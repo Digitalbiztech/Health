@@ -11,18 +11,16 @@ interface AppointmentRowProps {
 export function AppointmentRow({ appt, compact, onStatus }: AppointmentRowProps) {
   const colors = APPT_STATUS_COLORS[appt.status];
   const start = new Date(appt.startTime);
-  const initials = `${appt.patient?.firstName?.[0] || ''}${appt.patient?.lastName?.[0] || ''}` || '?';
   const patientName = `${appt.patient?.firstName || ''} ${appt.patient?.lastName || ''}`.trim() || 'Patient';
 
   return (
     <div className="p-3 rounded-xl border border-border/40 bg-card/65 flex items-center justify-between gap-3 hover:shadow transition-shadow">
       <div className="flex items-center gap-3 min-w-0">
-        <div
-          className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-xs shrink-0"
-          style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
-        >
-          {initials}
-        </div>
+        <img
+          src="/logo/040523 YC LogoDeck_Icon-GS.jpg"
+          alt="YC Logo"
+          className="w-9 h-9 rounded-lg object-cover border border-border/40 shrink-0"
+        />
         <div className="min-w-0">
           <p className="font-semibold text-xs text-foreground truncate">{appt.title}</p>
           <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1">

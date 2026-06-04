@@ -630,6 +630,12 @@ export function ReportDashboard({
           ))}
         </div>
 
+        <img
+          src="/logo/YC_Letterform_WG.png"
+          alt="YC Letterform Logo"
+          className="h-10 w-auto object-contain shrink-0 mx-4 hidden lg:block"
+        />
+
         {/* Health Score Ring */}
         <div className="flex items-center gap-4 w-full lg:w-auto justify-center">
           <div className="relative w-16 h-16 flex items-center justify-center">

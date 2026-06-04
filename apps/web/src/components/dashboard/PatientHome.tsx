@@ -45,12 +45,11 @@ export function PatientHome({
       {/* ── Profile Card ──────────────────────────────────── */}
       <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-          <div
-            className="w-16 h-16 rounded-xl flex items-center justify-center font-bold text-xl text-white shrink-0"
-            style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
-          >
-            {patientPrincipal?.firstName?.[0] || ''}{patientPrincipal?.lastName?.[0] || ''}
-          </div>
+          <img
+            src="/logo/040523 YC LogoDeck_Icon-GS.jpg"
+            alt="YC Logo"
+            className="w-16 h-16 rounded-xl object-cover shrink-0 border border-border/40"
+          />
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-bold text-foreground">
               {patientPrincipal?.firstName} {patientPrincipal?.lastName}
@@ -73,6 +72,11 @@ export function PatientHome({
               )}
             </div>
           </div>
+          <img
+            src="/logo/YC_Letterform_WG.png"
+            alt="YC Letterform Logo"
+            className="h-10 w-auto object-contain shrink-0 mx-4 hidden sm:block"
+          />
           <button
             onClick={() => setPatientView('upload')}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer shrink-0"
