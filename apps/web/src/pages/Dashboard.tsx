@@ -4,6 +4,7 @@ import { Stethoscope, LogOut, ChevronLeft, Eye, RotateCcw, Download, Loader2 } f
 import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
+import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
 
 // Types
 import type {
@@ -434,7 +435,7 @@ export default function Dashboard() {
           >
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #D4BDAD, #B8A89A)' }}
+              style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
             >
               <Stethoscope className="w-5 h-5 text-white" />
             </div>
@@ -464,7 +465,7 @@ export default function Dashboard() {
                     onClick={() => {
                       setViewState('UPLOAD');
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer bg-[#D4BDAD]/15 text-[#8a7a6a] border-[#D4BDAD]/30"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer bg-[var(--primary)]/15 text-[var(--primary-text)] border-[var(--primary)]/30"
                   >
                     Back to Case File
                   </button>
@@ -476,7 +477,7 @@ export default function Dashboard() {
                       setViewState('UPLOAD');
                       setPatientView('home');
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer bg-[#D4BDAD]/15 text-[#8a7a6a] border-[#D4BDAD]/30"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer bg-[var(--primary)]/15 text-[var(--primary-text)] border-[var(--primary)]/30"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                     My Dashboard
@@ -505,7 +506,7 @@ export default function Dashboard() {
                 <div className="relative group">
                   <button
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white cursor-pointer shadow border-0"
-                    style={{ background: '#8a7a6a' }}
+                    style={{ background: 'var(--primary-text)' }}
                   >
                     <Download className="w-3.5 h-3.5" />
                     Export
@@ -531,18 +532,21 @@ export default function Dashboard() {
             {principal?.accountType === 'PATIENT' && viewState === 'UPLOAD' && patientView === 'upload' && (
               <button
                 onClick={() => setPatientView('home')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer bg-[#D4BDAD]/15 text-[#8a7a6a] border-[#D4BDAD]/30"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer bg-[var(--primary)]/15 text-[var(--primary-text)] border-[var(--primary)]/30"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
                 My Dashboard
               </button>
             )}
 
+            {/* Theme Switcher */}
+            <ThemeToggle />
+
             {/* Sign Out */}
             <button
               onClick={signOut}
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer hover:bg-[#D4BDAD]/10 bg-transparent'
+                'flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer hover:bg-primary/10 bg-transparent'
               )}
               style={{
                 color: 'var(--muted-foreground)',
@@ -560,7 +564,7 @@ export default function Dashboard() {
       <div className="relative z-10">
         {principalLoading ? (
           <div className="flex flex-col items-center justify-center min-h-[400px]">
-            <Loader2 className="w-8 h-8 animate-spin text-[#8a7a6a]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--primary-text)]" />
             <p className="text-xs text-muted-foreground mt-2">Resolving clinical security permissions...</p>
           </div>
         ) : principal?.accountType === 'STAFF' && viewState === 'UPLOAD' ? (
