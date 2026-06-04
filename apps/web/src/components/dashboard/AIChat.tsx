@@ -90,8 +90,8 @@ Let me know if there's a specific biomarker panel (CBC, Lipid Panel, CMP) you'd 
       {/* Header */}
       <div className="px-6 py-4 border-b border-border/40 flex items-center justify-between" style={{ background: 'var(--card)' }}>
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(212, 189, 173, 0.2)' }}>
-            <Lightbulb className="w-4.5 h-4.5 text-[#8a7a6a]" />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--primary-glow)' }}>
+            <Lightbulb className="w-4.5 h-4.5 text-[var(--primary-text)]" />
           </div>
           <div>
             <h5 className="text-sm font-bold text-foreground">AI Clinical Assistant</h5>
@@ -117,7 +117,7 @@ Let me know if there's a specific biomarker panel (CBC, Lipid Panel, CMP) you'd 
                   : 'text-white self-end rounded-tr-none shadow'
               )}
               style={{
-                background: isAI ? undefined : '#8a7a6a',
+                background: isAI ? undefined : 'var(--primary-text)',
               }}
             >
               {isAI ? (
@@ -132,7 +132,7 @@ Let me know if there's a specific biomarker panel (CBC, Lipid Panel, CMP) you'd 
         })}
         {loading && (
           <div className="bg-card border border-border/50 text-muted-foreground self-start rounded-2xl rounded-tl-none p-4 flex items-center gap-2.5 text-xs shadow-sm">
-            <Loader2 className="w-4 h-4 animate-spin text-[#8a7a6a]" />
+            <Loader2 className="w-4 h-4 animate-spin text-[var(--primary-text)]" />
             <span>Analyzing diagnostic parameters...</span>
           </div>
         )}
@@ -149,7 +149,7 @@ Let me know if there's a specific biomarker panel (CBC, Lipid Panel, CMP) you'd 
           <button
             key={item}
             onClick={() => handleSend(item)}
-            className="text-[10px] font-semibold border border-border/50 hover:border-[#D4BDAD] px-2.5 py-1 rounded-full text-muted-foreground hover:text-foreground cursor-pointer transition-all bg-card"
+            className="text-[10px] font-semibold border border-border/50 hover:border-[var(--primary)] px-2.5 py-1 rounded-full text-muted-foreground hover:text-foreground cursor-pointer transition-all bg-card"
           >
             {item}
           </button>
@@ -171,7 +171,7 @@ Let me know if there's a specific biomarker panel (CBC, Lipid Panel, CMP) you'd 
         <button
           onClick={() => handleSend()}
           className="w-10 h-10 rounded-xl flex items-center justify-center text-white cursor-pointer shadow hover:opacity-90 transition-opacity"
-          style={{ background: '#8a7a6a' }}
+          style={{ background: 'var(--primary-text)' }}
         >
           <Send className="w-4 h-4" />
         </button>
