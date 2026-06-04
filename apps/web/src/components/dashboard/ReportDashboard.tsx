@@ -146,7 +146,7 @@ export function ReportDashboard({
                     <div
                       key={b.id}
                       onClick={() => setSelectedBiomarkerDetail(b)}
-                      className="p-3 rounded-xl border border-border/40 hover:border-[#D4BDAD] transition-all cursor-pointer flex items-center justify-between group bg-transparent"
+                      className="p-3 rounded-xl border border-border/40 hover:border-[var(--primary)] transition-all cursor-pointer flex items-center justify-between group bg-transparent"
                     >
                       <div className="flex items-center gap-2.5">
                         <span className="w-1.5 h-6 rounded-full" style={{ background: colors.text }} />
@@ -195,7 +195,7 @@ export function ReportDashboard({
                     className={cn(
                       'px-3.5 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all flex items-center gap-2',
                       isSelected
-                        ? 'bg-[#D4BDAD] text-white shadow-sm font-bold border-[#D4BDAD]'
+                        ? 'bg-[var(--primary)] text-white shadow-sm font-bold border-[var(--primary)]'
                         : 'border border-border/60 hover:bg-border/20 text-muted-foreground hover:text-foreground'
                     )}
                   >
@@ -233,7 +233,7 @@ export function ReportDashboard({
                     <PolarGrid stroke="var(--border)" />
                     <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }} />
                     <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: 'var(--muted-foreground)' }} />
-                    <Radar name="Body Index" dataKey="score" stroke="#8a7a6a" fill="#D4BDAD" fillOpacity={0.4} />
+                    <Radar name="Body Index" dataKey="score" stroke="var(--primary-text)" fill="var(--primary)" fillOpacity={0.4} />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
@@ -250,7 +250,7 @@ export function ReportDashboard({
                   <div
                     key={b.id}
                     onClick={() => setSelectedBiomarkerDetail(b)}
-                    className="p-4 rounded-xl border border-border/40 hover:border-[#D4BDAD]/60 hover:shadow-md cursor-pointer transition-all flex flex-col gap-3 group bg-card"
+                    className="p-4 rounded-xl border border-border/40 hover:border-[var(--primary)]/60 hover:shadow-md cursor-pointer transition-all flex flex-col gap-3 group bg-card"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -346,7 +346,7 @@ export function ReportDashboard({
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <span
                 className="w-5 h-5 rounded-md flex items-center justify-center text-white text-[10px] font-black"
-                style={{ background: slot === 'A' ? '#8a7a6a' : '#D4BDAD' }}
+                style={{ background: slot === 'A' ? 'var(--primary-text)' : 'var(--primary)' }}
               >
                 {slot}
               </span>
@@ -365,7 +365,7 @@ export function ReportDashboard({
           {/* Polling spinner */}
           {isPolling && (
             <div className="glass-card rounded-xl p-4 border-border/40 flex items-center gap-3 border">
-              <Loader2 className="w-5 h-5 animate-spin text-[#8a7a6a] shrink-0" />
+              <Loader2 className="w-5 h-5 animate-spin text-[var(--primary-text)] shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-foreground">Analyzing Report {slot}…</p>
                 <p className="text-[10px] text-muted-foreground">Usually 15–30 seconds.</p>
@@ -378,11 +378,11 @@ export function ReportDashboard({
             <div
               className="flex items-center gap-2.5 p-3 rounded-xl border-2 text-xs"
               style={{
-                borderColor: slot === 'A' ? '#8a7a6a' : '#D4BDAD',
-                background: slot === 'A' ? 'rgba(138,122,106,0.08)' : 'rgba(212,189,173,0.1)',
+                borderColor: slot === 'A' ? 'var(--primary-text)' : 'var(--primary)',
+                background: slot === 'A' ? 'rgba(138,122,106,0.08)' : 'var(--primary-glow)',
               }}
             >
-              <FileText className="w-4 h-4 shrink-0" style={{ color: slot === 'A' ? '#8a7a6a' : '#D4BDAD' }} />
+              <FileText className="w-4 h-4 shrink-0" style={{ color: slot === 'A' ? 'var(--primary-text)' : 'var(--primary)' }} />
               <div className="min-w-0">
                 <p className="font-semibold text-foreground truncate">{selected.fileName}</p>
                 {selected.reports?.[0]?.createdAt && (
@@ -395,7 +395,7 @@ export function ReportDashboard({
                   </p>
                 )}
               </div>
-              <CheckCircle2 className="w-4 h-4 shrink-0 ml-auto" style={{ color: slot === 'A' ? '#8a7a6a' : '#D4BDAD' }} />
+              <CheckCircle2 className="w-4 h-4 shrink-0 ml-auto" style={{ color: slot === 'A' ? 'var(--primary-text)' : 'var(--primary)' }} />
             </div>
           )}
 
@@ -413,17 +413,17 @@ export function ReportDashboard({
                     className={cn(
                       'flex items-center gap-2.5 p-3 rounded-xl border text-xs text-left transition-all cursor-pointer w-full',
                       isSelected
-                        ? 'border-[#D4BDAD] bg-[#D4BDAD]/10 text-foreground'
+                        ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-foreground'
                         : isUsedByOther
                         ? 'border-border/30 opacity-40 cursor-not-allowed'
-                        : 'border-border/50 hover:border-[#D4BDAD]/60 hover:bg-[#D4BDAD]/5 text-foreground'
+                        : 'border-border/50 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 text-foreground'
                     )}
                   >
                     <div
                       className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: isSelected ? 'rgba(212,189,173,0.2)' : 'rgba(212,189,173,0.1)' }}
+                      style={{ background: isSelected ? 'var(--primary-glow)' : 'var(--primary-glow)' }}
                     >
-                      <FileText className="w-4 h-4 text-[#8a7a6a]" />
+                      <FileText className="w-4 h-4 text-[var(--primary-text)]" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold truncate">{r.fileName}</p>
@@ -439,7 +439,7 @@ export function ReportDashboard({
                           : ''}
                       </p>
                     </div>
-                    {isSelected && <CheckCircle2 className="w-4 h-4 text-[#8a7a6a] shrink-0" />}
+                    {isSelected && <CheckCircle2 className="w-4 h-4 text-[var(--primary-text)] shrink-0" />}
                     {isUsedByOther && <span className="text-[9px] text-muted-foreground shrink-0">In use</span>}
                   </button>
                 );
@@ -449,7 +449,7 @@ export function ReportDashboard({
               <div
                 className={cn(
                   'flex items-center gap-2.5 p-3 rounded-xl border-2 border-dashed text-xs transition-all cursor-pointer group',
-                  dragActive ? 'border-[#D4BDAD] bg-[#D4BDAD]/10' : 'border-border/50 hover:border-[#D4BDAD]/60 hover:bg-[#D4BDAD]/5'
+                  dragActive ? 'border-[var(--primary)] bg-[var(--primary)]/10' : 'border-border/50 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5'
                 )}
                 onClick={() => {
                   pendingCompareSlotRef.current = slot;
@@ -469,12 +469,12 @@ export function ReportDashboard({
               >
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
-                  style={{ background: 'rgba(212, 189, 173, 0.15)' }}
+                  style={{ background: 'var(--primary-glow)' }}
                 >
                   {isUploading ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-[#8a7a6a]" />
+                    <Loader2 className="w-4 h-4 animate-spin text-[var(--primary-text)]" />
                   ) : (
-                    <Upload className="w-4 h-4 text-[#8a7a6a]" />
+                    <Upload className="w-4 h-4 text-[var(--primary-text)]" />
                   )}
                 </div>
                 <div>
@@ -495,7 +495,7 @@ export function ReportDashboard({
         <div className="flex flex-col gap-3 animate-fade-in">
           <div className="flex items-center justify-between">
             <h4 className="text-base font-bold text-foreground flex items-center gap-2">
-              <SplitSquareVertical className="w-5 h-5 text-[#8a7a6a]" />
+              <SplitSquareVertical className="w-5 h-5 text-[var(--primary-text)]" />
               Report Comparison
             </h4>
             <button
@@ -533,7 +533,7 @@ export function ReportDashboard({
         <div className="flex items-center gap-3">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg, #D4BDAD, #B8A89A)' }}
+            style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
           >
             <SplitSquareVertical className="w-5 h-5 text-white" />
           </div>
@@ -592,7 +592,7 @@ export function ReportDashboard({
         <div className="flex items-center gap-4 w-full lg:w-auto">
           <div
             className="w-14 h-14 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #D4BDAD, #B8A89A)' }}
+            style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
           >
             <Stethoscope className="w-7 h-7 text-white" />
           </div>
@@ -619,10 +619,10 @@ export function ReportDashboard({
               className="px-4 py-2 rounded-xl text-center border"
               style={{
                 background: 'rgba(212, 189, 173, 0.1)',
-                borderColor: 'rgba(212, 189, 173, 0.2)',
+                borderColor: 'var(--primary-glow)',
               }}
             >
-              <p className="text-lg font-bold" style={{ color: '#8a7a6a' }}>{stat.val}</p>
+              <p className="text-lg font-bold" style={{ color: 'var(--primary-text)' }}>{stat.val}</p>
               <p className="text-[10px] uppercase font-semibold" style={{ color: 'var(--muted-foreground)' }}>
                 {stat.label}
               </p>
@@ -683,7 +683,7 @@ export function ReportDashboard({
             className={cn(
               'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer border-0 bg-transparent',
               activeTab === tab.id
-                ? 'bg-[#D4BDAD]/15 text-[#8a7a6a] shadow-sm font-bold'
+                ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] shadow-sm font-bold'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
