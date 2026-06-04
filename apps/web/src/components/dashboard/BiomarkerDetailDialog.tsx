@@ -93,7 +93,7 @@ export function BiomarkerDetailDialog({ biomarker, onClose }: DetailDialogProps)
         <button
           onClick={onClose}
           className="w-full py-2.5 rounded-xl text-xs font-semibold text-white shadow-md text-center hover:opacity-90 transition-opacity cursor-pointer"
-          style={{ background: '#8a7a6a' }}
+          style={{ background: 'var(--primary-text)' }}
         >
           Close Detail
         </button>
