@@ -21,14 +21,6 @@ import {
 } from 'lucide-react';
 import {
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
   LineChart,
   Line,
   XAxis,
@@ -91,11 +83,7 @@ export function ReportDashboard({
   const healthScore = Math.max(0, Math.min(100, Math.round(100 - (flaggedBiomarkers.length * 12.5))));
   const pName = `${patient?.firstName || ''} ${patient?.lastName || ''}`.trim() || 'Patient';
 
-  // Status segments for pie chart
-  const pieData = [
-    { name: 'Normal', value: normalBiomarkers.length, color: '#1A9966' },
-    { name: 'Abnormal', value: flaggedBiomarkers.length, color: '#F04E14' },
-  ].filter((s) => s.value > 0);
+
 
   function renderCurrentReportTab() {
     // ── Sub-tab switcher ─────────────────────────────────────
@@ -138,32 +126,33 @@ export function ReportDashboard({
               Diagnostics Summary
             </h4>
 
-            {/* Pie Chart */}
-            <div className="h-44 w-full relative flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={65}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute text-center">
-                <span className="text-2xl font-bold block" style={{ color: 'var(--foreground)' }}>
-                  {flaggedBiomarkers.length}
+            {/* Diagnostics Summary health bar */}
+            <div className="flex flex-col gap-3 mt-2 mb-4">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-emerald-500">Optimal ({normalBiomarkers.length})</span>
+                <span className="font-bold text-rose-500">Flagged ({flaggedBiomarkers.length})</span>
+              </div>
+              <div className="relative h-3 rounded-full bg-border/20 overflow-hidden flex">
+                {normalBiomarkers.length > 0 && (
+                  <div 
+                    className="h-full bg-emerald-500/85 transition-all duration-500" 
+                    style={{ width: `${(normalBiomarkers.length / biomarkers.length) * 100}%` }}
+                    title={`${normalBiomarkers.length} Optimal`}
+                  />
+                )}
+                {flaggedBiomarkers.length > 0 && (
+                  <div 
+                    className="h-full bg-rose-500/85 transition-all duration-500" 
+                    style={{ width: `${(flaggedBiomarkers.length / biomarkers.length) * 100}%` }}
+                    title={`${flaggedBiomarkers.length} Flagged`}
+                  />
+                )}
+              </div>
+              <div className="text-center mt-3">
+                <span className="text-3xl font-extrabold text-foreground">
+                  {biomarkers.length > 0 ? Math.round((normalBiomarkers.length / biomarkers.length) * 100) : 100}%
                 </span>
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground">
-                  Anomaly Flags
-                </span>
+                <span className="text-[10px] text-muted-foreground block uppercase font-bold tracking-wider mt-0.5">Optimal Biomarker Score</span>
               </div>
             </div>
 
@@ -258,28 +247,38 @@ export function ReportDashboard({
             </div>
 
             {/* Radar View (when All is selected) */}
+            {/* Panel Health Overview (replacing Radar Chart) */}
             {selectedPanel === 'All' && (
-              <div className="h-64 mb-6 border-b border-border/20 pb-6">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart
-                    cx="50%"
-                    cy="50%"
-                    outerRadius="80%"
-                    data={panels
-                      .filter((p) => p !== 'All')
-                      .map((p) => {
-                        const list = biomarkers.filter((b) => b.category === p);
-                        const norm = list.filter((b) => b.status === 'NORMAL').length;
-                        const score = Math.round((norm / list.length) * 100);
-                        return { subject: p, score };
-                      })}
-                  >
-                    <PolarGrid stroke="var(--border)" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }} />
-                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: 'var(--muted-foreground)' }} />
-                    <Radar name="Body Index" dataKey="score" stroke="var(--primary-text)" fill="var(--primary)" fillOpacity={0.4} />
-                  </RadarChart>
-                </ResponsiveContainer>
+              <div className="mb-6 border-b border-border/20 pb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h5 className="text-xs font-bold text-foreground uppercase tracking-wider">Panel Health Index</h5>
+                  <span className="text-[10px] text-muted-foreground">Optimal markers by category</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                  {panels
+                    .filter((p) => p !== 'All')
+                    .map((p) => {
+                      const list = biomarkers.filter((b) => b.category === p);
+                      const norm = list.filter((b) => b.status === 'NORMAL').length;
+                      const score = Math.round((norm / list.length) * 100);
+
+                      return (
+                        <div key={p} className="flex items-center justify-between text-xs py-1">
+                          <span className="font-semibold text-muted-foreground w-28 shrink-0">{p}</span>
+                          <div className="flex-1 mx-3 h-2 rounded-full bg-border/20 overflow-hidden">
+                            <div 
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{ 
+                                width: `${score}%`,
+                                background: score >= 80 ? 'var(--status-normal)' : score >= 60 ? 'var(--status-low)' : 'var(--status-critical)' 
+                              }}
+                            />
+                          </div>
+                          <span className="font-bold text-foreground w-8 text-right">{score}%</span>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
             )}
 
@@ -485,10 +484,7 @@ export function ReportDashboard({
       const blocks = 14;
       return { label: cat.toUpperCase(), score, color, filled: Math.round((score / 100) * blocks), blocks };
     });
-    const catColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
-    const catPieData = categories.map((cat, i) => ({
-      name: cat, value: biomarkers.filter(b => b.category === cat).length, color: catColors[i % catColors.length],
-    }));
+
 
     // Normalized systemic profile data
     const profileData = biomarkers.map(b => {
@@ -554,43 +550,58 @@ export function ReportDashboard({
 
         {/* Categories + Things to Watch */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Categories Donut */}
-          <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm">
-            <h4 className="text-sm font-bold text-foreground mb-4">Categories</h4>
-            <div className="flex items-center gap-4">
-              <div className="w-32 h-32 relative flex items-center justify-center flex-shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={catPieData} cx="50%" cy="50%" innerRadius={42} outerRadius={54} paddingAngle={3} dataKey="value">
-                      {catPieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute text-center">
-                  <span className="text-xl font-extrabold block text-foreground">{biomarkers.length}</span>
-                  <span className="text-[9px] font-bold uppercase text-muted-foreground">Markers</span>
-                </div>
+          {/* Category Health Breakdown */}
+          <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-bold text-foreground">Category Health Breakdown</h4>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Normal / Flagged</span>
               </div>
-              <div className="flex-1 flex flex-col gap-2">
-                {catPieData.map((item, i) => (
-                  <div key={i} className="flex justify-between items-center text-[11px]">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: item.color }} />
-                      <span className="text-muted-foreground truncate max-w-[110px]">{item.name}</span>
+              <div className="flex flex-col gap-3 overflow-y-auto max-h-[160px] pr-1.5 custom-scrollbar">
+                {categories.map((cat) => {
+                  const catMarkers = biomarkers.filter(b => b.category === cat);
+                  const catNormal = catMarkers.filter(b => b.status === 'NORMAL').length;
+                  const catFlagged = catMarkers.length - catNormal;
+                  const normalPct = (catNormal / catMarkers.length) * 100;
+                  const flaggedPct = (catFlagged / catMarkers.length) * 100;
+
+                  return (
+                    <div key={cat} className="flex flex-col gap-1">
+                      <div className="flex justify-between items-center text-[10px]">
+                        <span className="font-bold text-foreground truncate max-w-[120px]">{cat}</span>
+                        <span className="text-[9px] text-muted-foreground font-medium">
+                          {catNormal}/{catMarkers.length} Normal
+                        </span>
+                      </div>
+                      <div className="relative h-2 rounded-full bg-border/20 overflow-hidden flex">
+                        {catNormal > 0 && (
+                          <div 
+                            className="h-full bg-emerald-500/85 transition-all duration-500" 
+                            style={{ width: `${normalPct}%` }}
+                            title={`${catNormal} Normal`}
+                          />
+                        )}
+                        {catFlagged > 0 && (
+                          <div 
+                            className="h-full bg-rose-500/85 transition-all duration-500" 
+                            style={{ width: `${flaggedPct}%` }}
+                            title={`${catFlagged} Flagged`}
+                          />
+                        )}
+                      </div>
                     </div>
-                    <span className="font-bold text-foreground">{item.value}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
-            <div className="border-t border-border/20 mt-4 pt-3 flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-xs">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-                <span className="text-muted-foreground"><strong className="text-foreground">{normalBiomarkers.length} markers</strong> within normal range</span>
+            <div className="border-t border-border/20 mt-4 pt-3 flex justify-between text-xs">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-muted-foreground"><strong className="text-foreground">{normalBiomarkers.length}</strong> Optimal</span>
               </div>
-              <div className="flex items-center gap-2 text-xs">
-                <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
-                <span className="text-muted-foreground"><strong className="text-foreground">{flaggedBiomarkers.length} markers</strong> require attention</span>
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                <span className="text-muted-foreground"><strong className="text-foreground">{flaggedBiomarkers.length}</strong> Attention</span>
               </div>
             </div>
           </div>
