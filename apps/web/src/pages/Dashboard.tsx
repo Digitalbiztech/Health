@@ -31,7 +31,7 @@ import { exportPDF, exportCSV } from '@/components/dashboard/utils';
 export default function Dashboard() {
   const { principal, signOut, principalLoading } = useAuth();
   const [viewState, setViewState] = useState<DashboardState>('UPLOAD');
-  const [patientView, setPatientView] = useState<'home' | 'upload'>('home');
+  const [patientView, setPatientView] = useState<'home' | 'upload'>('upload');
   const [patientUploads, setPatientUploads] = useState<UploadRecord[]>([]);
   const [patientUploadsLoading, setPatientUploadsLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -624,6 +624,15 @@ export default function Dashboard() {
                 setIsDragging={setIsDragging}
                 handleFileUpload={handleFileUpload}
                 fileInputRef={fileInputRef}
+                onNavigateToDashboard={(section) => {
+                  if (principal?.accountType === 'PATIENT') {
+                    if (patientUploads.length === 0) {
+                      toast.info(`Upload your lab report first to access ${section === 'insights' ? 'AI Insights' : section === 'ranges' ? 'Visual Ranges' : 'All Panels'}.`);
+                    } else {
+                      setPatientView('home');
+                    }
+                  }
+                }}
               />
             )}
             {viewState === 'LOADING' && (
