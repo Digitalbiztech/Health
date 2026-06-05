@@ -109,10 +109,10 @@
   --input: hsl(222 20% 20%);
   --ring: hsl(196 100% 50%);
 
-  --primary: hsl(196 100% 50%);
-  --primary-foreground: hsl(222 28% 10%);
-  --primary-text: hsl(196 100% 45%);
-  --primary-glow: hsl(196 100% 50% / 0.15);
+  --primary: hsl(27 15% 49%);
+  --primary-foreground: hsl(0 0% 100%);
+  --primary-text: hsl(27 25% 65%);
+  --primary-glow: hsl(27 15% 49% / 0.15);
 
   --secondary: hsl(222 20% 18%);
   --secondary-foreground: hsl(210 30% 96%);
@@ -126,12 +126,12 @@
   --destructive-foreground: hsl(0 0% 100%);
 
   --sidebar-background: hsl(222 30% 8%);
-  --sidebar-primary: hsl(196 100% 50%);
+  --sidebar-primary: hsl(27 15% 49%);
   --sidebar-foreground: hsl(210 20% 80%);
 
   --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
-  --glow-primary: 0 0 20px hsl(196 100% 50% / 0.3), 0 0 40px hsl(196 100% 50% / 0.1);
+  --glow-primary: 0 0 20px hsl(27 15% 49% / 0.3), 0 0 40px hsl(27 15% 49% / 0.1);
 }
 
 /* ─── Global Base ───────────────────────────────────────────── */
@@ -340,4 +340,133 @@ body::before {
 
 .dark .gradient-card {
   background: linear-gradient(145deg, hsl(222 28% 13%), hsl(222 28% 15%));
+}
+
+/* ─── Driver.js Tour — Auriem Themed Overrides ─────────────── */
+
+/* Popover container */
+.patient-tour-popover.driver-popover {
+  background: color-mix(in srgb, var(--card) 92%, transparent) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent) !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 20px 60px -12px rgba(0, 0, 0, 0.15),
+    0 0 30px hsl(25 31% 75% / 0.08) !important;
+  padding: 20px 24px !important;
+  max-width: 360px !important;
+  color: var(--foreground) !important;
+}
+
+.dark .patient-tour-popover.driver-popover {
+  box-shadow:
+    0 20px 60px -12px rgba(0, 0, 0, 0.5),
+    0 0 30px hsl(196 100% 50% / 0.1) !important;
+}
+
+/* Popover title */
+.patient-tour-popover .driver-popover-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: var(--foreground) !important;
+  margin-bottom: 6px !important;
+  line-height: 1.4 !important;
+}
+
+/* Popover description */
+.patient-tour-popover .driver-popover-description {
+  font-size: 12.5px !important;
+  color: var(--muted-foreground) !important;
+  line-height: 1.65 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Progress bar */
+.patient-tour-popover .driver-popover-progress-text {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--muted-foreground) !important;
+}
+
+/* Navigation buttons */
+.patient-tour-popover .driver-popover-navigation-btns {
+  gap: 8px !important;
+}
+
+.patient-tour-popover .driver-popover-prev-btn {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  color: var(--muted-foreground) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 6px 14px !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.patient-tour-popover .driver-popover-prev-btn:hover {
+  background: var(--primary-glow) !important;
+  color: var(--foreground) !important;
+}
+
+.patient-tour-popover .driver-popover-next-btn,
+.patient-tour-popover .driver-popover-close-btn-text {
+  background: var(--primary-text) !important;
+  color: white !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 6px 16px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 8px hsl(25 31% 75% / 0.25) !important;
+}
+
+.dark .patient-tour-popover .driver-popover-next-btn,
+.dark .patient-tour-popover .driver-popover-close-btn-text {
+  box-shadow: 0 2px 8px hsl(196 100% 50% / 0.25) !important;
+}
+
+.patient-tour-popover .driver-popover-next-btn:hover,
+.patient-tour-popover .driver-popover-close-btn-text:hover {
+  opacity: 0.88 !important;
+}
+
+/* Close (X) button */
+.patient-tour-popover .driver-popover-close-btn {
+  color: var(--muted-foreground) !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.patient-tour-popover .driver-popover-close-btn:hover {
+  background: var(--primary-glow) !important;
+  color: var(--foreground) !important;
+}
+
+/* Popover arrow */
+.patient-tour-popover .driver-popover-arrow {
+  border-color: color-mix(in srgb, var(--card) 92%, transparent) !important;
+}
+
+.patient-tour-popover.driver-popover-arrow-side-left .driver-popover-arrow-side,
+.patient-tour-popover.driver-popover-arrow-side-right .driver-popover-arrow-side,
+.patient-tour-popover.driver-popover-arrow-side-top .driver-popover-arrow-side,
+.patient-tour-popover.driver-popover-arrow-side-bottom .driver-popover-arrow-side {
+  border-color: color-mix(in srgb, var(--card) 92%, transparent) !important;
+}
+
+/* Highlighted stage */
+.driver-active-element {
+  border-radius: 16px !important;
 }
