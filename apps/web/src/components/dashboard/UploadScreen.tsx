@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import { Stethoscope, Loader2, Upload, FileText, Activity, Lightbulb } from 'lucide-react';
+import { Loader2, Upload, FileText, Activity, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface UploadScreenProps {
@@ -8,6 +8,7 @@ interface UploadScreenProps {
   setIsDragging: (dragging: boolean) => void;
   handleFileUpload: (file: File) => void;
   fileInputRef: RefObject<HTMLInputElement | null>;
+  onNavigateToDashboard?: (section?: string) => void;
 }
 
 export function UploadScreen({
@@ -16,17 +17,18 @@ export function UploadScreen({
   setIsDragging,
   handleFileUpload,
   fileInputRef,
+  onNavigateToDashboard,
 }: UploadScreenProps) {
   return (
     <main className="max-w-2xl mx-auto px-6 py-16 flex flex-col items-center text-center">
       <div
-        className="w-24 h-24 rounded-2xl flex items-center justify-center mb-6 animate-fade-in-up animate-float"
-        style={{
-          background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-          boxShadow: '0 12px 40px rgba(212, 189, 173, 0.3)',
-        }}
+        className="w-24 h-24 rounded-2xl flex items-center justify-center mb-6 animate-fade-in-up animate-float overflow-hidden border border-border/20 shadow-lg bg-card"
       >
-        <Stethoscope className="w-12 h-12 text-white" />
+        <img
+          src="/logo/040523 YC LogoDeck_Main-FC.jpg"
+          alt="Auriem Logo"
+          className="w-24 h-24 "
+        />
       </div>
 
       <h2
@@ -113,21 +115,25 @@ export function UploadScreen({
             icon: FileText,
             title: 'All Panels',
             color: 'var(--primary)',
+            section: 'panels',
           },
           {
             icon: Activity,
             title: 'Visual Ranges',
             color: 'var(--status-normal)',
+            section: 'ranges',
           },
           {
             icon: Lightbulb,
             title: 'AI Insights',
             color: 'var(--primary-text)',
+            section: 'insights',
           },
         ].map((feature, i) => (
-          <div
+          <button
             key={feature.title}
-            className="glass-card rounded-xl p-4 flex flex-col items-center gap-2 transition-all duration-200 hover:shadow-lg"
+            onClick={() => onNavigateToDashboard?.(feature.section)}
+            className="glass-card rounded-xl p-4 flex flex-col items-center gap-2 transition-all duration-200 hover:shadow-lg hover:bg-border/20 active:scale-[0.98] cursor-pointer border-0 bg-transparent"
             style={{ animationDelay: `${0.2 + i * 0.04}s` }}
           >
             <feature.icon className="w-6 h-6" style={{ color: feature.color }} />
@@ -137,7 +143,7 @@ export function UploadScreen({
             >
               {feature.title}
             </span>
-          </div>
+          </button>
         ))}
       </div>
     </main>
