@@ -61,3 +61,39 @@ export class ApiError extends Error {
     this.body = body;
   }
 }
+
+export interface ChatMessagePayload {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatBiomarkerPayload {
+  displayName: string;
+  value: number | string;
+  unit?: string;
+  referenceRange?: string;
+  status: string;
+}
+
+export interface ChatPatientPayload {
+  firstName?: string;
+  lastName?: string;
+  gender?: string;
+  dateOfBirth?: string;
+}
+
+/**
+ * Sends the chat history (plus biomarker/patient context) to the backend
+ * AI assistant and returns the assistant's reply.
+ */
+export async function sendChatMessage(payload: {
+  messages: ChatMessagePayload[];
+  biomarkers?: ChatBiomarkerPayload[];
+  patient?: ChatPatientPayload;
+}): Promise<{ reply: string; provider: string }> {
+  const res = await apiFetch<{ data: { reply: string; provider: string } }>('/chat', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return res.data;
+}

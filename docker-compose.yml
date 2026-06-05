@@ -57,6 +57,10 @@ services:
       REDIS_URL: redis://redis:6379
       EXTRACTION_SERVICE_URL: http://extraction:8001
       EXTRACTION_SERVICE_TIMEOUT_MS: ${EXTRACTION_SERVICE_TIMEOUT_MS:-120000}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
     ports:
       - "4000:4000"
     healthcheck:
