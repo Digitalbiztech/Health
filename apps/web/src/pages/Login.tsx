@@ -401,7 +401,7 @@ export default function Login() {
               'hover:opacity-90 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed',
             )}
             style={{
-              background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+              background: 'var(--primary)',
               color: 'var(--primary-foreground)',
               boxShadow: 'var(--glow-primary)',
             }}
