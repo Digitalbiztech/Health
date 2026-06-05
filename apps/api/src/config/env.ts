@@ -26,6 +26,12 @@ const envSchema = z.object({
   // Extraction microservice (FastAPI — apps/extraction)
   EXTRACTION_SERVICE_URL: z.string().url().default('http://localhost:8001'),
   EXTRACTION_SERVICE_TIMEOUT_MS: z.coerce.number().default(120_000),
+
+  // AI chat providers (optional — orchestrator skips any provider whose key is missing)
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+  GEMINI_API_KEY: z.string().optional(),
+  MISTRAL_API_KEY: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
