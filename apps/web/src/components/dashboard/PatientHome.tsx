@@ -1,9 +1,10 @@
-import { User, Calendar, Upload, FileText, CheckCircle2, Loader2, Heart, Stethoscope, Sparkles, Eye } from 'lucide-react';
+import { User, Calendar, Upload, FileText, CheckCircle2, Loader2, Heart, Stethoscope, Sparkles, Eye, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 import type { UploadRecord, CompleteReportData, DashboardState } from '@/types/dashboard';
 import { calculateAge } from './utils';
+import { usePatientTour } from '@/hooks/usePatientTour';
 
 interface PatientHomeProps {
   principal: any;
@@ -39,11 +40,14 @@ export function PatientHome({
   const normalCount = allBiomarkers.filter(b => b.status === 'NORMAL').length;
   const abnormalCount = allBiomarkers.filter(b => b.status !== 'NORMAL').length;
 
+  // Initialize the patient tour
+  const { startTour } = usePatientTour();
+
   return (
     <div className="max-w-[1200px] mx-auto px-4 lg:px-6 py-6 flex flex-col gap-6">
 
       {/* ── Profile Card ──────────────────────────────────── */}
-      <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
+      <div id="tour-profile-card" className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center gap-5">
           <img
             src="/logo/040523 YC LogoDeck_Icon-GS.jpg"
@@ -77,19 +81,31 @@ export function PatientHome({
             alt="YC Letterform Logo"
             className="h-10 w-auto object-contain shrink-0 mx-4 hidden sm:block"
           />
-          <button
-            onClick={() => setPatientView('upload')}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer shrink-0"
-            style={{ background: 'var(--primary-text)' }}
-          >
-            <Upload className="w-3.5 h-3.5" />
-            Upload New Report
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              id="tour-upload-btn"
+              onClick={() => setPatientView('upload')}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer"
+              style={{ background: 'var(--primary-text)' }}
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Upload New Report
+            </button>
+            <button
+              onClick={startTour}
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border cursor-pointer transition-all hover:bg-[var(--primary)]/10 bg-transparent"
+              style={{ borderColor: 'var(--border)', color: 'var(--primary-text)' }}
+              title="Take a guided tour of your dashboard"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Tour</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* ── Stats Cards ───────────────────────────────────── */}
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <section id="tour-stats-section" className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Reports', val: totalUploads, icon: FileText, color: 'var(--primary-text)' },
           { label: 'Analyzed', val: completedUploads, icon: CheckCircle2, color: '#1A9966' },
@@ -118,7 +134,7 @@ export function PatientHome({
         <div className="lg:col-span-4 flex flex-col gap-6">
 
           {/* Latest Health Summary */}
-          <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
+          <div id="tour-health-snapshot" className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
             <h4 className="text-sm font-bold uppercase tracking-wider mb-4" style={{ color: 'var(--muted-foreground)' }}>
               Health Snapshot
             </h4>
@@ -164,7 +180,7 @@ export function PatientHome({
 
           {/* Quick AI Insights from latest report */}
           {latestReport?.reports?.[0]?.insights?.summaryPoints?.length > 0 && (
-            <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
+            <div id="tour-ai-summary" className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
               <h4 className="text-sm font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--muted-foreground)' }}>
                 <Sparkles className="w-3.5 h-3.5 inline mr-1.5" style={{ color: 'var(--primary-text)' }} />
                 AI Summary
@@ -183,7 +199,7 @@ export function PatientHome({
 
         {/* Right — Reports History */}
         <div className="lg:col-span-8">
-          <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
+          <div id="tour-report-history" className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>
                 Lab Report History
@@ -221,9 +237,10 @@ export function PatientHome({
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                {patientUploads.map((upload) => {
+                {patientUploads.map((upload, uploadIdx) => {
                   const date = new Date(upload.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
                   const sizeMb = upload.fileSize ? (upload.fileSize / (1024 * 1024)).toFixed(2) : null;
+                  const isFirstCompleted = upload.status === 'COMPLETED' && uploadIdx === patientUploads.findIndex(u => u.status === 'COMPLETED');
 
                   return (
                     <div
@@ -286,6 +303,7 @@ export function PatientHome({
 
                         {upload.status === 'COMPLETED' && (
                           <button
+                            id={isFirstCompleted ? 'tour-report-review-btn' : undefined}
                             onClick={async () => {
                               const toastId = toast.loading('Loading report analytics...');
                               try {

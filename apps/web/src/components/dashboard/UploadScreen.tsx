@@ -21,27 +21,20 @@ export function UploadScreen({
 }: UploadScreenProps) {
   return (
     <main className="max-w-2xl mx-auto px-6 py-16 flex flex-col items-center text-center">
-      <div
-        className="w-24 h-24 rounded-2xl flex items-center justify-center mb-6 animate-fade-in-up animate-float overflow-hidden border border-border/20 shadow-lg bg-card"
-      >
+      {/* Centered freestanding logo */}
+      <div className="mb-8 animate-fade-in-up">
         <img
-          src="/logo/040523 YC LogoDeck_Main-FC.jpg"
-          alt="Auriem Logo"
-          className="w-24 h-24 "
+          src="/logo/041323 YC LogoDeck_Main-WG copy.png"
+          alt="Your Concierge MD Logo"
+          className="h-28 w-auto object-contain mx-auto"
         />
       </div>
 
-      <h2
-        className="text-3xl font-bold tracking-tight mb-2 animate-fade-in-up"
-        style={{ color: 'var(--foreground)', animationDelay: '0.05s' }}
-      >
-        Analyze Your Lab Results
-      </h2>
       <p
-        className="text-base mb-10 max-w-md animate-fade-in-up"
-        style={{ color: 'var(--muted-foreground)', animationDelay: '0.1s' }}
+        className="text-base mb-10 max-w-xl animate-fade-in-up font-medium leading-relaxed"
+        style={{ color: 'var(--muted-foreground)', animationDelay: '0.05s' }}
       >
-        Upload your blood work report and get AI-powered insights, biomarker visualization, and personalized health recommendations.
+        Upload your bloodwork PDF and get a clean, personalized report with charts, reference ranges, and AI-generated insights — in seconds.
       </p>
 
       {/* Real Drop & Upload zone */}
@@ -58,10 +51,12 @@ export function UploadScreen({
 
       <div
         className={cn(
-          "w-full min-h-[220px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-4 p-8 transition-all duration-300 cursor-pointer group animate-fade-in-up",
-          isDragging ? "border-[var(--primary)] bg-[var(--primary)]/10" : "border-border hover:bg-[var(--primary)]/5 hover:border-[var(--primary)]"
+          "w-full min-h-[240px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-8 transition-all duration-300 cursor-pointer group animate-fade-in-up",
+          isDragging
+            ? "border-[var(--primary)] bg-[var(--primary)]/10"
+            : "border-[var(--primary)]/20 hover:border-[var(--primary)]/60 bg-card/10 hover:bg-[var(--primary)]/5"
         )}
-        style={{ animationDelay: '0.15s' }}
+        style={{ animationDelay: '0.1s' }}
         onClick={() => fileInputRef.current?.click()}
         onDragOver={(e) => {
           e.preventDefault();
@@ -76,72 +71,86 @@ export function UploadScreen({
         }}
       >
         <div
-          className="w-16 h-16 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
+          className="w-14 h-14 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110 mb-2"
           style={{ background: 'var(--primary-glow)' }}
         >
           {uploading ? (
-            <Loader2 className="w-7 h-7 animate-spin" style={{ color: 'var(--primary-text)' }} />
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--primary-text)' }} />
           ) : (
-            <Upload className="w-7 h-7" style={{ color: 'var(--primary-text)' }} />
+            <Upload className="w-6 h-6" style={{ color: 'var(--primary-text)' }} />
           )}
         </div>
-        <div>
-          <p className="font-medium text-sm" style={{ color: 'var(--foreground)' }}>
-            {uploading ? 'Uploading and securing report buffer...' : 'Drop your lab report here or click to browse'}
+        <div className="flex flex-col items-center gap-1">
+          <p className="font-bold text-lg text-foreground">
+            {uploading ? 'Uploading and securing report buffer...' : 'Drop lab PDF here'}
           </p>
-          <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
-            PDF only · Max 20MB
+          <p className="text-xs text-muted-foreground">
+            or click to browse — PDF only, max 20MB
           </p>
         </div>
-        <span
-          className="px-4 py-2 rounded-lg text-sm font-medium pointer-events-none transition-all"
-          style={{
-            background: 'var(--primary-text)',
-            color: 'white',
-            cursor: 'pointer',
-          }}
-        >
-          Choose File
-        </span>
+        {!uploading && (
+          <span
+            className="mt-6 flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-md pointer-events-none transition-all duration-200"
+            style={{
+              background: 'var(--primary)',
+              boxShadow: 'var(--glow-primary)',
+            }}
+          >
+            <FileText className="w-4 h-4" />
+            Select PDF
+          </span>
+        )}
       </div>
 
       {/* Feature Grid */}
       <div
-        className="grid grid-cols-3 gap-4 w-full mt-12 animate-fade-in-up"
-        style={{ animationDelay: '0.2s' }}
+        className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full mt-12 animate-fade-in-up"
+        style={{ animationDelay: '0.15s' }}
       >
         {[
           {
             icon: FileText,
             title: 'All Panels',
-            color: 'var(--primary)',
+            iconBg: 'bg-blue-500/10',
+            iconColor: 'text-blue-400',
+            description: 'CMP, CBC, Lipids, Thyroid & more',
             section: 'panels',
           },
           {
             icon: Activity,
             title: 'Visual Ranges',
-            color: 'var(--status-normal)',
+            iconBg: 'bg-emerald-500/10',
+            iconColor: 'text-emerald-400',
+            description: 'See exactly where each value falls',
             section: 'ranges',
           },
           {
             icon: Lightbulb,
             title: 'AI Insights',
-            color: 'var(--primary-text)',
+            iconBg: 'bg-violet-500/10',
+            iconColor: 'text-violet-400',
+            description: 'Plain-language explanations',
             section: 'insights',
           },
         ].map((feature, i) => (
           <button
             key={feature.title}
             onClick={() => onNavigateToDashboard?.(feature.section)}
-            className="glass-card rounded-xl p-4 flex flex-col items-center gap-2 transition-all duration-200 hover:shadow-lg hover:bg-border/20 active:scale-[0.98] cursor-pointer border-0 bg-transparent"
-            style={{ animationDelay: `${0.2 + i * 0.04}s` }}
+            className="glass-card rounded-2xl p-6 flex flex-col items-center gap-2 transition-all duration-200 hover:shadow-lg hover:bg-border/20 active:scale-[0.98] cursor-pointer border-0 bg-transparent text-center"
+            style={{ animationDelay: `${0.15 + i * 0.04}s` }}
           >
-            <feature.icon className="w-6 h-6" style={{ color: feature.color }} />
+            <div className={cn("w-10 h-10 rounded-full flex items-center justify-center mb-2", feature.iconBg, feature.iconColor)}>
+              <feature.icon className="w-5 h-5" />
+            </div>
             <span
-              className="text-sm font-medium"
-              style={{ color: 'var(--foreground)' }}
+              className="text-base font-bold text-foreground"
             >
               {feature.title}
+            </span>
+            <span
+              className="text-xs text-muted-foreground leading-relaxed max-w-[180px] mx-auto"
+            >
+              {feature.description}
             </span>
           </button>
         ))}
