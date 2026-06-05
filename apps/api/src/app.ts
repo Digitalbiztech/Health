@@ -12,6 +12,7 @@ import reportRoutes from './routes/report.routes.js';
 import patientRoutes from './routes/patient.routes.js';
 import appointmentRoutes from './routes/appointment.routes.js';
 import taskRoutes from './routes/task.routes.js';
+import chatRoutes from './routes/chat.routes.js';
 import { extractionService, ExtractionServiceError } from './services/extractionService.js';
 
 // Boot up BullMQ workers
@@ -62,6 +63,7 @@ app.use('/reports', reportRoutes);
 app.use('/patients', patientRoutes);
 app.use('/appointments', appointmentRoutes);
 app.use('/tasks', taskRoutes);
+app.use('/chat', chatRoutes);
 
 // ─── Error Handling ──────────────────────────────────────────
 
