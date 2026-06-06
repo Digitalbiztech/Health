@@ -435,10 +435,10 @@ export default function Login() {
 
       {/* Footer */}
       <p
-        className="mt-8 text-[10px] font-bold uppercase tracking-[0.2em] animate-fade-in-up"
-        style={{ color: 'var(--muted-foreground)', animationDelay: '0.2s', opacity: 0.4 }}
+        className="mt-8 text-[10px] font-semibold uppercase tracking-[0.3em] opacity-35 animate-fade-in-up"
+        style={{ color: 'var(--muted-foreground)', animationDelay: '0.2s' }}
       >
-        Powered by Huumanize
+        POWERED BY HUUMANIZE
       </p>
     </div>
   );
