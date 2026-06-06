@@ -668,9 +668,9 @@ export default function Dashboard() {
       </div>
 
       {/* Footer */}
-      <footer className="relative z-10 flex items-center justify-center py-4 border-t border-border/20 mt-8">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40" style={{ color: 'var(--muted-foreground)' }}>
-          Powered by Huumanize
+      <footer className="relative z-10 flex items-center justify-center py-6 mt-12">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-35" style={{ color: 'var(--muted-foreground)' }}>
+          POWERED BY HUUMANIZE
         </p>
       </footer>
     </div>
