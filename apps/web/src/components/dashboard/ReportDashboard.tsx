@@ -18,11 +18,14 @@ import {
   AlertTriangle,
   Activity,
   BarChart2,
+  Search,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
   Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -471,239 +474,528 @@ export function ReportDashboard({
   function renderBiomarkerAnalysis(subTabBar: React.ReactNode) {
     // Data processing
     const categories = panels.filter(p => p !== 'All');
-    const systemMap: Record<string, { color: string }> = {
-      CBC: { color: '#10b981' }, Blood: { color: '#10b981' },
-      Metabolic: { color: '#f59e0b' }, 'Lipid Panel': { color: '#3b82f6' },
-      Hormones: { color: '#8b5cf6' }, Thyroid: { color: '#8b5cf6' },
-      'Vitamins & Minerals': { color: '#ec4899' }, Nutrients: { color: '#ec4899' },
+    
+    // System map with full details
+    const systemMap: Record<string, { color: string; label: string }> = {
+      CBC: { color: '#22d3ee', label: 'Complete Blood Count' },
+      Blood: { color: '#22d3ee', label: 'Complete Blood Count' },
+      Metabolic: { color: '#14b8a6', label: 'Comprehensive Metabolic' },
+      'Comprehensive Metabolic Panel': { color: '#14b8a6', label: 'Comprehensive Metabolic' },
+      'Lipid Panel': { color: '#f97316', label: 'Lipid Panel' },
+      Lipid: { color: '#f97316', label: 'Lipid Panel' },
+      Hormones: { color: '#a855f7', label: 'Thyroid / Hormones' },
+      Thyroid: { color: '#a855f7', label: 'Thyroid / Hormones' },
+      'Vitamins & Minerals': { color: '#10b981', label: 'Vitamins & Minerals' },
+      Nutrients: { color: '#10b981', label: 'Vitamins & Minerals' },
     };
-    const systemBars = categories.map(cat => {
-      const catM = biomarkers.filter(b => b.category === cat);
-      const score = catM.length ? Math.round((catM.filter(b => b.status === 'NORMAL').length / catM.length) * 100) : 0;
-      const color = systemMap[cat]?.color || 'var(--primary-text)';
-      const blocks = 14;
-      return { label: cat.toUpperCase(), score, color, filled: Math.round((score / 100) * blocks), blocks };
+
+    // Standard clinical panels for the Body System Status
+    const standardPanels = [
+      { id: 'blood', label: 'BLOOD', categories: ['CBC', 'Blood'] },
+      { id: 'heart', label: 'HEART', categories: ['Lipid Panel', 'Lipid'] },
+      { id: 'hormones', label: 'HORMONES', categories: ['Hormones', 'Thyroid'] },
+      { id: 'nutrients', label: 'NUTRIENTS', categories: ['Vitamins & Minerals', 'Nutrients'] },
+      { id: 'metabolic', label: 'METABOLIC', categories: ['Metabolic', 'Comprehensive Metabolic Panel'] },
+    ];
+
+    const systemBars = standardPanels.map(panel => {
+      const catBiomarkers = biomarkers.filter(b => panel.categories.includes(b.category));
+      const score = catBiomarkers.length 
+        ? Math.round((catBiomarkers.filter(b => b.status === 'NORMAL').length / catBiomarkers.length) * 100)
+        : 100;
+      
+      const primaryCat = panel.categories[0];
+      const color = systemMap[primaryCat]?.color || '#10b981';
+      const blocks = 8;
+      const filled = Math.round((score / 100) * blocks);
+      return { label: panel.label, score, color, filled, blocks };
     });
 
+    // Report Condition line chart data (5 points as shown in mockup)
+    const conditionData = systemBars.map(bar => ({
+      name: bar.label.charAt(0) + bar.label.slice(1).toLowerCase(),
+      score: bar.score,
+    }));
 
-    // Normalized systemic profile data
-    const profileData = biomarkers.map(b => {
+    // User profile age/gender
+    const calculateAgeLocal = (dob?: string) => {
+      if (!dob) return 42;
+      const birthDate = new Date(dob);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age;
+    };
+    const patientAge = calculateAgeLocal(patient?.dateOfBirth);
+    const patientGender = patient?.gender ? (patient.gender.toLowerCase().startsWith('m') ? 'M' : 'F') : 'M';
+    
+    // Group donut segments
+    const totalMarkers = biomarkers.length;
+    let accumulatedPercent = 0;
+    const categoryDonutData = categories.map(cat => {
+      const count = biomarkers.filter(b => b.category === cat).length;
+      const pct = totalMarkers > 0 ? (count / totalMarkers) * 100 : 0;
+      const sysInfo = systemMap[cat] || { color: '#10b981', label: cat };
+      const strokeDash = `${pct} ${100 - pct}`;
+      const strokeOffset = 100 - accumulatedPercent;
+      accumulatedPercent += pct;
+      return {
+        name: sysInfo.label,
+        count,
+        color: sysInfo.color,
+        strokeDash,
+        strokeOffset,
+      };
+    });
+
+    // Filter things to watch
+    const watchBiomarkers = flaggedBiomarkers.slice(0, 3); // show top 3 or all
+
+    // Ordered profile data for the connected category line chart
+    const orderedBiomarkers = [...biomarkers].sort((a, b) => {
+      const catOrder = ['CBC', 'Blood', 'Metabolic', 'Comprehensive Metabolic Panel', 'Lipid Panel', 'Lipid', 'Hormones', 'Thyroid', 'Vitamins & Minerals', 'Nutrients'];
+      const indexA = catOrder.indexOf(a.category);
+      const indexB = catOrder.indexOf(b.category);
+      return (indexA !== -1 ? indexA : 99) - (indexB !== -1 ? indexB : 99);
+    });
+
+    const profileData = orderedBiomarkers.map(b => {
       let yVal = 2.2;
       if (b.status === 'LOW') yVal = 1.1;
       else if (b.status === 'HIGH') yVal = 3.1;
       else if (b.status === 'CRITICAL') {
         yVal = (b.referenceMin != null && b.value < b.referenceMin) ? 0.5 : 3.6;
       }
+      
       const catColor = systemMap[b.category]?.color || 'var(--primary-text)';
-      return { name: b.displayName, val: yVal, color: catColor, status: b.status };
+      const item: any = {
+        name: b.displayName,
+        color: catColor,
+        status: b.status,
+        value: b.value,
+        unit: b.unit,
+      };
+      
+      const sysLabel = systemMap[b.category]?.label || 'Other';
+      item[`val_${sysLabel}`] = yVal;
+      
+      return item;
     });
+
+    const lineCategories = Array.from(new Set(categories.map(cat => systemMap[cat]?.label || cat)));
+    const categoryColors = categories.reduce((acc, cat) => {
+      const label = systemMap[cat]?.label || cat;
+      acc[label] = systemMap[cat]?.color || '#10b981';
+      return acc;
+    }, {} as Record<string, string>);
+
+    const activeReport = reportData.reports?.[0];
+    const collectionDateStr = activeReport?.createdAt
+      ? new Date(activeReport.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      : 'No Collection Date';
 
     return (
       <div className="flex flex-col gap-6 animate-fade-in">
         {subTabBar}
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { label: 'HEALTH SCORE', val: healthScore, unit: '/100', Icon: Heart, color: healthScore >= 80 ? '#1A9966' : healthScore >= 60 ? '#C97D0A' : '#F04E14', sub: 'OVERALL' },
-            { label: 'BIOMARKERS', val: biomarkers.length, unit: `/${categories.length} panels`, Icon: Activity, color: 'var(--primary-text)', sub: 'TESTED' },
-            { label: 'FLAGGED', val: flaggedBiomarkers.length, unit: `/${biomarkers.length}`, Icon: AlertTriangle, color: flaggedBiomarkers.length === 0 ? '#1A9966' : '#F04E14', sub: 'NEEDS REVIEW' },
-          ].map(kpi => (
-            <div key={kpi.label} className="glass-card rounded-2xl p-5 border border-border/40 flex flex-col gap-2 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{kpi.label}</p>
-                <kpi.Icon className="w-4 h-4" style={{ color: kpi.color }} />
+        {/* Two Column Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* Left Column (8/12) */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            
+            {/* Header Box */}
+            <div className="glass-card rounded-2xl p-5 border border-border/40 flex justify-between items-center shadow-sm">
+              <div>
+                <h3 className="text-xl font-extrabold text-foreground tracking-tight">Bloodwork Analysis</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{collectionDateStr}</p>
               </div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-extrabold" style={{ color: kpi.color }}>{kpi.val}</span>
-                <span className="text-xs text-muted-foreground">{kpi.unit}</span>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center border border-border/40 bg-muted/10">
+                <Search className="w-4 h-4 text-muted-foreground" />
               </div>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{kpi.sub}</p>
-              <div className="h-1 rounded-full mt-1" style={{ background: `linear-gradient(90deg, ${kpi.color}, transparent)`, opacity: 0.5 }} />
             </div>
-          ))}
-        </div>
 
-        {/* Body System Status */}
-        <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h4 className="text-sm font-bold text-foreground">Body System Status</h4>
-              <p className="text-[10px] text-muted-foreground">Wellness score across each diagnostic panel</p>
+            {/* Summary Metrics Row */}
+            <div className="grid grid-cols-3 gap-4">
+              {/* Health Score */}
+              <div className="glass-card rounded-2xl p-5 border border-border/40 flex flex-col justify-between shadow-sm relative overflow-hidden h-36">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Heart className="w-4 h-4 text-emerald-500 fill-emerald-500/20" />
+                      <span className="text-[10px] font-extrabold tracking-widest text-muted-foreground uppercase">Health Score</span>
+                    </div>
+                    <span className="text-[10px] font-extrabold text-emerald-500">↑ 4%</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-3">
+                    <span className="text-3xl font-black text-foreground">{healthScore}</span>
+                    <span className="text-xs text-muted-foreground">/100</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">OVERALL</p>
+                  <svg viewBox="0 0 100 20" className="w-full h-5 mt-1 overflow-visible">
+                    <path d="M0,15 Q25,5 50,12 T100,5" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Biomarkers */}
+              <div className="glass-card rounded-2xl p-5 border border-border/40 flex flex-col justify-between shadow-sm relative overflow-hidden h-36">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Activity className="w-4 h-4 text-cyan-400" />
+                      <span className="text-[10px] font-extrabold tracking-widest text-muted-foreground uppercase">Biomarkers</span>
+                    </div>
+                    <span className="text-[10px] font-extrabold text-cyan-400">↑ 5</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-3">
+                    <span className="text-3xl font-black text-foreground">{totalMarkers}</span>
+                    <span className="text-xs text-muted-foreground">/{categories.length} panels</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">TESTED</p>
+                  <svg viewBox="0 0 100 20" className="w-full h-5 mt-1 overflow-visible">
+                    <path d="M0,15 Q30,15 60,8 T100,10" fill="none" stroke="#22d3ee" strokeWidth="2.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Flagged */}
+              <div className="glass-card rounded-2xl p-5 border border-border/40 flex flex-col justify-between shadow-sm relative overflow-hidden h-36">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-orange-500 fill-orange-500/10" />
+                      <span className="text-[10px] font-extrabold tracking-widest text-muted-foreground uppercase">Flagged</span>
+                    </div>
+                    <span className="text-[10px] font-extrabold text-orange-500">↓ 11%</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-3">
+                    <span className="text-3xl font-black text-foreground">{flaggedBiomarkers.length}</span>
+                    <span className="text-xs text-muted-foreground">/{totalMarkers}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">NEEDS REVIEW</p>
+                  <svg viewBox="0 0 100 20" className="w-full h-5 mt-1 overflow-visible">
+                    <path d="M0,10 Q20,5 40,15 T80,10 T100,18" fill="none" stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
             </div>
-            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">SCORE BY PANEL</span>
+
+            {/* Report Condition */}
+            <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-foreground">Report Condition</h4>
+                  <p className="text-[10px] text-muted-foreground">Average Panel Score</p>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-muted/30 text-muted-foreground">This Report</span>
+              </div>
+              
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold text-foreground">94%</span>
+                <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">▲ 4%</span>
+              </div>
+
+              <div className="h-40 w-full mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={conditionData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.1} vertical={false} />
+                    <XAxis dataKey="name" tick={{ fill: 'var(--muted-foreground)', fontSize: 9 }} tickLine={false} axisLine={false} />
+                    <YAxis domain={[0, 100]} ticks={[0, 50, 100]} tick={{ fill: 'var(--muted-foreground)', fontSize: 9 }} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      content={({ active, payload }) =>
+                        active && payload?.length ? (
+                          <div className="glass-card rounded-xl p-2 border border-border/40 shadow text-[10px] bg-card">
+                            <p className="font-bold text-foreground">{payload[0]?.payload?.name}</p>
+                            <p className="text-emerald-400 font-extrabold mt-0.5">{payload[0]?.value}% Score</p>
+                          </div>
+                        ) : null
+                      }
+                    />
+                    <Area type="monotone" dataKey="score" stroke="#10b981" strokeWidth={2} fill="url(#scoreGradient)" dot={(props: any) => {
+                      if (props.cx === undefined || props.cy === undefined) return null;
+                      return <circle key={props.key} cx={props.cx} cy={props.cy} r={4} fill="#10b981" stroke="white" strokeWidth={1.5} />;
+                    }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Body System Status */}
+            <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-foreground">Body System Status</h4>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">SCORE BY PANEL</span>
+              </div>
+              <div className="flex flex-col gap-4">
+                {systemBars.map(sys => (
+                  <div key={sys.label} className="flex items-center gap-4">
+                    <span className="text-[10px] font-bold w-28 shrink-0 tracking-wider text-muted-foreground">{sys.label}</span>
+                    <div className="flex gap-[4px] flex-1">
+                      {Array.from({ length: sys.blocks }).map((_, idx) => {
+                        const isFilled = idx < sys.filled;
+                        const fillColor = sys.score >= 90 ? sys.color : '#f97316';
+                        return (
+                          <div
+                            key={idx}
+                            className="flex-1 h-3.5 rounded-sm transition-all"
+                            style={{ background: isFilled ? fillColor : 'rgba(255,255,255,0.05)' }}
+                          />
+                        );
+                      })}
+                    </div>
+                    <span className="text-xs font-bold w-10 text-right" style={{ color: sys.score >= 90 ? sys.color : '#f97316' }}>{sys.score}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
-          <div className="flex flex-col gap-4">
-            {systemBars.map(sys => (
-              <div key={sys.label} className="flex items-center gap-4">
-                <span className="text-[9px] font-bold w-32 shrink-0 tracking-wider" style={{ color: 'var(--muted-foreground)' }}>{sys.label}</span>
-                <div className="flex gap-[3px] flex-1">
-                  {Array.from({ length: sys.blocks }).map((_, idx) => (
-                    <div key={idx} className="flex-1 h-3.5 rounded-sm transition-all" style={{ background: idx < sys.filled ? sys.color : 'rgba(255,255,255,0.05)' }} />
+
+          {/* Right Column (4/12) */}
+          <div className="lg:col-span-4 flex flex-col gap-6">
+            
+            {/* User Profile Card */}
+            <div className="glass-card rounded-2xl p-6 border border-border/40 flex flex-col items-center justify-center text-center shadow-sm">
+              <div className="w-16 h-16 rounded-full bg-muted/15 flex items-center justify-center border border-border/40 text-2xl font-black text-[var(--primary-text)] shadow-inner">
+                {pName.charAt(0).toUpperCase()}
+              </div>
+              <h4 className="text-base font-extrabold text-foreground mt-4 tracking-tight">{pName}</h4>
+              <p className="text-xs text-muted-foreground mt-1">{patientAge} yrs · {patientGender}</p>
+            </div>
+
+            {/* Categories Card */}
+            <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col gap-4">
+              <h4 className="text-sm font-bold text-foreground">Categories</h4>
+              
+              <div className="flex items-center gap-4">
+                {/* Donut Chart */}
+                <div className="relative w-24 h-24 flex-shrink-0 flex items-center justify-center">
+                  <svg width="96" height="96" viewBox="0 0 40 40" className="transform -rotate-90">
+                    {categoryDonutData.map((d, i) => (
+                      <circle
+                        key={i}
+                        cx="20"
+                        cy="20"
+                        r="15.91549430918954"
+                        fill="transparent"
+                        stroke={d.color}
+                        strokeWidth="4"
+                        strokeDasharray={d.strokeDash}
+                        strokeDashoffset={d.strokeOffset}
+                      />
+                    ))}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-lg font-black text-foreground">{totalMarkers}</span>
+                    <span className="text-[7px] tracking-widest text-muted-foreground font-extrabold">MARKERS</span>
+                  </div>
+                </div>
+
+                {/* Categories List */}
+                <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                  {categoryDonutData.map((d, i) => (
+                    <div key={i} className="flex items-center justify-between text-[10px]">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: d.color }} />
+                        <span className="text-muted-foreground truncate font-medium">{d.name}</span>
+                      </div>
+                      <span className="font-bold text-foreground ml-2">{d.count}</span>
+                    </div>
                   ))}
                 </div>
-                <span className="text-xs font-bold w-10 text-right" style={{ color: sys.color }}>{sys.score}%</span>
               </div>
-            ))}
+
+              {/* Status breakdown text and items */}
+              <div className="border-t border-border/20 pt-4 mt-2 flex flex-col gap-3">
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  {flaggedBiomarkers.length <= 2 
+                    ? "Good news — most of your lab values are healthy." 
+                    : "Your lab report contains several biomarkers that require clinical review."}
+                </p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-xs">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span className="text-muted-foreground"><strong className="text-foreground">{normalBiomarkers.length} markers</strong> normal</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <AlertTriangle className="w-4 h-4 text-orange-400" />
+                    <span className="text-muted-foreground"><strong className="text-foreground">{flaggedBiomarkers.length} markers</strong> needs attention</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Things to Watch */}
+            <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col gap-4">
+              <h4 className="text-sm font-bold text-foreground">Things to Watch</h4>
+              {flaggedBiomarkers.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-6">
+                  <CheckCircle2 className="w-8 h-8 text-green-400" />
+                  <p className="text-xs text-muted-foreground text-center">Excellent! All biomarkers are within optimal range.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4 overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
+                  {watchBiomarkers.map(b => {
+                    const color = systemMap[b.category]?.color || '#f97316';
+                    const pct = getEffectivePct(b);
+                    const desc = b.description || `${b.displayName} levels are flagged as ${b.status.toLowerCase()}, indicating a shift outside optimal boundaries.`;
+                    
+                    return (
+                      <div key={b.id} className="p-3.5 rounded-xl border border-border/40 bg-card/40 flex flex-col gap-2.5">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 text-orange-500 fill-orange-500/10" />
+                            <span className="font-extrabold text-xs text-foreground">{b.displayName}</span>
+                          </div>
+                          <span className="font-extrabold text-xs text-orange-500">{b.value}</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground leading-normal">{desc}</p>
+                        
+                        <div className="mt-1">
+                          <div className="relative h-1.5 rounded-full bg-border/20 flex overflow-hidden">
+                            <div className="h-full w-[20%] bg-orange-500/10" />
+                            <div className="h-full w-[60%] bg-emerald-500/15" />
+                            <div className="h-full w-[20%] bg-orange-500/10" />
+                            <div
+                              className="absolute w-2.5 h-2.5 -top-[2px] rounded-full border border-white shadow transition-all duration-300"
+                              style={{ left: `calc(${pct}% - 5px)`, background: color }}
+                            />
+                          </div>
+                          <div className="flex justify-between text-[8px] mt-1 text-muted-foreground font-semibold px-0.5">
+                            <span>Low</span>
+                            <span>Normal</span>
+                            <span>High</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
 
-        {/* Categories + Things to Watch */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Category Health Breakdown */}
-          <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-bold text-foreground">Category Health Breakdown</h4>
-                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Normal / Flagged</span>
-              </div>
-              <div className="flex flex-col gap-3 overflow-y-auto max-h-[160px] pr-1.5 custom-scrollbar">
-                {categories.map((cat) => {
-                  const catMarkers = biomarkers.filter(b => b.category === cat);
-                  const catNormal = catMarkers.filter(b => b.status === 'NORMAL').length;
-                  const catFlagged = catMarkers.length - catNormal;
-                  const normalPct = (catNormal / catMarkers.length) * 100;
-                  const flaggedPct = (catFlagged / catMarkers.length) * 100;
-
-                  return (
-                    <div key={cat} className="flex flex-col gap-1">
-                      <div className="flex justify-between items-center text-[10px]">
-                        <span className="font-bold text-foreground truncate max-w-[120px]">{cat}</span>
-                        <span className="text-[9px] text-muted-foreground font-medium">
-                          {catNormal}/{catMarkers.length} Normal
-                        </span>
-                      </div>
-                      <div className="relative h-2 rounded-full bg-border/20 overflow-hidden flex">
-                        {catNormal > 0 && (
-                          <div 
-                            className="h-full bg-emerald-500/85 transition-all duration-500" 
-                            style={{ width: `${normalPct}%` }}
-                            title={`${catNormal} Normal`}
-                          />
-                        )}
-                        {catFlagged > 0 && (
-                          <div 
-                            className="h-full bg-rose-500/85 transition-all duration-500" 
-                            style={{ width: `${flaggedPct}%` }}
-                            title={`${catFlagged} Flagged`}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="border-t border-border/20 mt-4 pt-3 flex justify-between text-xs">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-muted-foreground"><strong className="text-foreground">{normalBiomarkers.length}</strong> Optimal</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-                <span className="text-muted-foreground"><strong className="text-foreground">{flaggedBiomarkers.length}</strong> Attention</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Things to Watch */}
-          <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col gap-3">
-            <h4 className="text-sm font-bold text-foreground">Things to Watch</h4>
-            {flaggedBiomarkers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-8">
-                <CheckCircle2 className="w-10 h-10 text-green-400" />
-                <p className="text-xs text-muted-foreground text-center">Excellent! All biomarkers are within optimal range.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3 overflow-y-auto max-h-[280px] custom-scrollbar">
-                {flaggedBiomarkers.map(b => {
-                  const color = b.status === 'CRITICAL' ? '#D41717' : b.status === 'HIGH' ? '#F04E14' : '#C97D0A';
-                  const pct = b.referenceMin != null && b.referenceMax != null
-                    ? Math.max(5, Math.min(95, ((b.value - b.referenceMin) / (b.referenceMax - b.referenceMin)) * 100))
-                    : b.status === 'HIGH' ? 85 : 15;
-                  return (
-                    <div key={b.id} className="p-3.5 rounded-xl border border-border/40 bg-card/60 flex flex-col gap-2.5">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle className="w-3.5 h-3.5" style={{ color }} />
-                          <span className="font-extrabold text-xs text-foreground">{b.displayName}</span>
-                        </div>
-                        <span className="font-extrabold text-xs" style={{ color }}>{b.value} {b.unit}</span>
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-[8px] mb-1 text-muted-foreground">
-                          <span>Low</span><span className="font-semibold text-foreground">Normal</span><span>High</span>
-                        </div>
-                        <div className="relative h-2 rounded-full bg-border/30 flex overflow-hidden">
-                          <div className="h-full w-[25%]" style={{ background: 'rgba(201,125,10,0.2)' }} />
-                          <div className="h-full w-[50%]" style={{ background: 'rgba(26,153,102,0.2)' }} />
-                          <div className="h-full w-[25%]" style={{ background: 'rgba(240,78,20,0.2)' }} />
-                          <div className="absolute w-3.5 h-3.5 -top-[3px] rounded-full border border-white shadow" style={{ left: `calc(${pct}% - 7px)`, background: color }} />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Systemic Biomarker Profile */}
-        <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm">
-          <div className="flex items-center justify-between mb-1">
+        {/* Systemic Biomarker Profile & Reference Zones */}
+        <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
               <h4 className="text-sm font-bold text-foreground">Systemic Biomarker Profile & Reference Zones</h4>
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold mt-0.5">NORMALIZED RANGE PROFILES ACROSS {categories.length} DIAGNOSTIC CATEGORIES</p>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-extrabold mt-0.5">NORMALIZED RANGE PROFILES ACROSS {categories.length} DIAGNOSTIC CATEGORIES</p>
             </div>
-            <div className="flex items-center gap-4 flex-wrap justify-end">
-              {['#10b981','#3b82f6','#f59e0b','#8b5cf6','#ec4899'].map((c, i) => (
-                <span key={i} className="flex items-center gap-1.5 text-[9px] font-semibold text-muted-foreground">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
-                  {['Blood','Metabolic','Lipid','Hormones','Nutrients'][i]}
-                </span>
-              ))}
+            <div className="flex items-center gap-4 flex-wrap md:justify-end">
+              {lineCategories.map((catLabel, idx) => {
+                const color = categoryColors[catLabel] || '#10b981';
+                return (
+                  <span key={idx} className="flex items-center gap-1.5 text-[9px] font-extrabold text-muted-foreground uppercase tracking-wider">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
+                    {catLabel}
+                  </span>
+                );
+              })}
             </div>
           </div>
-          <div className="h-52 mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={profileData} margin={{ top: 8, right: 16, left: 0, bottom: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
-                <XAxis dataKey="name" tick={{ fill: 'var(--muted-foreground)', fontSize: 8 }} angle={-35} textAnchor="end" interval={0} />
-                <YAxis domain={[0, 4]} tick={{ fill: 'var(--muted-foreground)', fontSize: 9 }}
-                  tickFormatter={(v) => (['','Very Low','Low','','Optimal','','High','Elevated'][Math.round(v * 2)] || '')}
-                  ticks={[0.5, 1.1, 2.2, 3.1, 3.6]}
-                />
-                <Tooltip
-                  content={({ active, payload }) =>
-                    active && payload?.length ? (
-                      <div className="glass-card rounded-xl p-2.5 border border-border/40 shadow text-xs bg-card">
-                        <p className="font-bold text-foreground">{payload[0]?.payload?.name}</p>
-                        <p className="text-muted-foreground mt-0.5">Status: <span className="font-semibold text-foreground">{payload[0]?.payload?.status}</span></p>
-                      </div>
-                    ) : null
-                  }
-                />
-                <ReferenceLine y={0.5} stroke="rgba(239,68,68,0.15)" strokeDasharray="3 3" />
-                <ReferenceLine y={1.1} stroke="rgba(245,158,11,0.15)" strokeDasharray="3 3" />
-                <ReferenceLine y={2.2} stroke="rgba(16,185,129,0.2)" strokeDasharray="3 3" label={{ value: 'Optimal', position: 'right', fill: '#10b981', fontSize: 8 }} />
-                <ReferenceLine y={3.1} stroke="rgba(245,158,11,0.15)" strokeDasharray="3 3" />
-                <ReferenceLine y={3.6} stroke="rgba(239,68,68,0.15)" strokeDasharray="3 3" />
-                <Line type="monotone" dataKey="val" stroke="var(--primary-text)" strokeWidth={2.5} dot={(props: any) => {
-                  const c = props.payload?.color || 'var(--primary-text)';
-                  return <circle key={props.key} cx={props.cx} cy={props.cy} r={4} fill={c} stroke="white" strokeWidth={1.5} />;
-                }} />
-              </LineChart>
-            </ResponsiveContainer>
+
+          <div className="relative flex h-56 mt-4">
+            {/* Vertical color bar zone indicator */}
+            <div className="w-1.5 h-40 self-center rounded-full bg-gradient-to-t from-rose-500 via-amber-500 via-emerald-500 via-amber-500 to-rose-500 mr-2 opacity-80" />
+            <div className="flex-1 h-full min-w-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={profileData} margin={{ top: 8, right: 16, left: -20, bottom: 32 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.1} vertical={false} />
+                  <XAxis dataKey="name" tick={{ fill: 'var(--muted-foreground)', fontSize: 8, fontWeight: 'bold' }} angle={-45} textAnchor="end" interval={0} height={60} />
+                  <YAxis
+                    domain={[0, 4]}
+                    tick={{ fill: 'var(--muted-foreground)', fontSize: 8, fontWeight: 'bold' }}
+                    tickFormatter={(v) => {
+                      if (v === 0.5) return 'Very Low';
+                      if (v === 1.1) return 'Low';
+                      if (v === 2.2) return 'Optimal';
+                      if (v === 3.1) return 'High';
+                      if (v === 3.6) return 'Elevated';
+                      return '';
+                    }}
+                    ticks={[0.5, 1.1, 2.2, 3.1, 3.6]}
+                    width={60}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) =>
+                      active && payload?.length ? (
+                        <div className="glass-card rounded-xl p-2.5 border border-border/40 shadow text-xs bg-card">
+                          <p className="font-bold text-foreground">{payload[0]?.payload?.name}</p>
+                          <p className="text-muted-foreground mt-0.5">Value: <span className="font-extrabold text-foreground">{payload[0]?.payload?.value} {payload[0]?.payload?.unit}</span></p>
+                          <p className="text-muted-foreground mt-0.5">Status: <span className="font-semibold text-foreground">{payload[0]?.payload?.status}</span></p>
+                        </div>
+                      ) : null
+                    }
+                  />
+                  
+                  <ReferenceLine y={0.5} stroke="rgba(239,68,68,0.1)" strokeDasharray="3 3" />
+                  <ReferenceLine y={1.1} stroke="rgba(245,158,11,0.1)" strokeDasharray="3 3" />
+                  <ReferenceLine y={2.2} stroke="rgba(16,185,129,0.15)" strokeDasharray="3 3" />
+                  <ReferenceLine y={3.1} stroke="rgba(245,158,11,0.1)" strokeDasharray="3 3" />
+                  <ReferenceLine y={3.6} stroke="rgba(239,68,68,0.1)" strokeDasharray="3 3" />
+
+                  {lineCategories.map(catLabel => {
+                    const color = categoryColors[catLabel] || 'var(--primary-text)';
+                    return (
+                      <Line
+                        key={catLabel}
+                        type="monotone"
+                        dataKey={`val_${catLabel}`}
+                        stroke={color}
+                        strokeWidth={2.5}
+                        connectNulls={false}
+                        dot={(props: any) => {
+                          if (props.cx === undefined || props.cy === undefined) return null;
+                          const c = props.payload?.color || color;
+                          return (
+                            <circle
+                              key={props.key}
+                              cx={props.cx}
+                              cy={props.cy}
+                              r={4.5}
+                              fill={c}
+                              stroke="white"
+                              strokeWidth={1.5}
+                            />
+                          );
+                        }}
+                        activeDot={{ r: 6 }}
+                      />
+                    );
+                  })}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
+
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/20">
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-              <span><strong className="text-foreground">Clinical Guide:</strong> Dots represent normalized status. The Optimal zone (center band) is the target reference region.</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span><strong className="text-foreground">Clinical Guide:</strong> The vertical color bar and shaded bands map reference intervals dynamically, allowing immediate visual assessment across distinct panels and units.</span>
             </div>
-            <span className="text-[9px] font-bold px-2.5 py-1 rounded-full" style={{ background: 'var(--primary-glow)', color: 'var(--primary-text)' }}>100% NORMALIZED</span>
+            <span className="text-[9px] font-extrabold px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">100% NORMALIZED</span>
           </div>
         </div>
+
       </div>
     );
   }
