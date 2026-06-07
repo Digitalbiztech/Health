@@ -40,6 +40,7 @@ import { BiomarkerDetailDialog } from './BiomarkerDetailDialog';
 import { TrendAnalysisChart } from './TrendAnalysisChart';
 import { AIChat } from './AIChat';
 import { ComparisonView } from './ComparisonView';
+import { ClinicalSection } from './ClinicalSection';
 
 interface ReportDashboardProps {
   reportData: CompleteReportData;
@@ -69,6 +70,8 @@ export function ReportDashboard({
   const [selectedPanel, setSelectedPanel] = useState<string>('All');
   const [selectedBiomarkerDetail, setSelectedBiomarkerDetail] = useState<any>(null);
   const [compareDragging, setCompareDragging] = useState<'A' | 'B' | null>(null);
+  const [biomarkerSearch, setBiomarkerSearch] = useState('');
+  const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
 
   const compareFileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingCompareSlotRef = useRef<'A' | 'B'>('A');
@@ -85,6 +88,13 @@ export function ReportDashboard({
 
   const healthScore = Math.max(0, Math.min(100, Math.round(100 - (flaggedBiomarkers.length * 12.5))));
   const pName = `${patient?.firstName || ''} ${patient?.lastName || ''}`.trim() || 'Patient';
+
+  // Biomarker Breakdown filtering
+  const breakdownCategories = panels.filter(p => p !== 'All');
+  const breakdownBiomarkers = biomarkers
+    .filter(b => selectedPanel === 'All' || b.category === selectedPanel)
+    .filter(b => !showFlaggedOnly || b.status !== 'NORMAL')
+    .filter(b => !biomarkerSearch || b.displayName.toLowerCase().includes(biomarkerSearch.toLowerCase()));
 
 
 
@@ -117,364 +127,182 @@ export function ReportDashboard({
       return renderBiomarkerAnalysis(subTabBar);
     }
 
-    // ── Clinical Report (original grid) ─────────────────────
+    // ── Clinical Report ─────────────────────────────────────
     return (
-      <div className="flex flex-col gap-0">
+      <div className="flex flex-col gap-0 animate-fade-in">
         {subTabBar}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Side — Flagged Summary & Pie Chart */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
-          <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
-            <h4 className="text-sm font-bold uppercase tracking-wider mb-4" style={{ color: 'var(--muted-foreground)' }}>
-              Diagnostics Summary
-            </h4>
+        
+        {/* High-fidelity clinical summary sub-view */}
+        <ClinicalSection reportData={reportData} />
 
-            {/* Diagnostics Summary health bar */}
-            <div className="flex flex-col gap-3 mt-2 mb-4">
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-emerald-500">Optimal ({normalBiomarkers.length})</span>
-                <span className="font-bold text-rose-500">Flagged ({flaggedBiomarkers.length})</span>
+        {/* ── Biomarker Breakdown ─────────────────────────────── */}
+        <div className="mt-8 border-t border-border/20 pt-8">
+          {/* Header row */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-5">
+            <div>
+              <h3 className="text-lg font-extrabold text-foreground tracking-tight">Biomarker Breakdown</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Horizontal slider ranges &amp; clinical explanations</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search biomarkers..."
+                  value={biomarkerSearch}
+                  onChange={(e) => setBiomarkerSearch(e.target.value)}
+                  className="pl-9 pr-3 py-2 rounded-xl text-xs border border-border/40 bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[var(--primary)] w-48"
+                />
               </div>
-              <div className="relative h-3 rounded-full bg-border/20 overflow-hidden flex">
-                {normalBiomarkers.length > 0 && (
-                  <div 
-                    className="h-full bg-emerald-500/85 transition-all duration-500" 
-                    style={{ width: `${(normalBiomarkers.length / biomarkers.length) * 100}%` }}
-                    title={`${normalBiomarkers.length} Optimal`}
-                  />
-                )}
-                {flaggedBiomarkers.length > 0 && (
-                  <div 
-                    className="h-full bg-rose-500/85 transition-all duration-500" 
-                    style={{ width: `${(flaggedBiomarkers.length / biomarkers.length) * 100}%` }}
-                    title={`${flaggedBiomarkers.length} Flagged`}
-                  />
-                )}
-              </div>
-              <div className="text-center mt-3">
-                <span className="text-3xl font-extrabold text-foreground">
-                  {biomarkers.length > 0 ? Math.round((normalBiomarkers.length / biomarkers.length) * 100) : 100}%
-                </span>
-                <span className="text-[10px] text-muted-foreground block uppercase font-bold tracking-wider mt-0.5">Optimal Biomarker Score</span>
+              {/* All / Flagged toggle */}
+              <div className="flex rounded-xl border border-border/40 overflow-hidden">
+                <button
+                  onClick={() => setShowFlaggedOnly(false)}
+                  className={cn(
+                    'px-3.5 py-2 text-xs font-semibold cursor-pointer border-0 transition-all',
+                    !showFlaggedOnly
+                      ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] font-bold'
+                      : 'bg-transparent text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setShowFlaggedOnly(true)}
+                  className={cn(
+                    'px-3.5 py-2 text-xs font-semibold cursor-pointer border-0 transition-all flex items-center gap-1.5',
+                    showFlaggedOnly
+                      ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] font-bold'
+                      : 'bg-transparent text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  Flagged
+                  {flaggedBiomarkers.length > 0 && (
+                    <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+                      {flaggedBiomarkers.length}
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
-
-            <p className="text-xs leading-relaxed text-center mt-4" style={{ color: 'var(--muted-foreground)' }}>
-              {flaggedBiomarkers.length === 0
-                ? "Excellent! All monitored biological vectors are well-balanced within optimal physiological zones."
-                : `We identified ${flaggedBiomarkers.length} biomarker values exhibiting deviance from standard reference values.`}
-            </p>
           </div>
 
-          {/* Flagged biomarker scrollbox */}
-          {flaggedBiomarkers.length > 0 && (
-            <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
-              <h4 className="text-sm font-bold uppercase tracking-wider mb-4 flex items-center justify-between" style={{ color: 'var(--muted-foreground)' }}>
-                <span>Anomaly List</span>
-                <span className="text-xs bg-[#F04E14]/10 text-[#F04E14] px-2 py-0.5 rounded-full font-bold">
-                  {flaggedBiomarkers.length} Alert{flaggedBiomarkers.length > 1 ? 's' : ''}
-                </span>
-              </h4>
-              <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto custom-scrollbar">
-                {flaggedBiomarkers.map((b) => {
-                  const colors = STATUS_COLORS[b.status];
-                  return (
-                    <div
-                      key={b.id}
-                      onClick={() => setSelectedBiomarkerDetail(b)}
-                      className="p-3 rounded-xl border border-border/40 hover:border-[var(--primary)] transition-all cursor-pointer flex items-center justify-between group bg-transparent"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-1.5 h-6 rounded-full" style={{ background: colors.text }} />
-                        <div>
-                          <p className="font-semibold text-xs" style={{ color: 'var(--foreground)' }}>
-                            {b.displayName}
-                          </p>
-                          <p className="text-[10px] mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
-                            Ref: {b.referenceRange}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right flex items-center gap-2">
-                        <div>
-                          <p className="font-bold text-xs" style={{ color: colors.text }}>
-                            {b.value} {b.unit}
-                          </p>
-                          <p className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>
-                            {b.status}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
+          {/* Category tabs */}
+          <div className="flex gap-2 mb-6 flex-wrap">
+            {panels.map((panel) => {
+              const isSelected = selectedPanel === panel;
+              const count = panel === 'All'
+                ? biomarkers.filter(b => !showFlaggedOnly || b.status !== 'NORMAL')
+                            .filter(b => !biomarkerSearch || b.displayName.toLowerCase().includes(biomarkerSearch.toLowerCase())).length
+                : biomarkers.filter(b => b.category === panel)
+                            .filter(b => !showFlaggedOnly || b.status !== 'NORMAL')
+                            .filter(b => !biomarkerSearch || b.displayName.toLowerCase().includes(biomarkerSearch.toLowerCase())).length;
 
-        {/* Right Side — Main Panel Workspace */}
-        <div className="lg:col-span-8 flex flex-col gap-6">
-          <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
-            {/* Panel selector pills */}
-            <div className="flex flex-wrap gap-2 mb-6 border-b border-border/40 pb-4">
-              {panels.map((panel) => {
-                const isSelected = selectedPanel === panel;
-                const panelMarkers = panel === 'All' ? biomarkers : biomarkers.filter((b) => b.category === panel);
-                const panelFlagged = panelMarkers.filter((b) => b.status !== 'NORMAL').length;
-
-                return (
-                  <button
-                    key={panel}
-                    onClick={() => setSelectedPanel(panel)}
+              return (
+                <button
+                  key={panel}
+                  onClick={() => setSelectedPanel(panel)}
+                  className={cn(
+                    'px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all flex items-center gap-2 border-0',
+                    isSelected
+                      ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] font-bold'
+                      : 'bg-card text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {panel === 'All' ? 'All' : panel}
+                  <span
                     className={cn(
-                      'px-3.5 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all flex items-center gap-2',
-                      isSelected
-                        ? 'bg-[var(--primary)] text-white shadow-sm font-bold border-[var(--primary)]'
-                        : 'border border-border/60 hover:bg-border/20 text-muted-foreground hover:text-foreground'
+                      'w-5 h-5 rounded-md text-[10px] font-bold flex items-center justify-center',
+                      isSelected ? 'bg-[var(--primary-text)] text-white' : 'bg-border/30 text-muted-foreground'
                     )}
                   >
-                    <span>{panel === 'All' ? 'All Panels' : panel}</span>
-                    {panelFlagged > 0 && (
-                      <span
-                        className={cn(
-                          'w-2 h-2 rounded-full bg-[#F04E14]',
-                          isSelected ? 'bg-white' : ''
-                        )}
-                      />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-            {/* Radar View (when All is selected) */}
-            {/* Panel Health Overview (replacing Radar Chart) */}
-            {selectedPanel === 'All' && (
-              <div className="mb-6 border-b border-border/20 pb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h5 className="text-xs font-bold text-foreground uppercase tracking-wider">Panel Health Index</h5>
-                  <span className="text-[10px] text-muted-foreground">Optimal markers by category</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-                  {panels
-                    .filter((p) => p !== 'All')
-                    .map((p) => {
-                      const list = biomarkers.filter((b) => b.category === p);
-                      const norm = list.filter((b) => b.status === 'NORMAL').length;
-                      const score = Math.round((norm / list.length) * 100);
+          {/* Biomarker cards grid (2 columns) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {breakdownBiomarkers.map((b) => {
+              const colors = STATUS_COLORS[b.status];
+              const Icon = CATEGORY_ICONS[b.category] || Droplet;
+              const effectivePct = getEffectivePct(b);
 
-                      return (
-                        <div key={p} className="flex items-center justify-between text-xs py-1">
-                          <span className="font-semibold text-muted-foreground w-28 shrink-0">{p}</span>
-                          <div className="flex-1 mx-3 h-2 rounded-full bg-border/20 overflow-hidden">
-                            <div 
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{ 
-                                width: `${score}%`,
-                                background: score >= 80 ? 'var(--status-normal)' : score >= 60 ? 'var(--status-low)' : 'var(--status-critical)' 
-                              }}
-                            />
-                          </div>
-                          <span className="font-bold text-foreground w-8 text-right">{score}%</span>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-
-            {/* Biomarker list view — grouped by category */}
-            {selectedPanel === 'All' ? (
-              // Show categories grouped
-              <div className="flex flex-col gap-8">
-                {panels.filter(p => p !== 'All').map((category) => {
-                  const catMarkers = biomarkers.filter(b => b.category === category);
-                  if (catMarkers.length === 0) return null;
-                  const catFlagged = catMarkers.filter(b => b.status !== 'NORMAL').length;
-                  const CatIcon = CATEGORY_ICONS[category] || Droplet;
-                  const catScore = Math.round(((catMarkers.length - catFlagged) / catMarkers.length) * 100);
-
-                  return (
-                    <div key={category}>
-                      {/* Category header */}
-                      <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/30">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--primary-glow)' }}>
-                            <CatIcon className="w-3.5 h-3.5" style={{ color: 'var(--primary-text)' }} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-foreground">{category}</p>
-                            <p className="text-[10px] text-muted-foreground">{catMarkers.length} marker{catMarkers.length !== 1 ? 's' : ''}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground">
-                            <div className="w-16 h-1.5 rounded-full bg-border/30 overflow-hidden">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${catScore}%`,
-                                  background: catScore >= 80 ? '#1A9966' : catScore >= 60 ? '#C97D0A' : '#F04E14',
-                                }}
-                              />
-                            </div>
-                            <span className={catScore >= 80 ? 'text-green-500' : catScore >= 60 ? 'text-yellow-500' : 'text-red-500'}>
-                              {catScore}%
-                            </span>
-                          </div>
-                          {catFlagged > 0 && (
-                            <span className="text-[9px] bg-[#F04E14]/10 text-[#F04E14] px-2 py-0.5 rounded-full font-bold">
-                              {catFlagged} alert{catFlagged > 1 ? 's' : ''}
-                            </span>
-                          )}
-                        </div>
+              return (
+                <div
+                  key={b.id}
+                  className="p-4 rounded-xl border border-border/40 hover:border-[var(--primary)]/60 hover:shadow-md transition-all flex flex-col gap-3 group bg-card"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105" style={{ background: colors.bg }}>
+                        <Icon className="w-4 h-4" style={{ color: colors.text }} />
                       </div>
-
-                      {/* Cards grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {catMarkers.map((b) => {
-                          const colors = STATUS_COLORS[b.status];
-                          const Icon = CATEGORY_ICONS[b.category] || Droplet;
-                          const effectivePct = getEffectivePct(b);
-                          return (
-                            <div
-                              key={b.id}
-                              className="p-4 rounded-xl border border-border/40 hover:border-[var(--primary)]/60 hover:shadow-md transition-all flex flex-col gap-3 group bg-card"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: colors.bg }}>
-                                    <Icon className="w-4 h-4" style={{ color: colors.text }} />
-                                  </div>
-                                  <div>
-                                    <p className="font-bold text-xs" style={{ color: 'var(--foreground)' }}>{b.displayName}</p>
-                                    <p className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>{b.value} {b.unit}</p>
-                                  </div>
-                                </div>
-                                <span className="text-[9px] uppercase px-2 py-0.5 rounded-full font-bold" style={{ background: colors.bg, color: colors.text }}>
-                                  {b.status}
-                                </span>
-                              </div>
-
-                              {/* Zone slider bar */}
-                              <div>
-                                <div className="flex justify-between text-[9px] mb-1" style={{ color: 'var(--muted-foreground)' }}>
-                                  <span>Low</span>
-                                  <span className="font-semibold" style={{ color: 'var(--foreground)' }}>{b.value} {b.unit}</span>
-                                  <span>High</span>
-                                </div>
-                                <div className="relative h-2 rounded-full overflow-hidden bg-border/40 flex">
-                                  <div className="h-full w-[20%]" style={{ background: 'rgba(201, 125, 10, 0.25)' }} />
-                                  <div className="h-full w-[60%] border-x border-border/40" style={{ background: 'rgba(26, 153, 102, 0.25)' }} />
-                                  <div className="h-full w-[20%]" style={{ background: 'rgba(240, 78, 20, 0.25)' }} />
-                                  <div
-                                    className="absolute w-3.5 h-3.5 -top-0.5 rounded-full border border-white shadow transition-all duration-500"
-                                    style={{ left: `calc(${effectivePct}% - 7px)`, background: colors.text }}
-                                  />
-                                </div>
-                                <div className="flex justify-between text-[8px] mt-1" style={{ color: 'var(--muted-foreground)' }}>
-                                  <span>Min: {b.referenceMin ?? '0'}</span>
-                                  <span>Ref: {b.referenceRange}</span>
-                                  <span>Max: {b.referenceMax ?? 'N/A'}</span>
-                                </div>
-                              </div>
-
-                              {/* Details button */}
-                              <button
-                                onClick={() => setSelectedBiomarkerDetail(b)}
-                                className="w-full py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border border-border/40 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 transition-all bg-transparent text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5"
-                              >
-                                <Info className="w-3 h-3" />
-                                View Details
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              // Single panel selected
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredBiomarkers.map((b) => {
-                  const colors = STATUS_COLORS[b.status];
-                  const Icon = CATEGORY_ICONS[b.category] || Droplet;
-                  const effectivePct = getEffectivePct(b);
-
-                  return (
-                    <div
-                      key={b.id}
-                      className="p-4 rounded-xl border border-border/40 hover:border-[var(--primary)]/60 hover:shadow-md transition-all flex flex-col gap-3 group bg-card"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105"
-                            style={{ background: colors.bg }}
-                          >
-                            <Icon className="w-4 h-4" style={{ color: colors.text }} />
-                          </div>
-                          <div>
-                            <p className="font-bold text-xs" style={{ color: 'var(--foreground)' }}>{b.displayName}</p>
-                            <p className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>{b.category}</p>
-                          </div>
-                        </div>
-                        <span className="text-[9px] uppercase px-2 py-0.5 rounded-full font-bold" style={{ background: colors.bg, color: colors.text }}>
-                          {b.status}
-                        </span>
-                      </div>
-
-                      {/* Zone slider bar */}
                       <div>
-                        <div className="flex justify-between text-[9px] mb-1" style={{ color: 'var(--muted-foreground)' }}>
-                          <span>Low</span>
-                          <span className="font-semibold" style={{ color: 'var(--foreground)' }}>{b.value} {b.unit}</span>
-                          <span>High</span>
-                        </div>
-                        <div className="relative h-2 rounded-full overflow-hidden bg-border/40 flex">
-                          <div className="h-full w-[20%]" style={{ background: 'rgba(201, 125, 10, 0.25)' }} />
-                          <div className="h-full w-[60%] border-x border-border/40" style={{ background: 'rgba(26, 153, 102, 0.25)' }} />
-                          <div className="h-full w-[20%]" style={{ background: 'rgba(240, 78, 20, 0.25)' }} />
-                          <div
-                            className="absolute w-3.5 h-3.5 -top-0.5 rounded-full border border-white shadow transition-all duration-500"
-                            style={{ left: `calc(${effectivePct}% - 7px)`, background: colors.text }}
-                          />
-                        </div>
-                        <div className="flex justify-between text-[8px] mt-1" style={{ color: 'var(--muted-foreground)' }}>
-                          <span>Min: {b.referenceMin ?? '0'}</span>
-                          <span>Optimal: {b.referenceRange}</span>
-                          <span>Max: {b.referenceMax ?? 'N/A'}</span>
-                        </div>
+                        <p className="font-bold text-xs" style={{ color: 'var(--foreground)' }}>{b.displayName}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--muted-foreground)' }}>{b.category}</p>
                       </div>
-
-                      {/* Details button */}
-                      <button
-                        onClick={() => setSelectedBiomarkerDetail(b)}
-                        className="w-full py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border border-border/40 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 transition-all bg-transparent text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5"
-                      >
-                        <Info className="w-3 h-3" />
-                        View Details
-                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    <span className="text-[9px] uppercase px-2 py-0.5 rounded-full font-bold" style={{ background: colors.bg, color: colors.text }}>
+                      {b.status}
+                    </span>
+                  </div>
+
+                  {/* Zone slider bar */}
+                  <div>
+                    <div className="flex justify-between text-[9px] mb-1" style={{ color: 'var(--muted-foreground)' }}>
+                      <span>Low</span>
+                      <span className="font-semibold" style={{ color: 'var(--foreground)' }}>{b.value} {b.unit}</span>
+                      <span>High</span>
+                    </div>
+                    <div className="relative h-2 rounded-full overflow-hidden bg-border/40 flex">
+                      <div className="h-full w-[20%]" style={{ background: 'rgba(201, 125, 10, 0.25)' }} />
+                      <div className="h-full w-[60%] border-x border-border/40" style={{ background: 'rgba(26, 153, 102, 0.25)' }} />
+                      <div className="h-full w-[20%]" style={{ background: 'rgba(240, 78, 20, 0.25)' }} />
+                      <div
+                        className="absolute w-3.5 h-3.5 -top-0.5 rounded-full border border-white shadow transition-all duration-500"
+                        style={{ left: `calc(${effectivePct}% - 7px)`, background: colors.text }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[8px] mt-1" style={{ color: 'var(--muted-foreground)' }}>
+                      <span>Min: {b.referenceMin ?? '0'}</span>
+                      <span>Optimal: {b.referenceRange}</span>
+                      <span>Max: {b.referenceMax ?? 'N/A'}</span>
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      onClick={() => setSelectedBiomarkerDetail(b)}
+                      className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold border border-border/40 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 transition-all bg-transparent text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                      View Details
+                    </button>
+                    <button
+                      onClick={() => setSelectedBiomarkerDetail(b)}
+                      className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold border border-border/40 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 transition-all bg-transparent text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      Explain
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
-    </div>
     );
   }
 
   function renderBiomarkerAnalysis(subTabBar: React.ReactNode) {
     // Data processing
     const categories = panels.filter(p => p !== 'All');
-    
+
     // System map with full details
     const systemMap: Record<string, { color: string; label: string }> = {
       CBC: { color: '#22d3ee', label: 'Complete Blood Count' },
@@ -500,10 +328,10 @@ export function ReportDashboard({
 
     const systemBars = standardPanels.map(panel => {
       const catBiomarkers = biomarkers.filter(b => panel.categories.includes(b.category));
-      const score = catBiomarkers.length 
+      const score = catBiomarkers.length
         ? Math.round((catBiomarkers.filter(b => b.status === 'NORMAL').length / catBiomarkers.length) * 100)
         : 100;
-      
+
       const primaryCat = panel.categories[0];
       const color = systemMap[primaryCat]?.color || '#10b981';
       const blocks = 8;
@@ -531,7 +359,7 @@ export function ReportDashboard({
     };
     const patientAge = calculateAgeLocal(patient?.dateOfBirth);
     const patientGender = patient?.gender ? (patient.gender.toLowerCase().startsWith('m') ? 'M' : 'F') : 'M';
-    
+
     // Group donut segments
     const totalMarkers = biomarkers.length;
     let accumulatedPercent = 0;
@@ -569,7 +397,7 @@ export function ReportDashboard({
       else if (b.status === 'CRITICAL') {
         yVal = (b.referenceMin != null && b.value < b.referenceMin) ? 0.5 : 3.6;
       }
-      
+
       const catColor = systemMap[b.category]?.color || 'var(--primary-text)';
       const item: any = {
         name: b.displayName,
@@ -578,10 +406,10 @@ export function ReportDashboard({
         value: b.value,
         unit: b.unit,
       };
-      
+
       const sysLabel = systemMap[b.category]?.label || 'Other';
       item[`val_${sysLabel}`] = yVal;
-      
+
       return item;
     });
 
@@ -603,10 +431,10 @@ export function ReportDashboard({
 
         {/* Two Column Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
+
           {/* Left Column (8/12) */}
           <div className="lg:col-span-8 flex flex-col gap-6">
-            
+
             {/* Header Box */}
             <div className="glass-card rounded-2xl p-5 border border-border/40 flex justify-between items-center shadow-sm">
               <div>
@@ -699,7 +527,7 @@ export function ReportDashboard({
                 </div>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-muted/30 text-muted-foreground">This Report</span>
               </div>
-              
+
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-extrabold text-foreground">94%</span>
                 <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">▲ 4%</span>
@@ -710,8 +538,8 @@ export function ReportDashboard({
                   <AreaChart data={conditionData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                     <defs>
                       <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.1} vertical={false} />
@@ -769,7 +597,7 @@ export function ReportDashboard({
 
           {/* Right Column (4/12) */}
           <div className="lg:col-span-4 flex flex-col gap-6">
-            
+
             {/* User Profile Card */}
             <div className="glass-card rounded-2xl p-6 border border-border/40 flex flex-col items-center justify-center text-center shadow-sm">
               <div className="w-16 h-16 rounded-full bg-muted/15 flex items-center justify-center border border-border/40 text-2xl font-black text-[var(--primary-text)] shadow-inner">
@@ -782,7 +610,7 @@ export function ReportDashboard({
             {/* Categories Card */}
             <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col gap-4">
               <h4 className="text-sm font-bold text-foreground">Categories</h4>
-              
+
               <div className="flex items-center gap-4">
                 {/* Donut Chart */}
                 <div className="relative w-24 h-24 flex-shrink-0 flex items-center justify-center">
@@ -824,8 +652,8 @@ export function ReportDashboard({
               {/* Status breakdown text and items */}
               <div className="border-t border-border/20 pt-4 mt-2 flex flex-col gap-3">
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  {flaggedBiomarkers.length <= 2 
-                    ? "Good news — most of your lab values are healthy." 
+                  {flaggedBiomarkers.length <= 2
+                    ? "Good news — most of your lab values are healthy."
                     : "Your lab report contains several biomarkers that require clinical review."}
                 </p>
                 <div className="flex flex-col gap-2">
@@ -855,7 +683,7 @@ export function ReportDashboard({
                     const color = systemMap[b.category]?.color || '#f97316';
                     const pct = getEffectivePct(b);
                     const desc = b.description || `${b.displayName} levels are flagged as ${b.status.toLowerCase()}, indicating a shift outside optimal boundaries.`;
-                    
+
                     return (
                       <div key={b.id} className="p-3.5 rounded-xl border border-border/40 bg-card/40 flex flex-col gap-2.5">
                         <div className="flex justify-between items-center">
@@ -866,7 +694,7 @@ export function ReportDashboard({
                           <span className="font-extrabold text-xs text-orange-500">{b.value}</span>
                         </div>
                         <p className="text-[10px] text-muted-foreground leading-normal">{desc}</p>
-                        
+
                         <div className="mt-1">
                           <div className="relative h-1.5 rounded-full bg-border/20 flex overflow-hidden">
                             <div className="h-full w-[20%] bg-orange-500/10" />
@@ -946,7 +774,7 @@ export function ReportDashboard({
                       ) : null
                     }
                   />
-                  
+
                   <ReferenceLine y={0.5} stroke="rgba(239,68,68,0.1)" strokeDasharray="3 3" />
                   <ReferenceLine y={1.1} stroke="rgba(245,158,11,0.1)" strokeDasharray="3 3" />
                   <ReferenceLine y={2.2} stroke="rgba(16,185,129,0.15)" strokeDasharray="3 3" />
