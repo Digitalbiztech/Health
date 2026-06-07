@@ -5,7 +5,7 @@ import {
   TrendingUp,
   MessageSquare,
   SplitSquareVertical,
-  ChevronRight,
+  // ChevronRight,
   Droplet,
   X,
   Loader2,
@@ -82,15 +82,15 @@ export function ReportDashboard({
   const flaggedBiomarkers = biomarkers.filter((b) => b.status !== 'NORMAL');
   const panels = ['All', ...Array.from(new Set(biomarkers.map((b) => b.category)))];
 
-  const filteredBiomarkers = selectedPanel === 'All'
-    ? biomarkers
-    : biomarkers.filter((b) => b.category === selectedPanel);
+  // const filteredBiomarkers = selectedPanel === 'All'
+  //   ? biomarkers
+  //   : biomarkers.filter((b) => b.category === selectedPanel);
 
   const healthScore = Math.max(0, Math.min(100, Math.round(100 - (flaggedBiomarkers.length * 12.5))));
   const pName = `${patient?.firstName || ''} ${patient?.lastName || ''}`.trim() || 'Patient';
 
   // Biomarker Breakdown filtering
-  const breakdownCategories = panels.filter(p => p !== 'All');
+  // const breakdownCategories = panels.filter(p => p !== 'All');
   const breakdownBiomarkers = biomarkers
     .filter(b => selectedPanel === 'All' || b.category === selectedPanel)
     .filter(b => !showFlaggedOnly || b.status !== 'NORMAL')
