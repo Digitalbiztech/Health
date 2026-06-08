@@ -1,7 +1,7 @@
 import { type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler.js';
-import { generateChatReply } from '../services/chatService.js';
+import { generateChatReply, getLatestChatHistory, createNewSession } from '../services/chatService.js';
 
 const chatBodySchema = z.object({
   messages: z
@@ -31,25 +31,97 @@ const chatBodySchema = z.object({
       dateOfBirth: z.string().optional(),
     })
     .optional(),
+  patientId: z.string().optional(),
+  sessionId: z.string().optional(),
 });
 
 /**
  * POST /chat
  * Protected — Generates a clinical-assistant reply grounded in the patient's
- * biomarker context, falling back across the configured AI providers.
+ * RAG history and biomarker context.
  */
 export async function postChat(req: Request, res: Response, next: NextFunction) {
   try {
+    const principal = req.principal;
+    if (!principal) {
+      throw new AppError('Unauthorized', 401);
+    }
+
     const parsed = chatBodySchema.safeParse(req.body);
     if (!parsed.success) {
       throw new AppError(parsed.error.issues[0]?.message || 'Invalid chat request', 400);
     }
 
-    const { reply, provider } = await generateChatReply(parsed.data);
+    const { reply, provider, sessionId } = await generateChatReply({
+      ...parsed.data,
+      principal,
+    });
 
     res.status(200).json({
       status: 'success',
-      data: { reply, provider },
+      data: { reply, provider, sessionId },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /chat/history
+ * Fetch the latest chat session and messages for a patient.
+ */
+export async function getHistory(req: Request, res: Response, next: NextFunction) {
+  try {
+    const principal = req.principal;
+    if (!principal) {
+      throw new AppError('Unauthorized', 401);
+    }
+
+    let targetPatientId = req.query.patientId as string;
+    if (principal.accountType === 'PATIENT') {
+      targetPatientId = principal.id;
+    }
+
+    if (!targetPatientId) {
+      throw new AppError('Patient ID is required', 400);
+    }
+
+    const history = await getLatestChatHistory(targetPatientId);
+
+    res.status(200).json({
+      status: 'success',
+      data: history,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /chat/session
+ * Create a fresh chat session for a patient.
+ */
+export async function postNewSession(req: Request, res: Response, next: NextFunction) {
+  try {
+    const principal = req.principal;
+    if (!principal) {
+      throw new AppError('Unauthorized', 401);
+    }
+
+    let targetPatientId = req.body.patientId as string;
+    if (principal.accountType === 'PATIENT') {
+      targetPatientId = principal.id;
+    }
+
+    if (!targetPatientId) {
+      throw new AppError('Patient ID is required', 400);
+    }
+
+    const sessionId = await createNewSession(targetPatientId, principal);
+
+    res.status(200).json({
+      status: 'success',
+      data: { sessionId },
     });
   } catch (err) {
     next(err);
