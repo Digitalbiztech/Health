@@ -68,6 +68,22 @@ async def extract(req: ExtractionRequest) -> ExtractionResponse:
         normalized = normalize_batch(parsed_biomarkers) if parsed_biomarkers else []
         insight_dicts = generate_insights(normalized) if normalized else []
 
+        # RAG Ingestion (Non-fatal, patient-scoped)
+        if req.patient_id:
+            try:
+                from app.rag.ingestion import ingest_extraction
+                ingest_extraction(
+                    patient_id=req.patient_id,
+                    upload_id=req.upload_id,
+                    extraction_id=req.upload_id,  # Using upload_id as extraction_id for 1:1 reference
+                    masked_text=masked_full_text,
+                    biomarkers=normalized,
+                    insights=insight_dicts,
+                )
+                logger.info("Successfully ingested extraction into RAG vector store for patient %s", req.patient_id)
+            except Exception as re:
+                logger.error("RAG Ingestion failed (non-fatal): %s", re, exc_info=True)
+
         return ExtractionResponse(
             success=True,
             upload_id=req.upload_id,
