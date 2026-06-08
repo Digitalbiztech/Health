@@ -87,6 +87,7 @@ export const extractionWorker = new Worker(
       fileUrl: upload.fileUrl,
       fileType: 'application/pdf',
       uploadId: upload.id,
+      patientId: upload.patientId,
     });
 
     if (!response.success || !response.data) {
