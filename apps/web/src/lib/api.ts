@@ -90,10 +90,33 @@ export async function sendChatMessage(payload: {
   messages: ChatMessagePayload[];
   biomarkers?: ChatBiomarkerPayload[];
   patient?: ChatPatientPayload;
-}): Promise<{ reply: string; provider: string }> {
-  const res = await apiFetch<{ data: { reply: string; provider: string } }>('/chat', {
+  patientId?: string;
+  sessionId?: string;
+}): Promise<{ reply: string; provider: string; sessionId: string }> {
+  const res = await apiFetch<{ data: { reply: string; provider: string; sessionId: string } }>('/chat', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
   return res.data;
 }
+
+/**
+ * Fetches the persistent chat history for a patient.
+ */
+export async function getChatHistory(patientId?: string): Promise<{ sessionId: string | null; messages: ChatMessagePayload[] }> {
+  const query = patientId ? `?patientId=${patientId}` : '';
+  const res = await apiFetch<{ data: { sessionId: string | null; messages: ChatMessagePayload[] } }>(`/chat/history${query}`);
+  return res.data;
+}
+
+/**
+ * Requests the creation of a new chat session to start a fresh thread.
+ */
+export async function createChatSession(patientId?: string): Promise<{ sessionId: string }> {
+  const res = await apiFetch<{ data: { sessionId: string } }>('/chat/session', {
+    method: 'POST',
+    body: JSON.stringify({ patientId }),
+  });
+  return res.data;
+}
+
