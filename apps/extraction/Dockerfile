@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# Build context: apps/extraction
+# Build context: repo root.
 
 ARG PYTHON_VERSION=3.12-slim
 
@@ -16,7 +16,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY apps/extraction/requirements.txt .
 RUN pip install --user -r requirements.txt \
     && python -m spacy download en_core_web_sm
 
@@ -31,7 +31,7 @@ RUN useradd --create-home --uid 1001 app
 WORKDIR /app
 
 COPY --from=builder --chown=app:app /root/.local /home/app/.local
-COPY --chown=app:app app ./app
+COPY --chown=app:app apps/extraction/app ./app
 
 USER app
 
