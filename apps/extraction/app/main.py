@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from app.parsers import BIOMARKER_DICTIONARY, OPENAI_AVAILABLE, OPENAI_MODEL
 from app.phi import PRESIDIO_AVAILABLE
 from app.routers import extract_router, health_router, normalize_router
+from app.rag import rag_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,3 +46,5 @@ app = FastAPI(
 app.include_router(health_router)
 app.include_router(extract_router)
 app.include_router(normalize_router)
+app.include_router(rag_router)
+
