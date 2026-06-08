@@ -25,6 +25,12 @@ export function ClinicalSection({ reportData }: ClinicalSectionProps) {
     ? Math.round((normalBiomarkers.length / biomarkers.length) * 100)
     : 100;
 
+  // Resilient text cleaner helper to catch and strip any raw "undefined" strings from data
+  const cleanText = (str: string) => {
+    if (!str) return '';
+    return str.replace(/\(undefined\s*(?:mg\/dL)?\)/gi, '').replace(/undefined/gi, 'elevated');
+  };
+
   // Patient info
   const dob = patient?.dateOfBirth
     ? new Date(patient.dateOfBirth).toLocaleDateString('en-GB')
@@ -39,16 +45,29 @@ export function ClinicalSection({ reportData }: ClinicalSectionProps) {
     : 'N/A';
   const analyzedDate = new Date().toLocaleDateString('en-GB');
 
-  // Derive test type from biomarker categories
+  // Derive human-friendly test type (Panels Screened) from categories
+  const categoryHumanNameMap: Record<string, string> = {
+    'CBC': 'Complete Blood Count',
+    'Kidney': 'Kidney Function',
+    'Lipid': 'Lipid Profile',
+    'Lipid Panel': 'Lipid Profile',
+    'Metabolic': 'Metabolic Health',
+    'Vitamins': 'Vitamins & Micronutrients',
+    'Thyroid': 'Thyroid Panel',
+    'Liver': 'Liver Function',
+    'Electrolytes': 'Electrolytes Balance',
+  };
+
   const categories = Array.from(new Set(biomarkers.map((b) => b.category)));
-  const testType = categories.length > 0
-    ? categories.slice(0, 2).join(', ')
-    : 'Blood Panel';
+  const humanizedCategories = categories.map(cat => categoryHumanNameMap[cat] || cat);
+  const panelsScreened = humanizedCategories.length > 0
+    ? humanizedCategories.slice(0, 2).join(' & ')
+    : 'Routine Blood Panel';
 
   // Summary & recommendations from report
-  const summary = activeReport?.summary || '';
-  const summaryPoints = activeReport?.insights?.summaryPoints || [];
-  const recommendations = activeReport?.insights?.recommendations || [];
+  const summary = cleanText(activeReport?.summary || '');
+  const summaryPoints = (activeReport?.insights?.summaryPoints || []).map(cleanText);
+  const recommendations = (activeReport?.insights?.recommendations || []).map(cleanText);
   const flags = activeReport?.insights?.flags || [];
 
   // Build systemic observations from flagged biomarkers grouped by category
@@ -62,28 +81,38 @@ export function ClinicalSection({ reportData }: ClinicalSectionProps) {
     const statuses = markers.map((m) => `${m.status.toLowerCase()} ${m.displayName}`).join(' and ');
     return {
       title: `${cat} Observations`,
-      description: `The data shows ${statuses}, which may indicate areas requiring clinical review. These findings should be monitored to assess ${cat.toLowerCase()} function over time.`,
+      description: cleanText(`The data shows ${statuses}, which may indicate areas requiring clinical review. These findings should be monitored to assess ${cat.toLowerCase()} function over time.`),
     };
   });
 
-  // Build possible health statuses from summary points
-  const healthStatuses = summaryPoints.slice(0, 3).map((point) => ({
-    title: point.length > 60 ? point.slice(0, 60) + '...' : point,
-    description: point,
-  }));
+  // Build possible health statuses from summary points - split by colon to prevent truncation
+  const healthStatuses = summaryPoints.slice(0, 3).map((point) => {
+    const colonIndex = point.indexOf(':');
+    if (colonIndex !== -1) {
+      const title = point.slice(0, colonIndex).trim();
+      const description = point.slice(colonIndex + 1).trim();
+      return { title, description };
+    }
+    return { title: 'Health Observation', description: point };
+  });
 
-  // Build pay attention items from recommendations
-  const payAttentionItems = recommendations.slice(0, 3).map((rec) => ({
-    title: rec.length > 50 ? rec.slice(0, 50) + '...' : rec,
-    description: rec,
-  }));
+  // Build pay attention items from recommendations - split by colon to prevent truncation
+  const payAttentionItems = recommendations.slice(0, 3).map((rec) => {
+    const colonIndex = rec.indexOf(':');
+    if (colonIndex !== -1) {
+      const title = rec.slice(0, colonIndex).trim();
+      const description = rec.slice(colonIndex + 1).trim();
+      return { title, description };
+    }
+    return { title: 'Clinical Recommendation', description: rec };
+  });
 
   // Suggested screenings from flags
   const suggestedScreenings = flags.slice(0, 3).map((f) => {
     const marker = biomarkers.find((b) => b.id === f.biomarkerId);
     return {
       name: marker?.displayName || f.biomarkerId,
-      reason: f.note || `To further assess ${marker?.displayName || 'biomarker'} levels and clinical status.`,
+      reason: cleanText(f.note || `To further assess ${marker?.displayName || 'biomarker'} levels and clinical status.`),
     };
   });
 
@@ -95,8 +124,35 @@ export function ClinicalSection({ reportData }: ClinicalSectionProps) {
         reason: `To further assess ${b.displayName.toLowerCase()} levels (currently ${b.status.toLowerCase()}).`,
       }));
 
+  // Build active timeline steps checklist from screenings to progress action items logically
+  const timelineSteps = [];
+  if (displayScreenings.length > 0) {
+    const mainMarker = displayScreenings[0].name;
+    timelineSteps.push({
+      step: 1,
+      title: `Consult Primary Care Provider (PCP)`,
+      description: `Schedule a follow-up consultation with your PCP to discuss your elevated ${mainMarker} levels.`,
+    });
+    timelineSteps.push({
+      step: 2,
+      title: `Retest in 90 Days`,
+      description: `Schedule a follow-up lab screening in 3 months to monitor changes in your ${displayScreenings.map(s => s.name).slice(0, 2).join(' & ')} levels.`,
+    });
+    timelineSteps.push({
+      step: 3,
+      title: `Implement Lifestyle Changes`,
+      description: `Focus on recommendations listed in the 'Pay Attention' checklist, specifically targeting metabolic and cardiovascular vectors.`,
+    });
+  } else {
+    timelineSteps.push({
+      step: 1,
+      title: `Maintain Annual Wellness Exams`,
+      description: `All biomarkers are currently in the optimal zone. Retain standard annual wellness screenings.`,
+    });
+  }
+
   return (
-    <div className="flex flex-col gap-6 animate-fade-in">
+    <div className="flex flex-col gap-8 animate-fade-in">
 
       {/* ── Row 1: Patient Profile + Scan & Lab Info ──────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -119,11 +175,15 @@ export function ClinicalSection({ reportData }: ClinicalSectionProps) {
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Weight</p>
-              <p className="text-sm font-bold text-foreground mt-0.5">—</p>
+              <button className="text-xs font-bold text-[var(--primary-text)] hover:underline mt-0.5 bg-transparent border-0 p-0 cursor-pointer flex items-center gap-0.5">
+                <Plus className="w-3 h-3" /> Add Weight
+              </button>
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Height</p>
-              <p className="text-sm font-bold text-foreground mt-0.5">—</p>
+              <button className="text-xs font-bold text-[var(--primary-text)] hover:underline mt-0.5 bg-transparent border-0 p-0 cursor-pointer flex items-center gap-0.5">
+                <Plus className="w-3 h-3" /> Add Height
+              </button>
             </div>
           </div>
         </div>
@@ -133,7 +193,7 @@ export function ClinicalSection({ reportData }: ClinicalSectionProps) {
           <div className="flex items-center gap-2 mb-4">
             <Microscope className="w-4 h-4" style={{ color: 'var(--primary-text)' }} />
             <h4 className="text-xs font-extrabold uppercase tracking-widest" style={{ color: 'var(--primary-text)' }}>
-              Scan & Laboratory Info
+              Scan &amp; Laboratory Info
             </h4>
           </div>
           <div className="grid grid-cols-2 gap-y-4 gap-x-8">
@@ -146,8 +206,8 @@ export function ClinicalSection({ reportData }: ClinicalSectionProps) {
               <p className="text-sm font-bold text-foreground mt-0.5">{analyzedDate}</p>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Test Type</p>
-              <p className="text-sm font-bold text-foreground mt-0.5 truncate" title={testType}>{testType}</p>
+              <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Panels Screened</p>
+              <p className="text-sm font-bold text-foreground mt-0.5 truncate" title={panelsScreened}>{panelsScreened}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Lab Name</p>
@@ -185,16 +245,16 @@ export function ClinicalSection({ reportData }: ClinicalSectionProps) {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl font-black text-white">{healthScore}%</span>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-300">Optimal</span>
+              <span className="text-xl font-black text-white">{normalBiomarkers.length}/{biomarkers.length}</span>
+              <span className="text-[8px] font-bold uppercase tracking-widest text-emerald-300">Optimal</span>
             </div>
           </div>
 
           {/* Text + Stats */}
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-extrabold text-white tracking-tight">Biomarker Health Balance</h3>
-            <p className="text-sm text-emerald-100/80 mt-1 leading-relaxed">
-              Your overall biomarker configuration is <strong className="text-white">{healthScore}% in optimal range</strong>.
+            <p className="text-sm text-emerald-100/95 mt-1 leading-relaxed">
+              Your lab report shows <strong className="text-white">{normalBiomarkers.length} out of {biomarkers.length} biomarkers</strong> in the optimal range.
               {flaggedBiomarkers.length > 0 && (
                 <> There {flaggedBiomarkers.length === 1 ? 'is' : 'are'} {flaggedBiomarkers.length} marker{flaggedBiomarkers.length > 1 ? 's' : ''} requiring targeted attention and clinical discussion.</>
               )}
@@ -354,7 +414,7 @@ export function ClinicalSection({ reportData }: ClinicalSectionProps) {
         </div>
       </div>
 
-      {/* ── Row 5: Clinical Panel Synthesis + Suggested Screenings */}
+      {/* ── Row 5: Clinical Panel Synthesis + Suggested Next Steps */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Clinical Panel Synthesis */}
         <div className="md:col-span-7 glass-card rounded-2xl p-6 border border-border/40 shadow-sm">
@@ -371,27 +431,25 @@ export function ClinicalSection({ reportData }: ClinicalSectionProps) {
           </p>
         </div>
 
-        {/* Suggested Screenings */}
+        {/* Suggested Next Steps / Timeline Checklist */}
         <div className="md:col-span-5 glass-card rounded-2xl p-6 border border-border/40 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-5">
             <Plus className="w-4 h-4" style={{ color: 'var(--primary-text)' }} />
-            <h3 className="text-base font-extrabold text-foreground tracking-tight">Suggested Screenings</h3>
+            <h3 className="text-base font-extrabold text-foreground tracking-tight">Suggested Next Steps</h3>
           </div>
-          <div className="flex flex-col gap-3">
-            {displayScreenings.length > 0 ? (
-              displayScreenings.map((s, i) => (
-                <div
-                  key={i}
-                  className="rounded-xl p-3.5"
-                  style={{ background: 'color-mix(in srgb, var(--card) 60%, var(--background))', border: '1px solid var(--border)' }}
-                >
-                  <p className="text-sm font-bold text-foreground mb-0.5">{s.name}</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{s.reason}</p>
+          <div className="relative pl-6 border-l border-border/30 flex flex-col gap-5">
+            {timelineSteps.map((step, i) => (
+              <div key={i} className="relative">
+                {/* Timeline dot */}
+                <div className="absolute -left-[31px] top-0.5 w-4.5 h-4.5 rounded-full bg-card border-2 border-[var(--primary)] flex items-center justify-center shadow-sm">
+                  <span className="text-[9px] font-black text-[var(--primary-text)]">{step.step}</span>
                 </div>
-              ))
-            ) : (
-              <p className="text-xs text-muted-foreground">No additional screenings recommended at this time.</p>
-            )}
+                <div>
+                  <p className="text-xs font-bold text-foreground mb-0.5">{step.title}</p>
+                  <p className="text-[11px] text-muted-foreground leading-normal">{step.description}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

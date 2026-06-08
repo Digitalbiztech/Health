@@ -35,7 +35,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { CompleteReportData } from '@/types/dashboard';
 import { STATUS_COLORS, CATEGORY_ICONS } from './constants';
-import { getEffectivePct } from './utils';
+import { getEffectivePct, getSliderTrack } from './utils';
 import { BiomarkerDetailDialog } from './BiomarkerDetailDialog';
 import { TrendAnalysisChart } from './TrendAnalysisChart';
 import { AIChat } from './AIChat';
@@ -90,11 +90,17 @@ export function ReportDashboard({
   const pName = `${patient?.firstName || ''} ${patient?.lastName || ''}`.trim() || 'Patient';
 
   // Biomarker Breakdown filtering
-  // const breakdownCategories = panels.filter(p => p !== 'All');
   const breakdownBiomarkers = biomarkers
     .filter(b => selectedPanel === 'All' || b.category === selectedPanel)
     .filter(b => !showFlaggedOnly || b.status !== 'NORMAL')
-    .filter(b => !biomarkerSearch || b.displayName.toLowerCase().includes(biomarkerSearch.toLowerCase()));
+    .filter(b => !biomarkerSearch || b.displayName.toLowerCase().includes(biomarkerSearch.toLowerCase()))
+    .sort((a, b) => {
+      const aFlagged = a.status !== 'NORMAL';
+      const bFlagged = b.status !== 'NORMAL';
+      if (aFlagged && !bFlagged) return -1;
+      if (!aFlagged && bFlagged) return 1;
+      return 0;
+    });
 
 
 
@@ -225,7 +231,7 @@ export function ReportDashboard({
           </div>
 
           {/* Biomarker cards grid (2 columns) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {breakdownBiomarkers.map((b) => {
               const colors = STATUS_COLORS[b.status];
               const Icon = CATEGORY_ICONS[b.category] || Droplet;
@@ -258,15 +264,20 @@ export function ReportDashboard({
                       <span className="font-semibold" style={{ color: 'var(--foreground)' }}>{b.value} {b.unit}</span>
                       <span>High</span>
                     </div>
-                    <div className="relative h-2 rounded-full overflow-hidden bg-border/40 flex">
-                      <div className="h-full w-[20%]" style={{ background: 'rgba(201, 125, 10, 0.25)' }} />
-                      <div className="h-full w-[60%] border-x border-border/40" style={{ background: 'rgba(26, 153, 102, 0.25)' }} />
-                      <div className="h-full w-[20%]" style={{ background: 'rgba(240, 78, 20, 0.25)' }} />
-                      <div
-                        className="absolute w-3.5 h-3.5 -top-0.5 rounded-full border border-white shadow transition-all duration-500"
-                        style={{ left: `calc(${effectivePct}% - 7px)`, background: colors.text }}
-                      />
-                    </div>
+                    {(() => {
+                      const track = getSliderTrack(b.canonicalName, b.displayName);
+                      return (
+                        <div className="relative h-2 rounded-full overflow-hidden bg-border/40 flex">
+                          {track.leftPct > 0 && <div className="h-full" style={{ width: `${track.leftPct}%`, background: track.leftColor }} />}
+                          {track.midPct > 0 && <div className="h-full border-x border-border/40" style={{ width: `${track.midPct}%`, background: track.midColor }} />}
+                          {track.rightPct > 0 && <div className="h-full" style={{ width: `${track.rightPct}%`, background: track.rightColor }} />}
+                          <div
+                            className="absolute w-3.5 h-3.5 -top-0.5 rounded-full border border-white shadow transition-all duration-500"
+                            style={{ left: `calc(${effectivePct}% - 7px)`, background: colors.text }}
+                          />
+                        </div>
+                      );
+                    })()}
                     <div className="flex justify-between text-[8px] mt-1" style={{ color: 'var(--muted-foreground)' }}>
                       <span>Min: {b.referenceMin ?? '0'}</span>
                       <span>Optimal: {b.referenceRange}</span>
@@ -274,20 +285,14 @@ export function ReportDashboard({
                     </div>
                   </div>
 
-                  {/* Action buttons */}
-                  <div className="flex gap-2 mt-1">
+                  {/* Action button */}
+                  <div className="mt-1">
                     <button
                       onClick={() => setSelectedBiomarkerDetail(b)}
-                      className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold border border-border/40 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 transition-all bg-transparent text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full py-1.5 rounded-lg text-[11px] font-semibold border border-border/40 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 transition-all bg-transparent text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <Info className="w-3.5 h-3.5" />
-                      View Details
-                    </button>
-                    <button
-                      onClick={() => setSelectedBiomarkerDetail(b)}
-                      className="flex-1 py-1.5 rounded-lg text-[11px] font-semibold border border-border/40 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 transition-all bg-transparent text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      Explain
+                      View Explanation
                     </button>
                   </div>
                 </div>
@@ -696,15 +701,20 @@ export function ReportDashboard({
                         <p className="text-[10px] text-muted-foreground leading-normal">{desc}</p>
 
                         <div className="mt-1">
-                          <div className="relative h-1.5 rounded-full bg-border/20 flex overflow-hidden">
-                            <div className="h-full w-[20%] bg-orange-500/10" />
-                            <div className="h-full w-[60%] bg-emerald-500/15" />
-                            <div className="h-full w-[20%] bg-orange-500/10" />
-                            <div
-                              className="absolute w-2.5 h-2.5 -top-[2px] rounded-full border border-white shadow transition-all duration-300"
-                              style={{ left: `calc(${pct}% - 5px)`, background: color }}
-                            />
-                          </div>
+                          {(() => {
+                            const track = getSliderTrack(b.canonicalName, b.displayName);
+                            return (
+                              <div className="relative h-1.5 rounded-full bg-border/20 flex overflow-hidden">
+                                {track.leftPct > 0 && <div className="h-full" style={{ width: `${track.leftPct}%`, background: track.leftColor }} />}
+                                {track.midPct > 0 && <div className="h-full border-x border-border/40" style={{ width: `${track.midPct}%`, background: track.midColor }} />}
+                                {track.rightPct > 0 && <div className="h-full" style={{ width: `${track.rightPct}%`, background: track.rightColor }} />}
+                                <div
+                                  className="absolute w-2.5 h-2.5 -top-[2px] rounded-full border border-white shadow transition-all duration-300"
+                                  style={{ left: `calc(${pct}% - 5px)`, background: color }}
+                                />
+                              </div>
+                            );
+                          })()}
                           <div className="flex justify-between text-[8px] mt-1 text-muted-foreground font-semibold px-0.5">
                             <span>Low</span>
                             <span>Normal</span>
@@ -1099,12 +1109,11 @@ export function ReportDashboard({
       {/* ── Patient Banner ─────────────────────────────────── */}
       <section className="glass-card rounded-2xl p-6 border-border/40 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-6 mb-8">
         <div className="flex items-center gap-4 w-full lg:w-auto">
-          <div
-            className="w-14 h-14 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}
-          >
-            <Stethoscope className="w-7 h-7 text-white" />
-          </div>
+          <img
+            src="/logo/YC_Icon_GS.png"
+            alt="Patient Avatar"
+            className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border/40"
+          />
           <div>
             <h3 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>
               {pName}

@@ -48,6 +48,53 @@ export function getEffectivePct(biomarker: Biomarker): number {
   return 50;
 }
 
+export function getSliderTrack(canonicalName?: string, displayName?: string): { leftPct: number; midPct: number; rightPct: number; leftColor: string; midColor: string; rightColor: string } {
+  const name = (canonicalName || displayName || '').toUpperCase();
+  
+  // 1. Only LOW is dangerous (eGFR, HDL, VITAMIN, VITD)
+  if (name.includes('EGFR') || name.includes('HDL') || name.includes('VITAMIN') || name.includes('VITD')) {
+    return {
+      leftPct: 25,
+      midPct: 75,
+      rightPct: 0,
+      leftColor: 'rgba(201, 125, 10, 0.25)', // Orange (Low danger)
+      midColor: 'rgba(26, 153, 102, 0.25)',  // Green (Optimal)
+      rightColor: 'rgba(26, 153, 102, 0.25)', // Green (Optimal)
+    };
+  }
+  
+  // 2. Only HIGH is dangerous (ALT, AST, Bilirubin, LDL, Cholesterol, Triglycerides, Glucose)
+  if (
+    name.includes('ALT') ||
+    name.includes('AST') ||
+    name.includes('BILIRUBIN') ||
+    name.includes('LDL') ||
+    name.includes('TRIGLYCERIDES') ||
+    name.includes('GLUCOSE') ||
+    name.includes('CHOLESTEROL') ||
+    name.includes('CREATININE')
+  ) {
+    return {
+      leftPct: 0,
+      midPct: 75,
+      rightPct: 25,
+      leftColor: 'rgba(26, 153, 102, 0.25)',  // Green (Optimal)
+      midColor: 'rgba(26, 153, 102, 0.25)',  // Green (Optimal)
+      rightColor: 'rgba(240, 78, 20, 0.25)',  // Red/Orange (High danger)
+    };
+  }
+  
+  // 3. Two-sided danger (Default: Sodium, Potassium, WBC, Hemoglobin, etc.)
+  return {
+    leftPct: 20,
+    midPct: 60,
+    rightPct: 20,
+    leftColor: 'rgba(201, 125, 10, 0.25)', // Orange (Low danger)
+    midColor: 'rgba(26, 153, 102, 0.25)',  // Green (Optimal)
+    rightColor: 'rgba(240, 78, 20, 0.25)',  // Red/Orange (High danger)
+  };
+}
+
 export function exportCSV(reportData: CompleteReportData) {
   if (!reportData || !reportData.extraction) return;
   const headers = 'Name,Value,Unit,Reference Range,Status,Category\n';

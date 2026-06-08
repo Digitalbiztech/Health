@@ -507,19 +507,21 @@ export default function Dashboard() {
                     <Download className="w-3.5 h-3.5" />
                     Export
                   </button>
-                  <div className="absolute right-0 top-full mt-1.5 w-36 glass-card rounded-xl border border-border/40 shadow-lg hidden group-hover:flex flex-col p-1.5 z-30">
-                    <button
-                      onClick={() => reportData && exportPDF(reportData, healthScore)}
-                      className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-border/30 cursor-pointer border-0 bg-transparent"
-                    >
-                      PDF Report
-                    </button>
-                    <button
-                      onClick={() => reportData && exportCSV(reportData)}
-                      className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-border/30 cursor-pointer border-0 bg-transparent"
-                    >
-                      Flat CSV Matrix
-                    </button>
+                  <div className="absolute right-0 top-full pt-1.5 w-36 hidden group-hover:flex flex-col z-30">
+                    <div className="glass-card rounded-xl border border-border/40 shadow-lg flex flex-col p-1.5">
+                      <button
+                        onClick={() => reportData && exportPDF(reportData, healthScore)}
+                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-border/30 cursor-pointer border-0 bg-transparent"
+                      >
+                        PDF Report
+                      </button>
+                      <button
+                        onClick={() => reportData && exportCSV(reportData)}
+                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-border/30 cursor-pointer border-0 bg-transparent"
+                      >
+                        Flat CSV Matrix
+                      </button>
+                    </div>
                   </div>
                 </div>
               </>

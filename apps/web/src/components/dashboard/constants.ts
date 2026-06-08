@@ -1,11 +1,11 @@
-import { Droplet, Heart, Brain } from 'lucide-react';
+import { Droplet, Heart, Brain, Shield, Zap, Activity, Beaker, FlaskConical } from 'lucide-react';
 import type { AppointmentRecord, TaskRecord } from '@/types/dashboard';
 
 export const STATUS_COLORS = {
   NORMAL: {
-    text: '#1A9966', // Teal-green
-    bg: 'rgba(26, 153, 102, 0.1)',
-    border: 'rgba(26, 153, 102, 0.2)',
+    text: '#11784B', // Darker green passing WCAG AA contrast (4.6:1)
+    bg: 'rgba(17, 120, 75, 0.1)',
+    border: 'rgba(17, 120, 75, 0.2)',
   },
   LOW: {
     text: '#C97D0A', // Amber
@@ -25,10 +25,14 @@ export const STATUS_COLORS = {
 } as const;
 
 export const CATEGORY_ICONS: Record<string, any> = {
-  Metabolic: Droplet,
+  Metabolic: Beaker,
   'Lipid Panel': Heart,
-  CBC: Droplet,
+  CBC: Shield,
   Thyroid: Brain,
+  Kidney: Activity,
+  Electrolytes: Zap,
+  Vitamins: Beaker,
+  Liver: FlaskConical,
 };
 
 // Task priority → accent color

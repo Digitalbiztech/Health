@@ -58,9 +58,14 @@ export const pdfWorker = new Worker(
       `Review of lipid panel indicates slightly elevated cardiovascular risk indices requiring preventative focus.`,
     ];
 
+    const glucoseVal = biomarkers.find(b => b.canonicalName === 'GLUCOSE')?.value;
+    const glucoseStr = glucoseVal != null ? ` (${glucoseVal} mg/dL)` : '';
+    const cholVal = biomarkers.find(b => b.canonicalName === 'CHOLESTEROL_TOTAL')?.value;
+    const cholStr = cholVal != null ? ` (${cholVal} mg/dL)` : '';
+
     const recommendations = [
-      `Prediabetes Screening: Fasting Blood Glucose is slightly high (${biomarkers.find(b => b.canonicalName === 'GLUCOSE')?.value} mg/dL). Consider reducing simple sugars and checking HbA1c.`,
-      `Cardiovascular Health: Total Cholesterol (${biomarkers.find(b => b.canonicalName === 'CHOLESTEROL_TOTAL')?.value} mg/dL) and LDL are elevated. Recommend adopting a Mediterranean diet rich in whole grains and healthy fats.`,
+      `Prediabetes Screening: Fasting Blood Glucose is slightly high${glucoseStr}. Consider reducing simple sugars and checking HbA1c.`,
+      `Cardiovascular Health: Total Cholesterol${cholStr} and LDL are elevated. Recommend adopting a Mediterranean diet rich in whole grains and healthy fats.`,
       `Activity: Engage in at least 150 minutes of moderate-intensity aerobic exercise per week to optimize lipid profiles.`,
     ];
 
