@@ -1,4 +1,4 @@
-import { Droplet, Heart, Brain, Shield, Zap, Activity, Beaker, FlaskConical } from 'lucide-react';
+import { Heart, Brain, Shield, Zap, Activity, Beaker, FlaskConical } from 'lucide-react';
 import type { AppointmentRecord, TaskRecord } from '@/types/dashboard';
 
 export const STATUS_COLORS = {
