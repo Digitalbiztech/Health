@@ -9,6 +9,8 @@ class ExtractionRequest(BaseModel):
     file_url: str
     file_type: str
     upload_id: str
+    patient_id: str | None = None
+
 
 
 class PageText(BaseModel):
