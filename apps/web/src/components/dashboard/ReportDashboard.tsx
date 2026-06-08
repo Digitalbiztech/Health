@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import {
-  Stethoscope,
   FileText,
   TrendingUp,
   MessageSquare,
