@@ -131,6 +131,7 @@ export const extractionService = {
     fileUrl: string;
     fileType: ExtractionFileType;
     uploadId: string;
+    patientId?: string;
   }): Promise<ExtractionResponse> {
     return request<ExtractionResponse>('/extract', {
       method: 'POST',
@@ -138,6 +139,7 @@ export const extractionService = {
         file_url: params.fileUrl,
         file_type: params.fileType,
         upload_id: params.uploadId,
+        patient_id: params.patientId,
       }),
     });
   },
