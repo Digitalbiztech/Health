@@ -25,6 +25,9 @@ import {
   Line,
   AreaChart,
   Area,
+  BarChart,
+  Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -311,6 +314,9 @@ export function ReportDashboard({
     const systemMap: Record<string, { color: string; label: string }> = {
       CBC: { color: '#22d3ee', label: 'Complete Blood Count' },
       Blood: { color: '#22d3ee', label: 'Complete Blood Count' },
+      Kidney: { color: '#6366f1', label: 'Kidney Function' },
+      Liver: { color: '#ec4899', label: 'Liver Function' },
+      Electrolytes: { color: '#eab308', label: 'Electrolytes' },
       Metabolic: { color: '#14b8a6', label: 'Comprehensive Metabolic' },
       'Comprehensive Metabolic Panel': { color: '#14b8a6', label: 'Comprehensive Metabolic' },
       'Lipid Panel': { color: '#f97316', label: 'Lipid Panel' },
@@ -319,6 +325,7 @@ export function ReportDashboard({
       Thyroid: { color: '#a855f7', label: 'Thyroid / Hormones' },
       'Vitamins & Minerals': { color: '#10b981', label: 'Vitamins & Minerals' },
       Nutrients: { color: '#10b981', label: 'Vitamins & Minerals' },
+      Vitamins: { color: '#10b981', label: 'Vitamins & Minerals' },
     };
 
     // Standard clinical panels for the Body System Status
@@ -326,8 +333,8 @@ export function ReportDashboard({
       { id: 'blood', label: 'BLOOD', categories: ['CBC', 'Blood'] },
       { id: 'heart', label: 'HEART', categories: ['Lipid Panel', 'Lipid'] },
       { id: 'hormones', label: 'HORMONES', categories: ['Hormones', 'Thyroid'] },
-      { id: 'nutrients', label: 'NUTRIENTS', categories: ['Vitamins & Minerals', 'Nutrients'] },
-      { id: 'metabolic', label: 'METABOLIC', categories: ['Metabolic', 'Comprehensive Metabolic Panel'] },
+      { id: 'nutrients', label: 'NUTRIENTS', categories: ['Vitamins & Minerals', 'Nutrients', 'Vitamins'] },
+      { id: 'metabolic', label: 'METABOLIC', categories: ['Metabolic', 'Comprehensive Metabolic Panel', 'Kidney', 'Liver', 'Electrolytes'] },
     ];
 
     const systemBars = standardPanels.map(panel => {
@@ -338,15 +345,16 @@ export function ReportDashboard({
 
       const primaryCat = panel.categories[0];
       const color = systemMap[primaryCat]?.color || '#10b981';
-      const blocks = 8;
+      const blocks = 10;
       const filled = Math.round((score / 100) * blocks);
       return { label: panel.label, score, color, filled, blocks };
     });
 
-    // Report Condition line chart data (5 points as shown in mockup)
+    // Report Condition chart data (5 points as shown in mockup)
     const conditionData = systemBars.map(bar => ({
       name: bar.label.charAt(0) + bar.label.slice(1).toLowerCase(),
       score: bar.score,
+      color: bar.color,
     }));
 
     // User profile age/gender
@@ -411,7 +419,7 @@ export function ReportDashboard({
         unit: b.unit,
       };
 
-      const sysLabel = systemMap[b.category]?.label || 'Other';
+      const sysLabel = systemMap[b.category]?.label || b.category;
       item[`val_${sysLabel}`] = yVal;
 
       return item;
@@ -539,13 +547,7 @@ export function ReportDashboard({
 
               <div className="h-40 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={conditionData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
+                  <BarChart data={conditionData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.1} vertical={false} />
                     <XAxis dataKey="name" tick={{ fill: 'var(--muted-foreground)', fontSize: 9 }} tickLine={false} axisLine={false} />
                     <YAxis domain={[0, 100]} ticks={[0, 50, 100]} tick={{ fill: 'var(--muted-foreground)', fontSize: 9 }} tickLine={false} axisLine={false} />
@@ -559,11 +561,12 @@ export function ReportDashboard({
                         ) : null
                       }
                     />
-                    <Area type="monotone" dataKey="score" stroke="#10b981" strokeWidth={2} fill="url(#scoreGradient)" dot={(props: any) => {
-                      if (props.cx === undefined || props.cy === undefined) return null;
-                      return <circle key={props.key} cx={props.cx} cy={props.cy} r={4} fill="#10b981" stroke="white" strokeWidth={1.5} />;
-                    }} />
-                  </AreaChart>
+                    <Bar dataKey="score" radius={[4, 4, 0, 0]}>
+                      {conditionData.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} opacity={0.85} />
+                      ))}
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
@@ -586,7 +589,7 @@ export function ReportDashboard({
                           <div
                             key={idx}
                             className="flex-1 h-3.5 rounded-sm transition-all"
-                            style={{ background: isFilled ? fillColor : 'rgba(255,255,255,0.05)' }}
+                            style={{ background: isFilled ? fillColor : 'rgba(100, 116, 139, 0.15)' }}
                           />
                         );
                       })}
@@ -690,12 +693,12 @@ export function ReportDashboard({
 
                     return (
                       <div key={b.id} className="p-3.5 rounded-xl border border-border/40 bg-card/40 flex flex-col gap-2.5">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-1.5">
-                            <AlertTriangle className="w-3.5 h-3.5 text-orange-500 fill-orange-500/10" />
-                            <span className="font-extrabold text-xs text-foreground">{b.displayName}</span>
+                        <div className="flex justify-between items-baseline w-full">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <AlertTriangle className="w-3.5 h-3.5 text-orange-500 fill-orange-500/10 shrink-0" />
+                            <span className="font-extrabold text-xs text-foreground truncate">{b.displayName}</span>
                           </div>
-                          <span className="font-extrabold text-xs text-orange-500">{b.value}</span>
+                          <span className="font-black text-sm text-orange-500 ml-3 shrink-0">{b.value}</span>
                         </div>
                         <p className="text-[10px] text-muted-foreground leading-normal">{desc}</p>
 
@@ -755,9 +758,9 @@ export function ReportDashboard({
             <div className="w-1.5 h-40 self-center rounded-full bg-gradient-to-t from-rose-500 via-amber-500 via-emerald-500 via-amber-500 to-rose-500 mr-2 opacity-80" />
             <div className="flex-1 h-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={profileData} margin={{ top: 8, right: 16, left: -20, bottom: 32 }}>
+                <LineChart data={profileData} margin={{ top: 8, right: 16, left: 20, bottom: 48 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.1} vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: 'var(--muted-foreground)', fontSize: 8, fontWeight: 'bold' }} angle={-45} textAnchor="end" interval={0} height={60} />
+                  <XAxis dataKey="name" tick={{ fill: 'var(--muted-foreground)', fontSize: 8, fontWeight: 'bold' }} angle={-90} textAnchor="end" interval={0} height={80} />
                   <YAxis
                     domain={[0, 4]}
                     tick={{ fill: 'var(--muted-foreground)', fontSize: 8, fontWeight: 'bold' }}
@@ -770,7 +773,7 @@ export function ReportDashboard({
                       return '';
                     }}
                     ticks={[0.5, 1.1, 2.2, 3.1, 3.6]}
-                    width={60}
+                    width={75}
                   />
                   <Tooltip
                     content={({ active, payload }) =>
