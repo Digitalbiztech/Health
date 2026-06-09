@@ -15,6 +15,12 @@ from .fuzzy import (
     token_set_score,
 )
 from .insights import generate_insights
+from .quality import (
+    PANEL_DEFINITIONS,
+    ExtractionQuality,
+    score_extraction,
+    should_fallback,
+)
 from .normalizer import (
     ResolvedName,
     classify_status,
@@ -31,8 +37,10 @@ __all__ = [
     "ALIAS_CANDIDATES",
     "ALIAS_INDEX",
     "BIOMARKER_DICTIONARY",
+    "ExtractionQuality",
     "OPENAI_AVAILABLE",
     "OPENAI_MODEL",
+    "PANEL_DEFINITIONS",
     "ResolvedName",
     "best_fuzzy_match",
     "best_token_set_match",
@@ -47,5 +55,7 @@ __all__ = [
     "normalize_biomarker",
     "resolve_name",
     "resolve_names_batch",
+    "score_extraction",
+    "should_fallback",
     "token_set_score",
 ]
