@@ -64,6 +64,15 @@ def _is_whitelisted(text: str) -> bool:
     return text.lower().strip() in MEDICAL_WHITELIST
 
 
+def _is_pure_number(text: str) -> bool:
+    cleaned = text.strip()
+    try:
+        float(cleaned)
+        return True
+    except ValueError:
+        return False
+
+
 class PHIEntity:
     """A detected PHI entity in text."""
 
@@ -115,6 +124,9 @@ def detect_with_presidio(text: str) -> list[PHIEntity]:
         detected_text = text[r.start:r.end]
         if _is_whitelisted(detected_text):
             logger.debug("Skipping whitelisted medical term: '%s'", detected_text)
+            continue
+        if _is_pure_number(detected_text):
+            logger.debug("Skipping pure numeric value: '%s'", detected_text)
             continue
         entities.append(
             PHIEntity(
