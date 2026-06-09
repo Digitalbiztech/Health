@@ -19,8 +19,8 @@ services:
 
   extraction:
     build:
-      context: ./apps/extraction
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/extraction/Dockerfile
     restart: unless-stopped
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
