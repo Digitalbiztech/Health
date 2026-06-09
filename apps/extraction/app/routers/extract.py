@@ -53,19 +53,16 @@ async def extract(req: ExtractionRequest) -> ExtractionResponse:
 
         result = await extract_pdf(pdf_bytes)
 
-        masked_full_text, _, full_entities = mask_text(result["text"])
-        masked_page_list, _vault, _page_entities = mask_pages(result["pages"])
-        total_phi = len(full_entities)
-        logger.info(
-            "PHI masking complete for upload %s: %d entities masked",
-            req.upload_id,
-            total_phi,
-        )
+        # Retrieve processed data from the quality-driven pipeline result
+        masked_full_text = result["masked_text"]
+        masked_page_list = result["masked_pages"]
+        total_phi = result["phi_entities_count"]
+        full_entities = result["phi_entities"]
+        parsed_biomarkers = result["parsed_biomarkers"]
+        normalized = result["normalized_biomarkers"]
+        quality = result["quality"]
 
-        canonical_hints = list(BIOMARKER_DICTIONARY.keys())
-        parsed_biomarkers = extract_biomarkers_llm(masked_full_text, canonical_hints)
-
-        normalized = normalize_batch(parsed_biomarkers) if parsed_biomarkers else []
+        # Generate insights from normalized panel
         insight_dicts = generate_insights(normalized) if normalized else []
 
         # RAG Ingestion (Non-fatal, patient-scoped)
@@ -91,7 +88,7 @@ async def extract(req: ExtractionRequest) -> ExtractionResponse:
                 text=result["text"],
                 masked_text=masked_full_text,
                 method=result["method"],
-                confidence=result["confidence"],
+                confidence=quality.confidence_score,  # Use quality engine composite confidence
                 page_count=result["page_count"],
                 pages=[PageText(**p) for p in result["pages"]],
                 masked_pages=[PageText(**p) for p in masked_page_list],
@@ -101,6 +98,7 @@ async def extract(req: ExtractionRequest) -> ExtractionResponse:
                 parsed_biomarkers=[RawBiomarker(**b) for b in parsed_biomarkers],
                 normalized_biomarkers=[NormalizedBiomarker(**n) for n in normalized],
                 insights=[Insight(**i) for i in insight_dicts],
+                quality=quality.to_dict(),
             ),
         )
 
@@ -111,3 +109,4 @@ async def extract(req: ExtractionRequest) -> ExtractionResponse:
     except Exception as e:
         logger.error("Unexpected error for %s: %s", req.upload_id, e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
