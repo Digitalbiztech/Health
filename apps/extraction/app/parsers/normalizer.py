@@ -47,7 +47,8 @@ class ResolvedName:
 
 def _clean(raw: str) -> str:
     """Normalise whitespace, strip non-alnum (except - / .), lowercase."""
-    cleaned = re.sub(r"[^a-z0-9\s\-/.]", "", raw.lower().strip())
+    val = raw.replace("_", " ")
+    cleaned = re.sub(r"[^a-z0-9\s\-/.]", "", val.lower().strip())
     return re.sub(r"\s+", " ", cleaned).strip()
 
 
@@ -186,7 +187,12 @@ def convert_unit(canonical_name: str, value: float, from_unit: str) -> tuple[flo
     return value, from_unit
 
 
-def classify_status(canonical_name: str, value: float) -> str:
+def classify_status(
+    canonical_name: str,
+    value: float,
+    custom_min: float | None = None,
+    custom_max: float | None = None,
+) -> str:
     """Classify a value (in preferred unit) as LOW / NORMAL / HIGH / CRITICAL."""
     entry = BIOMARKER_DICTIONARY.get(canonical_name)
     if not entry:
@@ -195,14 +201,17 @@ def classify_status(canonical_name: str, value: float) -> str:
     ref = entry["reference"]
     crit = entry.get("critical", {})
 
+    ref_min = custom_min if custom_min is not None else ref["min"]
+    ref_max = custom_max if custom_max is not None else ref["max"]
+
     if crit.get("low") is not None and value < crit["low"]:
         return "CRITICAL"
     if crit.get("high") is not None and value > crit["high"]:
         return "CRITICAL"
 
-    if value < ref["min"]:
+    if value < ref_min:
         return "LOW"
-    if value > ref["max"]:
+    if value > ref_max:
         return "HIGH"
 
     return "NORMAL"
@@ -212,8 +221,20 @@ def normalize_biomarker(
     raw_name: str,
     value: float | str,
     unit: str = "",
+    source: str = "unknown",
+    pdf_ref_min: float | None = None,
+    pdf_ref_max: float | None = None,
 ) -> dict | None:
-    """Full normalization for a single biomarker. Returns DB-ready dict or None."""
+    """Full normalization for a single biomarker. Returns DB-ready dict or None.
+
+    Parameters
+    ----------
+    source : str
+        Extractor name for auditability ("pymupdf", "pdfplumber", "mistral_ocr").
+    pdf_ref_min, pdf_ref_max : float | None
+        Reference range extracted from the PDF text. If provided, these take
+        priority over the dictionary's built-in reference ranges.
+    """
     resolved = resolve_name(raw_name)
     if not resolved:
         logger.warning("Unknown biomarker: '%s'", raw_name)
@@ -221,45 +242,73 @@ def normalize_biomarker(
 
     entry = BIOMARKER_DICTIONARY[resolved.canonical_name]
 
-    try:
-        numeric_val = float(str(value).strip().replace(",", ""))
-    except (ValueError, TypeError):
-        logger.warning("Cannot parse value '%s' for %s", value, resolved.canonical_name)
-        return None
-
-    final_value, final_unit = convert_unit(
-        resolved.canonical_name, numeric_val, unit or entry["preferred_unit"]
-    )
-    status = classify_status(resolved.canonical_name, final_value)
+    # Use PDF-extracted range if available, otherwise fall back to dictionary
     ref = entry["reference"]
+    ref_min = pdf_ref_min if pdf_ref_min is not None else ref.get("min")
+    ref_max = pdf_ref_max if pdf_ref_max is not None else ref.get("max")
+
+    # Try parsing value; if missing/empty, treat as name-only resolution. If invalid string, return None.
+    val_str = None
+    final_unit = unit or entry["preferred_unit"]
+    status = "NORMAL"
+
+    val_stripped = str(value).strip()
+    if val_stripped != "":
+        try:
+            numeric_val = float(val_stripped.replace(",", ""))
+            final_value, final_unit = convert_unit(
+                resolved.canonical_name, numeric_val, unit or entry["preferred_unit"]
+            )
+            status = classify_status(resolved.canonical_name, final_value, ref_min, ref_max)
+            val_str = str(Decimal(str(round(final_value, 4))))
+        except (ValueError, TypeError):
+            logger.warning("Cannot parse value '%s' for %s", value, resolved.canonical_name)
+            return None
+
+    if pdf_ref_min is not None or pdf_ref_max is not None:
+        if pdf_ref_min is not None and pdf_ref_max is not None:
+            ref_range_str = f"{pdf_ref_min} - {pdf_ref_max} {final_unit}"
+        elif pdf_ref_max is not None:
+            ref_range_str = f"< {pdf_ref_max} {final_unit}"
+        elif pdf_ref_min is not None:
+            ref_range_str = f"> {pdf_ref_min} {final_unit}"
+        else:
+            ref_range_str = ref.get("range_str", "")
+    else:
+        ref_range_str = ref.get("range_str", "")
 
     return {
         "canonical_name": resolved.canonical_name,
         "display_name": resolved.display_name,
-        "value": str(Decimal(str(round(final_value, 4)))),
+        "value": val_str,
         "unit": final_unit,
-        "reference_range": ref.get("range_str", ""),
+        "reference_range": ref_range_str,
         "status": status,
         "category": entry.get("category", ""),
-        "reference_min": ref.get("min"),
-        "reference_max": ref.get("max"),
+        "reference_min": ref_min,
+        "reference_max": ref_max,
         "confidence": resolved.confidence,
         "match_method": resolved.method,
+        "source": source,
     }
 
 
 def normalize_batch(
     biomarkers: list[dict],
     min_confidence: float = 0.0,
+    source: str = "unknown",
 ) -> list[dict]:
-    """Normalize a batch — unrecognized entries are dropped.
+    """Normalize a batch — unrecognized or invalid value entries are dropped.
 
     Parameters
     ----------
     biomarkers : list[dict]
         Each dict must have at least ``name``; ``value`` and ``unit`` optional.
+        May also include ``reference_min`` and ``reference_max`` from PDF.
     min_confidence : float
         Drop matches below this confidence threshold (0.0–1.0).
+    source : str
+        Extractor name for auditability.
     """
     results: list[dict] = []
     for raw in biomarkers:
@@ -267,9 +316,15 @@ def normalize_batch(
             raw.get("name", ""),
             raw.get("value", ""),
             raw.get("unit", ""),
+            source=source,
+            pdf_ref_min=raw.get("reference_min"),
+            pdf_ref_max=raw.get("reference_max"),
         )
         if normalized is None:
             logger.info("Skipping unrecognized biomarker: %s", raw.get("name", ""))
+            continue
+        if normalized["value"] is None:
+            logger.info("Skipping biomarker with empty/invalid value: %s", raw.get("name", ""))
             continue
         if normalized["confidence"] < min_confidence:
             logger.info(
