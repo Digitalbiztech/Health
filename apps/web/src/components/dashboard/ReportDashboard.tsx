@@ -18,13 +18,14 @@ import {
   Activity,
   BarChart2,
   Search,
+  Terminal,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
   Line,
-  AreaChart,
-  Area,
+  // AreaChart,
+  // Area,
   BarChart,
   Bar,
   Cell,
@@ -74,6 +75,7 @@ export function ReportDashboard({
   const [compareDragging, setCompareDragging] = useState<'A' | 'B' | null>(null);
   const [biomarkerSearch, setBiomarkerSearch] = useState('');
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
+  const [showApiLogs, setShowApiLogs] = useState(false);
 
   const compareFileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingCompareSlotRef = useRef<'A' | 'B'>('A');
@@ -1156,6 +1158,14 @@ export function ReportDashboard({
           className="h-10 w-auto object-contain shrink-0 mx-4 hidden lg:block"
         />
 
+        <button
+          onClick={() => setShowApiLogs(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold border border-border bg-border/10 text-foreground hover:bg-border/20 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+        >
+          <Terminal className="w-3.5 h-3.5 text-[var(--primary-text)]" />
+          API Logs
+        </button>
+
         {/* Health Score Ring */}
         <div className="flex items-center gap-4 w-full lg:w-auto justify-center">
           <div className="relative w-16 h-16 flex items-center justify-center">
@@ -1237,6 +1247,163 @@ export function ReportDashboard({
           onClose={() => setSelectedBiomarkerDetail(null)}
         />
       )}
+
+      {/* API Logs Dialog */}
+      {showApiLogs && (
+        <ApiLogsDialog
+          reportData={reportData}
+          onClose={() => setShowApiLogs(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+interface ApiLogsDialogProps {
+  reportData: CompleteReportData;
+  onClose: () => void;
+}
+
+function ApiLogsDialog({ reportData, onClose }: ApiLogsDialogProps) {
+  const apiLogs = reportData.extraction?.rawData?.metadata?.api_logs || null;
+  const [activeTab, setActiveTab] = useState<'pymupdf' | 'pdfplumber' | 'mistral_ocr'>('pymupdf');
+
+  const hasPymupdf = !!apiLogs?.pymupdf;
+  const hasPdfplumber = !!apiLogs?.pdfplumber;
+  const hasOcr = !!apiLogs?.mistral_ocr;
+
+  const tabs = [
+    { id: 'pymupdf', label: 'PyMuPDF Logs', exists: hasPymupdf, data: apiLogs?.pymupdf },
+    { id: 'pdfplumber', label: 'pdfplumber Logs', exists: hasPdfplumber, data: apiLogs?.pdfplumber },
+    { id: 'mistral_ocr', label: 'Mistral OCR Logs', exists: hasOcr, data: apiLogs?.mistral_ocr },
+  ];
+
+  // Pick first available tab
+  const defaultTab = tabs.find((t) => t.exists)?.id as 'pymupdf' | 'pdfplumber' | 'mistral_ocr' | undefined;
+  const currentTabId = tabs.some((t) => t.id === activeTab && t.exists) ? activeTab : defaultTab;
+  const currentTab = tabs.find((t) => t.id === currentTabId);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="glass-card rounded-2xl border border-border/40 shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden bg-background">
+        {/* Header */}
+        <div className="p-6 border-b border-border/40 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[var(--primary)]/10 text-[var(--primary-text)]">
+              <Terminal className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-foreground">Biomarker Extraction API Logs</h3>
+              <p className="text-xs text-muted-foreground">Compare intermediate outputs from PyMuPDF and pdfplumber</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg border-0 bg-transparent text-muted-foreground hover:text-foreground cursor-pointer hover:bg-border/10 transition-all"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        {!apiLogs ? (
+          <div className="p-12 text-center flex flex-col items-center justify-center gap-4">
+            <p className="text-muted-foreground text-sm">
+              No API logs found for this report. Logs are generated for new uploads running the modernized orchestrator pipeline.
+            </p>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-[var(--primary)] text-white border-0 cursor-pointer shadow-sm hover:opacity-90 transition-all"
+            >
+              Close
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Tab Selector */}
+            <div className="px-6 pt-4 border-b border-border/40 flex gap-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  disabled={!tab.exists}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={cn(
+                    "px-4 py-2 border-b-2 font-semibold text-sm transition-all bg-transparent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed",
+                    activeTab === tab.id
+                      ? "border-[var(--primary)] text-[var(--primary-text)]"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {tab.label} {!tab.exists && "(N/A)"}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Details */}
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+              {currentTab ? (
+                <>
+                  {/* Summary card */}
+                  <div className="p-4 rounded-xl border border-border/40 bg-card flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground capitalize">
+                        {currentTab.id === 'pymupdf' ? 'PyMuPDF Native Text Parser' : currentTab.id === 'pdfplumber' ? 'pdfplumber Layout & Table Parser' : 'Mistral OCR Engine'}
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Biomarkers parsed and normalized: <span className="font-bold text-foreground">{currentTab.data?.biomarkers?.length || 0}</span>
+                      </p>
+                    </div>
+                    <div className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 self-start sm:self-auto">
+                      Source: {currentTab.id}
+                    </div>
+                  </div>
+
+                  {/* Two sections: Normalized Biomarkers (JSON) and Raw Extracted Text */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-[300px]">
+                    {/* Left: Normalized Biomarkers list */}
+                    <div className="flex flex-col border border-border/40 rounded-xl overflow-hidden bg-card/50">
+                      <div className="px-4 py-2.5 border-b border-border/40 bg-card/80 flex items-center justify-between">
+                        <span className="text-xs font-bold text-foreground">Normalized Biomarkers</span>
+                        <span className="text-[10px] bg-border/20 text-muted-foreground px-2 py-0.5 rounded-full font-mono">
+                          JSON
+                        </span>
+                      </div>
+                      <div className="p-4 flex-1 font-mono text-xs overflow-auto max-h-[350px] bg-black/5 dark:bg-black/20 text-muted-foreground">
+                        {currentTab.data?.biomarkers && currentTab.data.biomarkers.length > 0 ? (
+                          <pre className="text-[11px] leading-relaxed select-text text-foreground">
+                            {JSON.stringify(currentTab.data.biomarkers, null, 2)}
+                          </pre>
+                        ) : (
+                          <p className="italic text-center mt-8 text-xs text-muted-foreground/60">No biomarkers successfully normalized from this extractor.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right: Raw Extracted Text */}
+                    <div className="flex flex-col border border-border/40 rounded-xl overflow-hidden bg-card/50">
+                      <div className="px-4 py-2.5 border-b border-border/40 bg-card/80 flex items-center justify-between">
+                        <span className="text-xs font-bold text-foreground">Raw Extracted Text</span>
+                        <span className="text-[10px] bg-border/20 text-muted-foreground px-2 py-0.5 rounded-full font-mono">
+                          Text
+                        </span>
+                      </div>
+                      <div className="p-4 flex-1 font-mono text-xs overflow-auto max-h-[350px] bg-black/5 dark:bg-black/20 text-muted-foreground whitespace-pre-wrap select-text leading-relaxed">
+                        {currentTab.data?.text ? (
+                          <span className="text-foreground">{currentTab.data.text}</span>
+                        ) : (
+                          <p className="italic text-center mt-8 text-xs text-muted-foreground/60">No raw text extracted by this method.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">Select a tab to view logs.</p>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
