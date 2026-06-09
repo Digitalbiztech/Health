@@ -148,7 +148,7 @@ Same process as the API — create a **New Web Service**:
 
 | Setting | Value |
 |---------|-------|
-| **Root Directory** | `apps/extraction` |
+| **Root Directory** | _Leave empty_ (repo root build context) |
 | **Runtime** | **Docker** (Python not natively supported on free tier, use the Dockerfile) |
 | **Build Command** | _Leave empty_ (uses Dockerfile) |
 | **Start Command** | _Leave empty_ |
