@@ -18,6 +18,15 @@ BIOMARKER_DICTIONARY: dict[str, dict] = {
         "reference": {"min": 4.0, "max": 5.6, "range_str": "4.0 - 5.6 %"},
         "critical": {"low": None, "high": 9.0},
     },
+    "glucose": {
+        "display_name": "Glucose",
+        "category": "Diabetes",
+        "aliases": ["glucose", "serum glucose", "blood glucose", "blood sugar", "glucose levels", "glucose level"],
+        "preferred_unit": "mg/dL",
+        "unit_conversions": {"mmol/L": lambda v: v * 18.0182},
+        "reference": {"min": 70, "max": 100, "range_str": "70 - 100 mg/dL"},
+        "critical": {"low": 50, "high": 400},
+    },
     "fasting_glucose": {
         "display_name": "Fasting Glucose",
         "category": "Diabetes",
@@ -126,7 +135,7 @@ BIOMARKER_DICTIONARY: dict[str, dict] = {
     "alt": {
         "display_name": "ALT (SGPT)",
         "category": "Liver",
-        "aliases": ["alt", "sgpt", "alanine aminotransferase", "alanine transaminase", "alt/sgpt"],
+        "aliases": ["alt", "sgpt", "alanine aminotransferase", "alanine transaminase", "alt/sgpt", "alt sgpt", "alt (sgpt)", "alt(sgpt)"],
         "preferred_unit": "U/L",
         "unit_conversions": {},
         "reference": {"min": 7, "max": 56, "range_str": "7 - 56 U/L"},
@@ -135,7 +144,7 @@ BIOMARKER_DICTIONARY: dict[str, dict] = {
     "ast": {
         "display_name": "AST (SGOT)",
         "category": "Liver",
-        "aliases": ["ast", "sgot", "aspartate aminotransferase", "aspartate transaminase", "ast/sgot"],
+        "aliases": ["ast", "sgot", "aspartate aminotransferase", "aspartate transaminase", "ast/sgot", "ast sgot", "ast (sgot)", "ast(sgot)"],
         "preferred_unit": "U/L",
         "unit_conversions": {},
         "reference": {"min": 10, "max": 40, "range_str": "10 - 40 U/L"},
@@ -573,6 +582,28 @@ BIOMARKER_DICTIONARY: dict[str, dict] = {
         "reference": {"min": 10, "max": 20, "range_str": "10 - 20"},
         "critical": {"low": None, "high": 40},
     },
+
+    # ── HORMONES ──
+    "testosterone_total": {
+        "display_name": "Total Testosterone",
+        "category": "Hormones",
+        "aliases": ["testosterone total", "total testosterone", "testosterone", "tst", "testo total", "testo"],
+        "abbreviations": ["TESTO"],
+        "preferred_unit": "ng/dL",
+        "unit_conversions": {"nmol/L": lambda v: v * 28.843},
+        "reference": {"min": 300, "max": 1000, "range_str": "300 - 1000 ng/dL"},
+        "critical": {"low": 100, "high": 1500},
+    },
+    "free_testosterone": {
+        "display_name": "Free Testosterone",
+        "category": "Hormones",
+        "aliases": ["free testosterone", "testosterone free", "ft", "free testo"],
+        "abbreviations": ["FT"],
+        "preferred_unit": "pg/mL",
+        "unit_conversions": {"pmol/L": lambda v: v * 0.2884},
+        "reference": {"min": 35, "max": 155, "range_str": "35 - 155 pg/mL"},
+        "critical": {"low": 15, "high": 250},
+    },
 }
 
 
@@ -581,11 +612,17 @@ BIOMARKER_DICTIONARY: dict[str, dict] = {
 
 def build_alias_index() -> dict[str, str]:
     """Build a flat alias → canonical_name lookup."""
+    import re
     index: dict[str, str] = {}
     for canonical, entry in BIOMARKER_DICTIONARY.items():
-        index[canonical] = canonical
+        # Canonical names themselves can have underscores:
+        cleaned_canonical = re.sub(r"[^a-z0-9\s\-/.]", "", canonical.replace("_", " ").lower().strip())
+        cleaned_canonical = re.sub(r"\s+", " ", cleaned_canonical).strip()
+        index[cleaned_canonical] = canonical
         for alias in entry["aliases"]:
-            index[alias.lower().strip()] = canonical
+            cleaned = re.sub(r"[^a-z0-9\s\-/.]", "", alias.replace("_", " ").lower().strip())
+            cleaned = re.sub(r"\s+", " ", cleaned).strip()
+            index[cleaned] = canonical
     return index
 
 
