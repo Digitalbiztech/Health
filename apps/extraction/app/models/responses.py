@@ -21,6 +21,7 @@ class ExtractedData(BaseModel):
     parsed_biomarkers: list[RawBiomarker] = []
     normalized_biomarkers: list[NormalizedBiomarker] = []
     insights: list[Insight] = []
+    quality: dict | None = None
 
 
 class ExtractionResponse(BaseModel):
