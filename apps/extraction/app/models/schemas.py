@@ -55,6 +55,7 @@ class NormalizedBiomarker(BaseModel):
     reference_max: float | None = None
     confidence: float | None = None
     match_method: str | None = None
+    source: str | None = None
 
 
 class Insight(BaseModel):
