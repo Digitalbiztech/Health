@@ -23,8 +23,7 @@ def _build_system_prompt(canonical_hints: list[str]) -> str:
     return (
         "You extract structured biomarker measurements from medical lab report "
         "text. Return ONLY entries that are explicitly present in the text — "
-        "never invent values, never carry over reference ranges, never include "
-        "qualitative results (e.g. 'positive', 'negative', 'detected').\n\n"
+        "never invent values, never include qualitative results (e.g. 'positive', 'negative', 'detected').\n\n"
         "For each biomarker measurement you find, return:\n"
         "  - name: the biomarker name as written, lowercase, no punctuation. "
         "Prefer one of the canonical names below when the text matches one of "
@@ -32,7 +31,9 @@ def _build_system_prompt(canonical_hints: list[str]) -> str:
         "  - value: the numeric value as a string (e.g. '5.4', '120'). Use only "
         "the value, no units, no operators ('<', '>'), no ranges.\n"
         "  - unit: the unit as written (e.g. 'mg/dL', 'mmol/L', '%', 'g/dL'). "
-        "If absent, return an empty string.\n\n"
+        "If absent, return an empty string.\n"
+        "  - reference_min: the lower bound of the reference range as a number/float (e.g. 12.0 for '12.0 - 16.0'). If absent or there is no lower bound, return null.\n"
+        "  - reference_max: the upper bound of the reference range as a number/float (e.g. 16.0 for '12.0 - 16.0', or 130 for '< 130'). If absent or there is no upper bound, return null.\n\n"
         "Skip any line you are unsure about. Skip patient demographics, dates, "
         "doctor notes, footers, page numbers.\n\n"
         f"Known canonical biomarker names you may encounter (use these when "
@@ -55,8 +56,10 @@ _BIOMARKER_SCHEMA: dict[str, Any] = {
                         "name": {"type": "string"},
                         "value": {"type": "string"},
                         "unit": {"type": "string"},
+                        "reference_min": {"type": ["number", "null"]},
+                        "reference_max": {"type": ["number", "null"]},
                     },
-                    "required": ["name", "value", "unit"],
+                    "required": ["name", "value", "unit", "reference_min", "reference_max"],
                 },
             }
         },
@@ -70,7 +73,7 @@ def extract_biomarkers_llm(
     text: str,
     canonical_hints: list[str] | None = None,
 ) -> list[dict]:
-    """Extract {name, value, unit} records from report text via the LLM.
+    """Extract {name, value, unit, reference_min, reference_max} records from report text via the LLM.
 
     Returns [] when OpenAI is unconfigured or the call fails — callers MUST
     treat that as 'no biomarkers found', not a hard error.
@@ -129,9 +132,17 @@ def extract_biomarkers_llm(
         name = str(b.get("name", "")).strip()
         value = str(b.get("value", "")).strip()
         unit = str(b.get("unit", "")).strip()
+        ref_min = b.get("reference_min")
+        ref_max = b.get("reference_max")
         if not name or not value:
             continue
-        cleaned.append({"name": name, "value": value, "unit": unit})
+        cleaned.append({
+            "name": name,
+            "value": value,
+            "unit": unit,
+            "reference_min": float(ref_min) if ref_min is not None else None,
+            "reference_max": float(ref_max) if ref_max is not None else None,
+        })
 
     logger.info("LLM extracted %d biomarker candidates", len(cleaned))
     return cleaned
