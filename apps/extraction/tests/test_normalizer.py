@@ -111,9 +111,17 @@ class TestResolveName:
 
     def test_new_biomarkers_exist(self):
         """Verify newly added biomarkers resolve."""
-        for name in ["mcv", "mch", "ggt", "ldh", "chloride", "magnesium", "vldl", "free t3"]:
+        for name in ["mcv", "mch", "ggt", "ldh", "chloride", "magnesium", "vldl", "free t3", "glucose", "testosterone total", "free testosterone"]:
             r = resolve_name(name)
             assert r is not None, f"Expected {name} to resolve"
+            assert r.confidence == 1.0
+
+    def test_parentheses_resolutions(self):
+        """Verify AST and ALT resolve correctly with spacing and parentheses."""
+        for name in ["ast sgot", "ast (sgot)", "ast(sgot)", "alt sgpt", "alt (sgpt)", "alt(sgpt)"]:
+            r = resolve_name(name)
+            assert r is not None, f"Expected {name} to resolve"
+            assert r.canonical_name in ("ast", "alt")
             assert r.confidence == 1.0
 
 
@@ -192,6 +200,22 @@ class TestNormalizeBiomarker:
     def test_value_with_comma(self):
         result = normalize_biomarker("platelets", "250,000", "x10³/µL")
         assert result is not None
+
+    def test_custom_pdf_ranges(self):
+        # fasting glucose default range is 70 - 100
+        # If value is 105, it is normally HIGH:
+        res_normal = normalize_biomarker("fasting glucose", "105", "mg/dL")
+        assert res_normal["status"] == "HIGH"
+        assert res_normal["reference_range"] == "70 - 100 mg/dL"
+
+        # If we override the range with PDF ranges, 105 becomes NORMAL:
+        res_custom = normalize_biomarker(
+            "fasting glucose", "105", "mg/dL", pdf_ref_min=70.0, pdf_ref_max=110.0
+        )
+        assert res_custom["status"] == "NORMAL"
+        assert res_custom["reference_min"] == 70.0
+        assert res_custom["reference_max"] == 110.0
+        assert "70.0 - 110.0" in res_custom["reference_range"]
 
 
 # ── Batch normalization ──────────────────────────────────────
