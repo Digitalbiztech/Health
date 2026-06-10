@@ -1,7 +1,7 @@
 import { type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler.js';
-import { generateChatReply, getLatestChatHistory, createNewSession } from '../services/chatService.js';
+import { generateChatReply, getLatestChatHistory, createNewSession, getChatSessions } from '../services/chatService.js';
 
 const chatBodySchema = z.object({
   messages: z
@@ -86,7 +86,7 @@ export async function getHistory(req: Request, res: Response, next: NextFunction
       throw new AppError('Patient ID is required', 400);
     }
 
-    const history = await getLatestChatHistory(targetPatientId);
+    const history = await getLatestChatHistory(targetPatientId, principal);
 
     res.status(200).json({
       status: 'success',
@@ -122,6 +122,37 @@ export async function postNewSession(req: Request, res: Response, next: NextFunc
     res.status(200).json({
       status: 'success',
       data: { sessionId },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /chat/sessions
+ * Fetch all chat sessions for a patient.
+ */
+export async function getSessions(req: Request, res: Response, next: NextFunction) {
+  try {
+    const principal = req.principal;
+    if (!principal) {
+      throw new AppError('Unauthorized', 401);
+    }
+
+    let targetPatientId = req.query.patientId as string;
+    if (principal.accountType === 'PATIENT') {
+      targetPatientId = principal.id;
+    }
+
+    if (!targetPatientId) {
+      throw new AppError('Patient ID is required', 400);
+    }
+
+    const sessions = await getChatSessions(targetPatientId, principal);
+
+    res.status(200).json({
+      status: 'success',
+      data: sessions,
     });
   } catch (err) {
     next(err);
