@@ -29,6 +29,7 @@ class RagChatRequest(BaseModel):
     messages: List[ChatMessageModel]
     user_input: str
     biomarkers: Optional[List[BiomarkerModel]] = None
+    user_role: Optional[str] = "patient"
 
 class RagChatResponse(BaseModel):
     reply: str
@@ -57,13 +58,14 @@ class KbIngestResponse(BaseModel):
 
 @router.post("/chat", response_model=RagChatResponse)
 async def endpoint_rag_chat(req: RagChatRequest):
-    logger.info("RAG chat request for patient %s", req.patient_id)
+    logger.info("RAG chat request for patient %s (role: %s)", req.patient_id, req.user_role)
     try:
         reply = await rag_chat(
             patient_id=req.patient_id,
             messages=[m.model_dump() for m in req.messages],
             user_input=req.user_input,
             biomarkers=[b.model_dump() for b in req.biomarkers] if req.biomarkers else None,
+            user_role=req.user_role or "patient",
         )
         return RagChatResponse(reply=reply, provider="openai")
     except Exception as e:
