@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { sendChatMessage, getChatHistory, createChatSession } from '@/lib/api';
 import type { Biomarker, PatientRecord } from '@/types/dashboard';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ChatProps {
   biomarkers: Biomarker[];
@@ -49,6 +50,9 @@ function AIMessageBubble({ content }: { content: string }) {
     ),
   };
 
+  const { principal } = useAuth();
+  const isDoctor = principal?.accountType === 'STAFF';
+
   return (
     <div className="flex flex-col gap-2">
       <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/10 dark:prose-pre:bg-black/30 text-foreground font-sans">
@@ -79,48 +83,82 @@ function AIMessageBubble({ content }: { content: string }) {
       )}
 
       {isClinical && (
-        <div className="mt-4 p-4 rounded-xl border border-primary/20 bg-primary/5 dark:bg-primary/10 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h6 className="text-[10px] font-bold uppercase tracking-wider text-[var(--primary-text)]">Actionable Next Steps</h6>
-            <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-[var(--primary-text)] font-semibold">Recommended</span>
+        isDoctor ? (
+          <div className="mt-4 p-4 rounded-xl border border-primary/20 bg-primary/5 dark:bg-primary/10 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h6 className="text-[10px] font-bold uppercase tracking-wider text-[var(--primary-text)]">Clinician Tools</h6>
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-[var(--primary-text)] font-semibold">Active Session</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Copy clinical findings directly to your clipboard or download the full patient PDF summary.
+            </p>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(mainContent.trim());
+                  alert("Clinical note copied to clipboard!");
+                }}
+                className="flex-1 py-2 px-3 rounded-lg bg-[var(--primary-text)] text-white text-[10px] font-bold shadow hover:opacity-90 active:scale-[0.97] transition-all border-0 cursor-pointer"
+              >
+                Copy Clinical Note
+              </button>
+              <button 
+                onClick={() => {
+                  const exportBtn = document.querySelector('[class*="export"]') as HTMLButtonElement;
+                  if (exportBtn) {
+                    exportBtn.click();
+                  } else {
+                    alert("Downloading patient clinical report summary PDF...");
+                  }
+                }}
+                className="flex-1 py-2 px-3 rounded-lg border border-border bg-background hover:bg-muted text-foreground text-[10px] font-bold active:scale-[0.97] transition-all cursor-pointer"
+              >
+                Download PDF Summary
+              </button>
+            </div>
           </div>
-          <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Review these results with your healthcare provider to establish a personalized health optimization plan.
-          </p>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => alert("Appointment Scheduler: In production, this launches your portal scheduling system.")}
-              className="flex-1 py-2 px-3 rounded-lg bg-[var(--primary-text)] text-white text-[10px] font-bold shadow hover:opacity-90 active:scale-[0.97] transition-all border-0 cursor-pointer"
-            >
-              Schedule Appointment
-            </button>
-            <button 
-              onClick={() => {
-                const exportBtn = document.querySelector('[class*="export"]') as HTMLButtonElement;
-                if (exportBtn) {
-                  exportBtn.click();
-                } else {
-                  alert("Downloading patient clinical report summary PDF...");
-                }
-              }}
-              className="flex-1 py-2 px-3 rounded-lg border border-border bg-background hover:bg-muted text-foreground text-[10px] font-bold active:scale-[0.97] transition-all cursor-pointer"
-            >
-              Download PDF Summary
-            </button>
+        ) : (
+          <div className="mt-4 p-4 rounded-xl border border-primary/20 bg-primary/5 dark:bg-primary/10 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h6 className="text-[10px] font-bold uppercase tracking-wider text-[var(--primary-text)]">Actionable Next Steps</h6>
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-primary/10 text-[var(--primary-text)] font-semibold">Recommended</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Review these results with your healthcare provider to establish a personalized health optimization plan.
+            </p>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => alert("Appointment Scheduler: In production, this launches your portal scheduling system.")}
+                className="flex-1 py-2 px-3 rounded-lg bg-[var(--primary-text)] text-white text-[10px] font-bold shadow hover:opacity-90 active:scale-[0.97] transition-all border-0 cursor-pointer"
+              >
+                Schedule Appointment
+              </button>
+              <button 
+                onClick={() => {
+                  const exportBtn = document.querySelector('[class*="export"]') as HTMLButtonElement;
+                  if (exportBtn) {
+                    exportBtn.click();
+                  } else {
+                    alert("Downloading patient clinical report summary PDF...");
+                  }
+                }}
+                className="flex-1 py-2 px-3 rounded-lg border border-border bg-background hover:bg-muted text-foreground text-[10px] font-bold active:scale-[0.97] transition-all cursor-pointer"
+              >
+                Download PDF Summary
+              </button>
+            </div>
           </div>
-        </div>
+        )
       )}
     </div>
   );
 }
 
 export function AIChat({ biomarkers, patient }: ChatProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: `Hello! I am your Personalized Medical Care chat agent. I can review your lab results, analyze trends, and even read medical flowcharts or guidelines if you upload them. How can I help you today?`,
-    },
-  ]);
+  const { principal } = useAuth();
+  const isDoctor = principal?.accountType === 'STAFF';
+
+  const [messages, setMessages] = useState<Message[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -133,6 +171,12 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
         const history = await getChatHistory(patient?.id);
         if (history.messages && history.messages.length > 0) {
           setMessages(history.messages);
+        } else {
+          // No history, set the default greeting!
+          const greeting = isDoctor
+            ? `Hello Doctor. I am your Clinical Diagnostic co-pilot. I can help analyze this patient's report, track longitudinal biomarker trends, and reference medical guidelines. How can I assist you with this patient's case today?`
+            : `Hello! I am your Personalized Medical Care chat agent. I can review your lab results, analyze trends, and even read medical flowcharts or guidelines if you upload them. How can I help you today?`;
+          setMessages([{ role: 'assistant', content: greeting }]);
         }
         if (history.sessionId) {
           setSessionId(history.sessionId);
@@ -142,7 +186,7 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
       }
     }
     loadHistory();
-  }, [patient?.id]);
+  }, [patient?.id, isDoctor]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -156,10 +200,13 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
     try {
       const { sessionId: newSessionId } = await createChatSession(patient?.id);
       setSessionId(newSessionId);
+      const greeting = isDoctor
+        ? `Hello Doctor. I've started a new clinical consultation thread for this patient. How can I help you analyze their lab reports today?`
+        : `Hello! I've started a new clinical consultation thread for you. How can I help you analyze your lab reports today?`;
       setMessages([
         {
           role: 'assistant',
-          content: `Hello! I've started a new clinical consultation thread for you. How can I help you analyze your lab reports today?`,
+          content: greeting,
         },
       ]);
     } catch (err) {
@@ -303,11 +350,19 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
       <div className="px-6 py-3 border-t border-border bg-card flex flex-col items-center gap-2">
         <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-bold">Suggested Questions</span>
         <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-          {[
-            'Explain my cholesterol anomalies',
-            'Is my fasting glucose dangerous?',
-            'What exercises help my HDL?',
-          ].map((item) => (
+          {(isDoctor
+            ? [
+                'Analyze longitudinal biomarker trends',
+                'What guidelines exist for critical HbA1c?',
+                'Differential diagnosis for elevated ALT',
+                'Review lipid profile and cardiovascular risk',
+              ]
+            : [
+                'Explain my cholesterol anomalies',
+                'Is my fasting glucose dangerous?',
+                'What exercises help my HDL?',
+              ]
+          ).map((item) => (
             <button
               key={item}
               onClick={() => handleSend(item)}
@@ -325,7 +380,11 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask Auriem AI about your clinical laboratory report insights..."
+          placeholder={
+            isDoctor
+              ? "Ask Auriem AI about clinical insights, trends, or guidelines for this patient..."
+              : "Ask Auriem AI about your clinical laboratory report insights..."
+          }
           className="flex-1 text-xs border border-border p-3 rounded-xl bg-background text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[var(--primary-text)] focus:ring-1 focus:ring-[var(--primary-text)]"
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSend();
