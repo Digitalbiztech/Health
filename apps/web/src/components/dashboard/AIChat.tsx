@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Loader2, Send, User, RotateCcw } from 'lucide-react';
+import { Loader2, Send, User, RotateCcw, MessageSquare, Plus, Menu } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
-import { sendChatMessage, getChatHistory, createChatSession } from '@/lib/api';
+import { sendChatMessage, getChatHistory, createChatSession, getChatSessions, type ChatSessionPayload } from '@/lib/api';
 import type { Biomarker, PatientRecord } from '@/types/dashboard';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -160,9 +160,21 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<ChatSessionPayload[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Load chat sessions list
+  async function loadSessions() {
+    try {
+      const data = await getChatSessions(patient?.id);
+      setSessions(data);
+    } catch (err) {
+      console.error('Failed to load chat sessions:', err);
+    }
+  }
 
   // Load persistent history on mount/patient change
   useEffect(() => {
@@ -186,12 +198,35 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
       }
     }
     loadHistory();
+    loadSessions();
   }, [patient?.id, isDoctor]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Load a specific session's history
+  async function selectSession(selectedSessionId: string) {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const history = await getChatHistory(patient?.id, selectedSessionId);
+      setSessionId(selectedSessionId);
+      if (history.messages && history.messages.length > 0) {
+        setMessages(history.messages);
+      } else {
+        const greeting = isDoctor
+          ? `Hello Doctor. I've loaded this clinical consultation thread. How can I assist you with this patient's case today?`
+          : `Hello! I've loaded this consultation thread. How can I help you analyze your lab reports today?`;
+        setMessages([{ role: 'assistant', content: greeting }]);
+      }
+    } catch (err) {
+      console.error('Failed to load session history:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   // Start a fresh consultation thread
   async function handleNewSession() {
@@ -209,6 +244,7 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
           content: greeting,
         },
       ]);
+      await loadSessions();
     } catch (err) {
       console.error('Failed to start new session:', err);
     } finally {
@@ -251,6 +287,7 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
         setSessionId(returnedSessionId);
       }
       setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
+      await loadSessions();
     } catch (err) {
       console.error(err);
       setMessages((prev) => [
@@ -263,139 +300,203 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-border shadow-md overflow-hidden flex flex-col bg-card animate-fade-in w-full min-h-[500px]">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/20">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full border border-border flex items-center justify-center font-serif text-sm font-bold text-[var(--primary-text)] bg-background shrink-0 select-none shadow-inner">
-            C
+    <div className="rounded-2xl border border-border shadow-md overflow-hidden flex bg-card animate-fade-in w-full min-h-[600px]">
+      {/* Sidebar - Past Chat Sessions */}
+      {sidebarOpen && (
+        <div className="w-64 border-r border-border bg-muted/10 flex flex-col shrink-0 transition-all duration-300">
+          <div className="p-4 border-b border-border flex items-center justify-between bg-muted/20">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <MessageSquare className="w-3.5 h-3.5" />
+              Chat History
+            </span>
+            <button
+              onClick={handleNewSession}
+              disabled={loading}
+              className="p-1 rounded-lg border border-border hover:border-primary bg-background text-muted-foreground hover:text-primary transition-all active:scale-[0.95] cursor-pointer"
+              title="New Thread"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <div>
-            <h5 className="text-[11px] font-bold tracking-wider text-[var(--primary-text)] uppercase">Personalized Medical Care</h5>
-            <p className="text-[10px] text-muted-foreground flex items-center mt-0.5 font-medium">
-              chat agent
-              <span className="w-1.5 h-1.5 bg-[#10b981] rounded-full mx-1.5 animate-pulse" />
-              <span className="text-[#10b981] font-semibold">Online</span>
-            </p>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1 max-h-[500px]">
+            {sessions.map((s) => {
+              const isActive = s.id === sessionId;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => selectSession(s.id)}
+                  className={cn(
+                    "w-full text-left px-3 py-2.5 rounded-xl text-xs transition-all duration-200 flex flex-col gap-1 cursor-pointer border",
+                    isActive
+                      ? "bg-primary/5 border-primary/20 text-[var(--primary-text)] font-semibold shadow-sm"
+                      : "bg-transparent border-transparent hover:bg-muted/40 text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <span className="truncate block font-medium w-full">{s.title || "Untitled Session"}</span>
+                  <span className="text-[9px] opacity-60">
+                    {new Date(s.updatedAt).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </button>
+              );
+            })}
+            {sessions.length === 0 && (
+              <div className="text-center py-8 text-[11px] text-muted-foreground">
+                No past sessions
+              </div>
+            )}
           </div>
         </div>
+      )}
 
-        {/* Start new session action */}
-        <button
-          onClick={handleNewSession}
-          disabled={loading}
-          className="flex items-center gap-1.5 text-[10px] font-bold border border-border hover:border-[var(--primary-text)] px-3 py-1.5 rounded-lg text-muted-foreground hover:text-[var(--primary-text)] transition-all bg-background/50 hover:bg-background active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-        >
-          <RotateCcw className="w-3 h-3" />
-          New Thread
-        </button>
-      </div>
-
-      {/* Messages */}
-      <div className="p-6 flex flex-col gap-6 bg-background">
-        {messages.map((msg, idx) => {
-          const isAI = msg.role === 'assistant';
-          return (
-            <div
-              key={idx}
-              className={cn(
-                'flex items-start gap-3 w-full',
-                isAI ? 'justify-start' : 'flex-row-reverse'
-              )}
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col bg-background min-w-0">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/20">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 -ml-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer bg-transparent border-0 outline-none"
+              title="Toggle sidebar"
             >
-              {/* Avatar */}
-              {isAI ? (
-                <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center bg-[var(--primary-glow)] shrink-0 font-serif text-xs font-bold text-[var(--primary-text)] select-none shadow-md">
-                  C
-                </div>
-              ) : (
-                <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center bg-muted/50 shrink-0 text-[var(--primary-text)] select-none shadow-md">
-                  <User className="w-4 h-4" />
-                </div>
-              )}
-
-              {/* Bubble */}
-              <div
-                className={cn(
-                  'rounded-2xl p-4 text-xs leading-relaxed shadow-sm transition-all duration-200',
-                  isAI
-                    ? 'bg-muted/30 border border-border/80 text-foreground rounded-tl-none max-w-[650px] w-full'
-                    : 'bg-[var(--primary-text)] text-white rounded-tr-none font-medium max-w-[85%]'
-                )}
-              >
-                {isAI ? (
-                  <AIMessageBubble content={msg.content} />
-                ) : (
-                  <p className="whitespace-pre-wrap font-sans">{msg.content}</p>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        {loading && (
-          <div className="flex items-start gap-3 w-full justify-start animate-pulse">
-            <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center bg-[var(--primary-glow)] shrink-0 font-serif text-xs font-bold text-[var(--primary-text)] select-none shadow-md">
+              <Menu className="w-4 h-4" />
+            </button>
+            <div className="w-9 h-9 rounded-full border border-border flex items-center justify-center font-serif text-sm font-bold text-[var(--primary-text)] bg-background shrink-0 select-none shadow-inner">
               C
             </div>
-            <div className="bg-muted/30 border border-border/80 text-muted-foreground rounded-2xl rounded-tl-none p-4 flex items-center gap-2.5 text-xs shadow-sm max-w-[650px] w-full">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--primary-text)]" />
-              <span>Analyzing diagnostic parameters...</span>
+            <div>
+              <h5 className="text-[11px] font-bold tracking-wider text-[var(--primary-text)] uppercase">
+                {isDoctor ? 'Clinical AI Co-Pilot' : 'Personalized Medical Care'}
+              </h5>
+              <p className="text-[10px] text-muted-foreground flex items-center mt-0.5 font-medium">
+                chat agent
+                <span className="w-1.5 h-1.5 bg-[#10b981] rounded-full mx-1.5 animate-pulse" />
+                <span className="text-[#10b981] font-semibold">Online</span>
+              </p>
             </div>
           </div>
-        )}
-        <div ref={scrollRef} />
-      </div>
 
-      {/* Centered Suggestions Pills */}
-      <div className="px-6 py-3 border-t border-border bg-card flex flex-col items-center gap-2">
-        <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-bold">Suggested Questions</span>
-        <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-          {(isDoctor
-            ? [
-                'Analyze longitudinal biomarker trends',
-                'What guidelines exist for critical HbA1c?',
-                'Differential diagnosis for elevated ALT',
-                'Review lipid profile and cardiovascular risk',
-              ]
-            : [
-                'Explain my cholesterol anomalies',
-                'Is my fasting glucose dangerous?',
-                'What exercises help my HDL?',
-              ]
-          ).map((item) => (
-            <button
-              key={item}
-              onClick={() => handleSend(item)}
-              className="text-[10px] font-semibold border border-border hover:border-[var(--primary-text)] px-3.5 py-1.5 rounded-full text-muted-foreground hover:text-[var(--primary-text)] cursor-pointer transition-all bg-background/50 hover:bg-background active:scale-[0.97] hover:shadow-sm"
-            >
-              {item}
-            </button>
-          ))}
+          {/* Start new session action */}
+          <button
+            onClick={handleNewSession}
+            disabled={loading}
+            className="flex items-center gap-1.5 text-[10px] font-bold border border-border hover:border-[var(--primary-text)] px-3 py-1.5 rounded-lg text-muted-foreground hover:text-[var(--primary-text)] transition-all bg-background/50 hover:bg-background active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+          >
+            <RotateCcw className="w-3 h-3" />
+            New Thread
+          </button>
         </div>
-      </div>
 
-      {/* Inputs */}
-      <div className="p-4 border-t border-border flex items-center gap-2 bg-card">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={
-            isDoctor
-              ? "Ask Auriem AI about clinical insights, trends, or guidelines for this patient..."
-              : "Ask Auriem AI about your clinical laboratory report insights..."
-          }
-          className="flex-1 text-xs border border-border p-3 rounded-xl bg-background text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[var(--primary-text)] focus:ring-1 focus:ring-[var(--primary-text)]"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSend();
-          }}
-        />
-        <button
-          onClick={() => handleSend()}
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-white bg-[var(--primary-text)] cursor-pointer shadow hover:opacity-90 active:scale-[0.95] transition-all shrink-0 border-0"
-        >
-          <Send className="w-4 h-4" />
-        </button>
+        {/* Messages */}
+        <div className="p-6 flex flex-col gap-6 bg-background">
+          {messages.map((msg, idx) => {
+            const isAI = msg.role === 'assistant';
+            return (
+              <div
+                key={idx}
+                className={cn(
+                  'flex items-start gap-3 w-full',
+                  isAI ? 'justify-start' : 'flex-row-reverse'
+                )}
+              >
+                {/* Avatar */}
+                {isAI ? (
+                  <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center bg-[var(--primary-glow)] shrink-0 font-serif text-xs font-bold text-[var(--primary-text)] select-none shadow-md">
+                    C
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center bg-muted/50 shrink-0 text-[var(--primary-text)] select-none shadow-md">
+                    <User className="w-4 h-4" />
+                  </div>
+                )}
+
+                {/* Bubble */}
+                <div
+                  className={cn(
+                    'rounded-2xl p-4 text-xs leading-relaxed shadow-sm transition-all duration-200',
+                    isAI
+                      ? 'bg-muted/30 border border-border/80 text-foreground rounded-tl-none max-w-[650px] w-full'
+                      : 'bg-[var(--primary-text)] text-white rounded-tr-none font-medium max-w-[85%]'
+                  )}
+                >
+                  {isAI ? (
+                    <AIMessageBubble content={msg.content} />
+                  ) : (
+                    <p className="whitespace-pre-wrap font-sans">{msg.content}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {loading && (
+            <div className="flex items-start gap-3 w-full justify-start animate-pulse">
+              <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center bg-[var(--primary-glow)] shrink-0 font-serif text-xs font-bold text-[var(--primary-text)] select-none shadow-md">
+                C
+              </div>
+              <div className="bg-muted/30 border border-border/80 text-muted-foreground rounded-2xl rounded-tl-none p-4 flex items-center gap-2.5 text-xs shadow-sm max-w-[650px] w-full">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--primary-text)]" />
+                <span>Analyzing diagnostic parameters...</span>
+              </div>
+            </div>
+          )}
+          <div ref={scrollRef} />
+        </div>
+
+        {/* Centered Suggestions Pills */}
+        <div className="px-6 py-3 border-t border-border bg-card flex flex-col items-center gap-2">
+          <span className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-bold">Suggested Questions</span>
+          <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+            {(isDoctor
+              ? [
+                  'Analyze longitudinal biomarker trends',
+                  'What guidelines exist for critical HbA1c?',
+                  'Differential diagnosis for elevated ALT',
+                  'Review lipid profile and cardiovascular risk',
+                ]
+              : [
+                  'Explain my cholesterol anomalies',
+                  'Is my fasting glucose dangerous?',
+                  'What exercises help my HDL?',
+                ]
+            ).map((item) => (
+              <button
+                key={item}
+                onClick={() => handleSend(item)}
+                className="text-[10px] font-semibold border border-border hover:border-[var(--primary-text)] px-3.5 py-1.5 rounded-full text-muted-foreground hover:text-[var(--primary-text)] cursor-pointer transition-all bg-background/50 hover:bg-background active:scale-[0.97] hover:shadow-sm"
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Inputs */}
+        <div className="p-4 border-t border-border flex items-center gap-2 bg-card">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={
+              isDoctor
+                ? "Ask Auriem AI about clinical insights, trends, or guidelines for this patient..."
+                : "Ask Auriem AI about your clinical laboratory report insights..."
+            }
+            className="flex-1 text-xs border border-border p-3 rounded-xl bg-background text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[var(--primary-text)] focus:ring-1 focus:ring-[var(--primary-text)]"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSend();
+            }}
+          />
+          <button
+            onClick={() => handleSend()}
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-white bg-[var(--primary-text)] cursor-pointer shadow hover:opacity-90 active:scale-[0.95] transition-all shrink-0 border-0"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
