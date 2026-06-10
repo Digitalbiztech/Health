@@ -18,6 +18,7 @@ export interface RagChatRequest {
   messages: ChatMessage[];
   user_input: string;
   biomarkers?: ChatBiomarker[] | null;
+  user_role?: 'doctor' | 'patient';
 }
 
 export interface RagChatResponse {
