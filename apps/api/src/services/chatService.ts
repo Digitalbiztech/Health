@@ -42,8 +42,17 @@ RULES:
 4. When relevant, offer evidence-based lifestyle, dietary, and follow-up testing suggestions.
 5. Format responses in concise Markdown (short paragraphs, bullet points, or numbered steps where helpful).`;
 
-function buildSystemPrompt(req: Omit<ChatRequest, 'principal'>): string {
-  const sections: string[] = [BASE_SYSTEM_PROMPT];
+const DOCTOR_BASE_SYSTEM_PROMPT = `You are Auriem's clinical diagnostic co-pilot, assisting a healthcare professional (physician/clinician) in reviewing laboratory bloodwork history and medical guidelines.
+
+RULES:
+1. Speak as a peer to a clinician: Use precise medical terminology, clinical reasoning, and scientific concepts. Do not simplify or patronize.
+2. Ground every response in the patient's longitudinal history, guidelines, and current values.
+3. Focus on clinical interpretation: discuss differential diagnoses, potential physiological mechanisms, and recommended clinical next steps (e.g. specific follow-up panels, imaging, or specialist consultation).
+4. Provide structured, dense, and objective insights using Markdown.`;
+
+function buildSystemPrompt(req: Omit<ChatRequest, 'principal'>, userRole: 'doctor' | 'patient'): string {
+  const basePrompt = userRole === 'doctor' ? DOCTOR_BASE_SYSTEM_PROMPT : BASE_SYSTEM_PROMPT;
+  const sections: string[] = [basePrompt];
 
   if (req.patient) {
     const { firstName, gender, dateOfBirth } = req.patient;
@@ -219,9 +228,11 @@ export async function generateChatReply(req: ChatRequest): Promise<{ reply: stri
     content: m.content,
   }));
 
+  const userRole = req.principal.accountType === 'STAFF' ? 'doctor' : 'patient';
+
   // 5. Try Retrieval-Augmented Generation (RAG)
   try {
-    console.log(`[ChatService] Querying RAG service for patient: ${targetPatientId}, session: ${sessionId}`);
+    console.log(`[ChatService] Querying RAG service for patient: ${targetPatientId}, session: ${sessionId} (role: ${userRole})`);
     const ragResult = await ragService.chat({
       patient_id: targetPatientId,
       messages: messageHistory.slice(0, -1), // History leading up to current query
@@ -233,6 +244,7 @@ export async function generateChatReply(req: ChatRequest): Promise<{ reply: stri
         referenceRange: b.referenceRange,
         status: b.status,
       })) : null,
+      user_role: userRole,
     });
 
     // Save RAG response
@@ -253,11 +265,12 @@ export async function generateChatReply(req: ChatRequest): Promise<{ reply: stri
     console.warn('[ChatService] RAG service failed, falling back to standard LLM providers:', ragErr);
 
     // 6. Fallback to standard provider chain (Gemini -> OpenAI -> Mistral)
-    const systemPrompt = buildSystemPrompt(req);
+    const systemPrompt = buildSystemPrompt(req, userRole);
     const historyForProvider: ProviderChatMessage[] = messageHistory.slice(0, -1).map((m) => ({
       role: m.role,
       content: m.content,
     }));
+
 
     const errors: string[] = [];
 
