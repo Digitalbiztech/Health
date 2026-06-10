@@ -100,11 +100,11 @@ export async function sendChatMessage(payload: {
   return res.data;
 }
 
-/**
- * Fetches the persistent chat history for a patient.
- */
-export async function getChatHistory(patientId?: string): Promise<{ sessionId: string | null; messages: ChatMessagePayload[] }> {
-  const query = patientId ? `?patientId=${patientId}` : '';
+export async function getChatHistory(patientId?: string, sessionId?: string): Promise<{ sessionId: string | null; messages: ChatMessagePayload[] }> {
+  const params = new URLSearchParams();
+  if (patientId) params.append('patientId', patientId);
+  if (sessionId) params.append('sessionId', sessionId);
+  const query = params.toString() ? `?${params.toString()}` : '';
   const res = await apiFetch<{ data: { sessionId: string | null; messages: ChatMessagePayload[] } }>(`/chat/history${query}`);
   return res.data;
 }
@@ -117,6 +117,22 @@ export async function createChatSession(patientId?: string): Promise<{ sessionId
     method: 'POST',
     body: JSON.stringify({ patientId }),
   });
+  return res.data;
+}
+
+export interface ChatSessionPayload {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Fetches all past chat sessions for a patient.
+ */
+export async function getChatSessions(patientId?: string): Promise<ChatSessionPayload[]> {
+  const query = patientId ? `?patientId=${patientId}` : '';
+  const res = await apiFetch<{ data: ChatSessionPayload[] }>(`/chat/sessions${query}`);
   return res.data;
 }
 
