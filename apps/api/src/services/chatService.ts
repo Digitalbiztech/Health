@@ -102,8 +102,12 @@ export async function getOrCreateActiveSession(
   patientId: string,
   principal: AuthenticatedPrincipal
 ): Promise<string> {
+  const isDoctor = principal.accountType === 'STAFF';
   const activeSession = await prisma.chatSession.findFirst({
-    where: { patientId },
+    where: {
+      patientId,
+      userId: isDoctor ? principal.id : null,
+    },
     orderBy: { updatedAt: 'desc' },
   });
 
@@ -117,7 +121,7 @@ export async function getOrCreateActiveSession(
       title: `Consultation - ${new Date().toLocaleDateString()}`,
       patientId,
       organizationId,
-      userId: principal.accountType === 'STAFF' ? principal.id : null,
+      userId: isDoctor ? principal.id : null,
     },
   });
 
@@ -132,12 +136,13 @@ export async function createNewSession(
   principal: AuthenticatedPrincipal
 ): Promise<string> {
   const organizationId = principal.organizationId || (await getFallbackOrganizationId());
+  const isDoctor = principal.accountType === 'STAFF';
   const newSession = await prisma.chatSession.create({
     data: {
       title: `Consultation - ${new Date().toLocaleDateString()}`,
       patientId,
       organizationId,
-      userId: principal.accountType === 'STAFF' ? principal.id : null,
+      userId: isDoctor ? principal.id : null,
     },
   });
   return newSession.id;
@@ -146,9 +151,14 @@ export async function createNewSession(
 /**
  * Fetches the complete message history for a patient's latest active session.
  */
-export async function getLatestChatHistory(patientId: string) {
+export async function getLatestChatHistory(patientId: string, principal: AuthenticatedPrincipal, sessionId?: string) {
+  const isDoctor = principal.accountType === 'STAFF';
   const session = await prisma.chatSession.findFirst({
-    where: { patientId },
+    where: {
+      id: sessionId || undefined,
+      patientId,
+      userId: isDoctor ? principal.id : null,
+    },
     orderBy: { updatedAt: 'desc' },
     include: {
       messages: {
@@ -168,6 +178,26 @@ export async function getLatestChatHistory(patientId: string) {
       content: m.content,
     })),
   };
+}
+
+/**
+ * Fetches all past chat sessions for a patient/doctor.
+ */
+export async function getChatSessions(patientId: string, principal: AuthenticatedPrincipal) {
+  const isDoctor = principal.accountType === 'STAFF';
+  return await prisma.chatSession.findMany({
+    where: {
+      patientId,
+      userId: isDoctor ? principal.id : null,
+    },
+    orderBy: { updatedAt: 'desc' },
+    select: {
+      id: true,
+      title: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 }
 
 /**
@@ -211,10 +241,18 @@ export async function generateChatReply(req: ChatRequest): Promise<{ reply: stri
     },
   });
 
+  const messageCount = await prisma.chatMessage.count({ where: { sessionId } });
+  const titleUpdate = messageCount === 1 
+    ? (userQuery.length > 50 ? userQuery.slice(0, 47) + '...' : userQuery) 
+    : undefined;
+
   // Update session's updatedAt time
   await prisma.chatSession.update({
     where: { id: sessionId },
-    data: { updatedAt: new Date() },
+    data: { 
+      updatedAt: new Date(),
+      ...(titleUpdate ? { title: titleUpdate } : {})
+    },
   });
 
   // 4. Retrieve complete message history for context
