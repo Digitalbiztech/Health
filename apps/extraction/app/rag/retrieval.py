@@ -28,6 +28,26 @@ RULES:
 5. Format responses in concise Markdown (short paragraphs, bullet points, or numbered steps where helpful).
 """
 
+_DOCTOR_SYSTEM_PROMPT = """You are Auriem's clinical diagnostic co-pilot, assisting a healthcare professional (physician/clinician) in reviewing laboratory bloodwork history and medical guidelines.
+
+Here is the context retrieved from the database to help you answer the clinician's query.
+
+RETRIEVED PATIENT HISTORY (Previous & Current Lab Reports):
+{patient_context}
+
+RETRIEVED CLINICAL REFERENCE GUIDELINES (General Medical Reference):
+{kb_context}
+
+CURRENT PANEL (Latest Values):
+{current_session_context}
+
+RULES:
+1. Speak as a peer to a clinician: Use precise medical terminology, clinical reasoning, and scientific concepts. Do not simplify or patronize.
+2. Ground every response in the patient's longitudinal history, guidelines, and current values.
+3. Focus on clinical interpretation: discuss differential diagnoses, potential physiological mechanisms, and recommended clinical next steps (e.g. specific follow-up panels, imaging, or specialist consultation).
+4. Provide structured, dense, and objective insights using Markdown.
+"""
+
 def format_current_biomarkers(biomarkers: list[dict]) -> str:
     """Format the current session's biomarkers if provided."""
     if not biomarkers:
@@ -193,6 +213,7 @@ async def rag_chat(
     messages: list[dict],
     user_input: str,
     biomarkers: list[dict] = None,
+    user_role: str = "patient",
 ) -> str:
     """Retrieve context, build system instruction, query OpenAI, and append PubMed references."""
     # 1. Retrieve relevant contexts
@@ -200,7 +221,8 @@ async def rag_chat(
     current_session_context = format_current_biomarkers(biomarkers or [])
 
     # 2. Build system instruction
-    system_instruction = _SYSTEM_PROMPT.format(
+    prompt_template = _DOCTOR_SYSTEM_PROMPT if user_role == "doctor" else _SYSTEM_PROMPT
+    system_instruction = prompt_template.format(
         patient_context=patient_context,
         kb_context=kb_context,
         current_session_context=current_session_context,
