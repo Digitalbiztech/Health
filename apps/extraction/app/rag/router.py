@@ -38,7 +38,7 @@ class RagChatResponse(BaseModel):
 class IngestRequest(BaseModel):
     patient_id: str
     upload_id: str
-    extraction_id: str
+    extraction_id: Optional[str] = None
     masked_text: str
     biomarkers: List[Dict[str, Any]]
     insights: List[Dict[str, Any]]
