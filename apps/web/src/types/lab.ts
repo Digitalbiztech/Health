@@ -25,4 +25,5 @@ export interface LabReport {
   summary?: string;
   aiInsights?: string[];
   panels: LabPanel[];
+  healthScore?: number;
 }
