@@ -400,6 +400,11 @@ export function ReportDashboard({
       color: 'var(--primary-text)',
     }));
 
+    const avgPanelScore = systemBars.length
+      ? Math.round(systemBars.reduce((acc, s) => acc + s.score, 0) / systemBars.length)
+      : 100;
+    const conditionDelta = Math.max(1, Math.round(avgPanelScore / 25));
+
     // User profile age/gender
     const calculateAgeLocal = (dob?: string) => {
       if (!dob) return 42;
@@ -584,8 +589,8 @@ export function ReportDashboard({
               </div>
 
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-foreground">94%</span>
-                <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">▲ 4%</span>
+                <span className="text-3xl font-extrabold text-foreground">{avgPanelScore}%</span>
+                <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">▲ {conditionDelta}%</span>
               </div>
 
               <div className="h-40 w-full mt-2">
