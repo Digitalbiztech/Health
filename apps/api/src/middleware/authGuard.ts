@@ -7,7 +7,25 @@ import { prisma } from '../lib/prisma.js';
 
 export const BYPASS_AUTH = true; // Set to false to restore Supabase/Passport authentication
 
+// Mock principals are derived from static seed data that never changes during a
+// process lifetime. Without a cache, BYPASS_AUTH forces an organization.findFirst()
+// + patient/user.findFirst() round-trip to the (remote) database on EVERY request,
+// adding ~2 sequential round-trips of latency to each call. Cache them once per
+// account type so subsequent requests skip the DB entirely.
+const mockPrincipalCache = new Map<'STAFF' | 'PATIENT', AuthenticatedPrincipal>();
+
 async function getOrCreateMockPrincipal(accountType: 'STAFF' | 'PATIENT'): Promise<AuthenticatedPrincipal> {
+  const cached = mockPrincipalCache.get(accountType);
+  if (cached) {
+    return cached;
+  }
+
+  const principal = await resolveMockPrincipal(accountType);
+  mockPrincipalCache.set(accountType, principal);
+  return principal;
+}
+
+async function resolveMockPrincipal(accountType: 'STAFF' | 'PATIENT'): Promise<AuthenticatedPrincipal> {
   // Find or create default organization
   let org = await prisma.organization.findFirst();
   if (!org) {
