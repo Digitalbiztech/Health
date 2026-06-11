@@ -19,6 +19,7 @@ import {
   BarChart2,
   Search,
   Terminal,
+  ShieldAlert,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -34,6 +35,7 @@ import {
   CartesianGrid,
   Tooltip,
   ReferenceLine,
+  ReferenceArea,
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import type { CompleteReportData } from '@/types/dashboard';
@@ -314,20 +316,20 @@ export function ReportDashboard({
 
     // System map with full details
     const systemMap: Record<string, { color: string; label: string }> = {
-      CBC: { color: '#22d3ee', label: 'Complete Blood Count' },
-      Blood: { color: '#22d3ee', label: 'Complete Blood Count' },
-      Kidney: { color: '#6366f1', label: 'Kidney Function' },
-      Liver: { color: '#ec4899', label: 'Liver Function' },
-      Electrolytes: { color: '#eab308', label: 'Electrolytes' },
-      Metabolic: { color: '#14b8a6', label: 'Comprehensive Metabolic' },
-      'Comprehensive Metabolic Panel': { color: '#14b8a6', label: 'Comprehensive Metabolic' },
-      'Lipid Panel': { color: '#f97316', label: 'Lipid Panel' },
-      Lipid: { color: '#f97316', label: 'Lipid Panel' },
-      Hormones: { color: '#a855f7', label: 'Thyroid / Hormones' },
-      Thyroid: { color: '#a855f7', label: 'Thyroid / Hormones' },
-      'Vitamins & Minerals': { color: '#10b981', label: 'Vitamins & Minerals' },
-      Nutrients: { color: '#10b981', label: 'Vitamins & Minerals' },
-      Vitamins: { color: '#10b981', label: 'Vitamins & Minerals' },
+      CBC: { color: '#10b981', label: 'Blood' },
+      Blood: { color: '#10b981', label: 'Blood' },
+      Kidney: { color: '#06b6d4', label: 'Metabolic' },
+      Liver: { color: '#06b6d4', label: 'Metabolic' },
+      Electrolytes: { color: '#06b6d4', label: 'Metabolic' },
+      Metabolic: { color: '#06b6d4', label: 'Metabolic' },
+      'Comprehensive Metabolic Panel': { color: '#06b6d4', label: 'Metabolic' },
+      'Lipid Panel': { color: '#f97316', label: 'Lipid' },
+      Lipid: { color: '#f97316', label: 'Lipid' },
+      Hormones: { color: '#a855f7', label: 'Hormones' },
+      Thyroid: { color: '#a855f7', label: 'Hormones' },
+      'Vitamins & Minerals': { color: '#ec4899', label: 'Nutrients' },
+      Nutrients: { color: '#ec4899', label: 'Nutrients' },
+      Vitamins: { color: '#ec4899', label: 'Nutrients' },
     };
 
     // Standard clinical panels for the Body System Status
@@ -356,7 +358,7 @@ export function ReportDashboard({
     const conditionData = systemBars.map(bar => ({
       name: bar.label.charAt(0) + bar.label.slice(1).toLowerCase(),
       score: bar.score,
-      color: bar.color,
+      color: 'var(--primary-text)',
     }));
 
     // User profile age/gender
@@ -580,25 +582,28 @@ export function ReportDashboard({
                 <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">SCORE BY PANEL</span>
               </div>
               <div className="flex flex-col gap-4">
-                {systemBars.map(sys => (
-                  <div key={sys.label} className="flex items-center gap-4">
-                    <span className="text-[10px] font-bold w-28 shrink-0 tracking-wider text-muted-foreground">{sys.label}</span>
-                    <div className="flex gap-[4px] flex-1">
-                      {Array.from({ length: sys.blocks }).map((_, idx) => {
-                        const isFilled = idx < sys.filled;
-                        const fillColor = sys.score >= 90 ? sys.color : '#f97316';
-                        return (
-                          <div
-                            key={idx}
-                            className="flex-1 h-3.5 rounded-sm transition-all"
-                            style={{ background: isFilled ? fillColor : 'rgba(100, 116, 139, 0.15)' }}
-                          />
-                        );
-                      })}
+                {systemBars.map(sys => {
+                  const isNormal = sys.score === 100;
+                  const fillColor = isNormal ? '#11784B' : '#D41717';
+                  return (
+                    <div key={sys.label} className="flex items-center gap-4">
+                      <span className="text-[10px] font-bold w-28 shrink-0 tracking-wider text-muted-foreground">{sys.label}</span>
+                      <div className="flex gap-[4px] flex-1">
+                        {Array.from({ length: sys.blocks }).map((_, idx) => {
+                          const isFilled = idx < sys.filled;
+                          return (
+                            <div
+                              key={idx}
+                              className="flex-1 h-3.5 rounded-sm transition-all"
+                              style={{ background: isFilled ? fillColor : 'rgba(100, 116, 139, 0.15)' }}
+                            />
+                          );
+                        })}
+                      </div>
+                      <span className="text-xs font-bold w-10 text-right" style={{ color: fillColor }}>{sys.score}%</span>
                     </div>
-                    <span className="text-xs font-bold w-10 text-right" style={{ color: sys.score >= 90 ? sys.color : '#f97316' }}>{sys.score}%</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -757,12 +762,19 @@ export function ReportDashboard({
 
           <div className="relative flex h-56 mt-4">
             {/* Vertical color bar zone indicator */}
-            <div className="w-1.5 h-40 self-center rounded-full bg-gradient-to-t from-rose-500 via-amber-500 via-emerald-500 via-amber-500 to-rose-500 mr-2 opacity-80" />
+            <div
+              className="absolute left-[12px] w-1.5 rounded-full z-10"
+              style={{
+                top: '8px',
+                height: '168px',
+                background: 'linear-gradient(to top, #f43f5e 0%, #f43f5e 20%, #fbbf24 20%, #fbbf24 41.25%, #10b981 41.25%, #10b981 68.75%, #fbbf24 68.75%, #fbbf24 83.75%, #f43f5e 83.75%, #f43f5e 100%)'
+              }}
+            />
             <div className="flex-1 h-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={profileData} margin={{ top: 8, right: 16, left: 20, bottom: 48 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.1} vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: 'var(--muted-foreground)', fontSize: 8, fontWeight: 'bold' }} angle={-90} textAnchor="end" interval={0} height={80} />
+                  <XAxis dataKey="name" tick={{ fill: 'var(--muted-foreground)', fontSize: 8, fontWeight: 'bold' }} angle={-45} textAnchor="end" interval={0} height={70} />
                   <YAxis
                     domain={[0, 4]}
                     tick={{ fill: 'var(--muted-foreground)', fontSize: 8, fontWeight: 'bold' }}
@@ -776,6 +788,9 @@ export function ReportDashboard({
                     }}
                     ticks={[0.5, 1.1, 2.2, 3.1, 3.6]}
                     width={75}
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
                   />
                   <Tooltip
                     content={({ active, payload }) =>
@@ -789,11 +804,14 @@ export function ReportDashboard({
                     }
                   />
 
-                  <ReferenceLine y={0.5} stroke="rgba(239,68,68,0.1)" strokeDasharray="3 3" />
-                  <ReferenceLine y={1.1} stroke="rgba(245,158,11,0.1)" strokeDasharray="3 3" />
-                  <ReferenceLine y={2.2} stroke="rgba(16,185,129,0.15)" strokeDasharray="3 3" />
-                  <ReferenceLine y={3.1} stroke="rgba(245,158,11,0.1)" strokeDasharray="3 3" />
-                  <ReferenceLine y={3.6} stroke="rgba(239,68,68,0.1)" strokeDasharray="3 3" />
+                  {/* Reference boundaries matching Y divisions */}
+                  <ReferenceLine y={0.8} stroke="#f43f5e" strokeDasharray="3 3" opacity={0.25} />
+                  <ReferenceLine y={1.65} stroke="#fbbf24" strokeDasharray="3 3" opacity={0.25} />
+                  <ReferenceLine y={2.75} stroke="#10b981" strokeDasharray="3 3" opacity={0.25} />
+                  <ReferenceLine y={3.35} stroke="#f43f5e" strokeDasharray="3 3" opacity={0.25} />
+
+                  {/* Shaded Optimal Reference Zone Band */}
+                  <ReferenceArea y1={1.65} y2={2.75} fill="#10b981" fillOpacity={0.035} />
 
                   {lineCategories.map(catLabel => {
                     const color = categoryColors[catLabel] || 'var(--primary-text)';
@@ -807,14 +825,15 @@ export function ReportDashboard({
                         connectNulls={false}
                         dot={(props: any) => {
                           if (props.cx === undefined || props.cy === undefined) return null;
-                          const c = props.payload?.color || color;
+                          const isNormal = props.payload?.status === 'NORMAL';
+                          const dotColor = isNormal ? '#10b981' : '#F04E14';
                           return (
                             <circle
                               key={props.key}
                               cx={props.cx}
                               cy={props.cy}
                               r={4.5}
-                              fill={c}
+                              fill={dotColor}
                               stroke="white"
                               strokeWidth={1.5}
                             />
@@ -834,7 +853,10 @@ export function ReportDashboard({
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
               <span><strong className="text-foreground">Clinical Guide:</strong> The vertical color bar and shaded bands map reference intervals dynamically, allowing immediate visual assessment across distinct panels and units.</span>
             </div>
-            <span className="text-[9px] font-extrabold px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">100% NORMALIZED</span>
+            <span className="flex items-center gap-1.5 text-[9px] font-extrabold px-2.5 py-1 rounded bg-rose-500/5 text-rose-500 border border-rose-500/10 uppercase tracking-wider">
+              <ShieldAlert className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+              100% NORMALIZED
+            </span>
           </div>
         </div>
 
