@@ -13,9 +13,29 @@ try:
     from presidio_analyzer import AnalyzerEngine
     from presidio_analyzer.nlp_engine import NlpEngineProvider
 
+    # spaCy emits many non-PHI entity labels (CARDINAL, PERCENT, ORDINAL, …) that
+    # Presidio does not map to PII types. Left unconfigured, each one logs a noisy
+    # "Entity X is not mapped to a Presidio entity" WARNING — lab reports are full
+    # of numbers, so this floods the logs. Explicitly ignore them.
     _nlp_config = {
         "nlp_engine_name": "spacy",
         "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}],
+        "ner_model_configuration": {
+            "labels_to_ignore": [
+                "CARDINAL",
+                "PERCENT",
+                "ORDINAL",
+                "QUANTITY",
+                "MONEY",
+                "PRODUCT",
+                "EVENT",
+                "WORK_OF_ART",
+                "LAW",
+                "LANGUAGE",
+                "FAC",
+                "TIME",
+            ],
+        },
     }
     _nlp_engine = NlpEngineProvider(nlp_configuration=_nlp_config).create_engine()
     _analyzer = AnalyzerEngine(nlp_engine=_nlp_engine, supported_languages=["en"])
