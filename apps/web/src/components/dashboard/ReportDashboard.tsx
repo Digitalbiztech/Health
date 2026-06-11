@@ -47,6 +47,45 @@ import { AIChat } from './AIChat';
 import { ComparisonView } from './ComparisonView';
 import { ClinicalSection } from './ClinicalSection';
 
+const CustomYAxisTick = (props: any) => {
+  const { x, y, payload } = props;
+  const v = payload.value;
+  
+  let text = '';
+  let color = 'var(--muted-foreground)';
+  
+  if (v === 0.5) {
+    text = 'Very Low';
+    color = '#f43f5e';
+  } else if (v === 1.1) {
+    text = 'Low';
+    color = '#fbbf24';
+  } else if (v === 2.2) {
+    text = 'Optimal';
+    color = '#10b981';
+  } else if (v === 3.1) {
+    text = 'High';
+    color = '#fbbf24';
+  } else if (v === 3.6) {
+    text = 'Elevated';
+    color = '#f43f5e';
+  }
+  
+  return (
+    <text
+      x={x - 8}
+      y={y}
+      dy={3}
+      textAnchor="end"
+      fill={color}
+      fontSize={8}
+      fontWeight="bold"
+    >
+      {text}
+    </text>
+  );
+};
+
 interface ReportDashboardProps {
   reportData: CompleteReportData;
   comparisonReports: CompleteReportData[];
@@ -760,13 +799,13 @@ export function ReportDashboard({
             </div>
           </div>
 
-          <div className="relative flex h-56 mt-4">
+          <div className="relative flex h-72 mt-4">
             {/* Vertical color bar zone indicator */}
             <div
               className="absolute left-[12px] w-1.5 rounded-full z-10"
               style={{
                 top: '8px',
-                height: '168px',
+                height: '162px',
                 background: 'linear-gradient(to top, #f43f5e 0%, #f43f5e 20%, #fbbf24 20%, #fbbf24 41.25%, #10b981 41.25%, #10b981 68.75%, #fbbf24 68.75%, #fbbf24 83.75%, #f43f5e 83.75%, #f43f5e 100%)'
               }}
             />
@@ -777,15 +816,7 @@ export function ReportDashboard({
                   <XAxis dataKey="name" tick={{ fill: 'var(--muted-foreground)', fontSize: 8, fontWeight: 'bold' }} angle={-45} textAnchor="end" interval={0} height={70} />
                   <YAxis
                     domain={[0, 4]}
-                    tick={{ fill: 'var(--muted-foreground)', fontSize: 8, fontWeight: 'bold' }}
-                    tickFormatter={(v) => {
-                      if (v === 0.5) return 'Very Low';
-                      if (v === 1.1) return 'Low';
-                      if (v === 2.2) return 'Optimal';
-                      if (v === 3.1) return 'High';
-                      if (v === 3.6) return 'Elevated';
-                      return '';
-                    }}
+                    tick={<CustomYAxisTick />}
                     ticks={[0.5, 1.1, 2.2, 3.1, 3.6]}
                     width={75}
                     axisLine={false}
