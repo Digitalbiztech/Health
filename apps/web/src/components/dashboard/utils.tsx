@@ -115,7 +115,7 @@ export function exportCSV(reportData: CompleteReportData) {
   toast.success('Successfully exported flat CSV matrix.');
 }
 
-function convertToLabReport(reportData: CompleteReportData, _healthScore: number): LabReport {
+function convertToLabReport(reportData: CompleteReportData, healthScore: number): LabReport {
   const patient = reportData.patient;
   const activeReport = reportData.reports?.[0];
   const biomarkers = reportData.extraction?.biomarkers || [];
@@ -153,6 +153,7 @@ function convertToLabReport(reportData: CompleteReportData, _healthScore: number
     summary: activeReport?.summary,
     aiInsights: activeReport?.insights?.recommendations || [],
     panels,
+    healthScore,
   };
 }
 
@@ -166,7 +167,7 @@ export async function exportPDF(reportData: CompleteReportData, healthScore: num
   try {
     const labReport = convertToLabReport(reportData, healthScore);
     const logoUrl = window.location.origin + '/logo/041323 YC LogoDeck_Main-WG copy.png';
-    const iconLogoUrl = window.location.origin + '/logo/040523 YC LogoDeck_Main-FC.jpg';
+    const iconLogoUrl = window.location.origin + '/logo/040523 YC LogoDeck_Icon-GS.jpg';
 
     const doc = <PremiumPDFDocument report={labReport} logoUrl={logoUrl} iconLogoUrl={iconLogoUrl} />;
     const blob = await pdf(doc).toBlob();
