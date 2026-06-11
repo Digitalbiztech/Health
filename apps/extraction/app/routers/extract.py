@@ -72,7 +72,11 @@ async def extract(req: ExtractionRequest) -> ExtractionResponse:
                 ingest_extraction(
                     patient_id=req.patient_id,
                     upload_id=req.upload_id,
-                    extraction_id=req.upload_id,  # Using upload_id as extraction_id for 1:1 reference
+                    # extraction_id is left unset: the extractions row is created by the
+                    # API *after* this service returns, so its id does not exist yet (and
+                    # never equals upload_id). Chunks are keyed by upload_id + patient_id,
+                    # which is what retrieval filters on.
+                    extraction_id=None,
                     masked_text=masked_full_text,
                     biomarkers=normalized,
                     insights=insight_dicts,
