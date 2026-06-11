@@ -23,7 +23,7 @@ def format_biomarkers(biomarkers: list[dict]) -> str:
 def ingest_extraction(
     patient_id: str,
     upload_id: str,
-    extraction_id: str,
+    extraction_id: str | None,
     masked_text: str,
     biomarkers: list[dict],
     insights: list[dict],
