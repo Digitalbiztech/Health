@@ -73,6 +73,15 @@ PANEL_DEFINITIONS: dict[str, dict[str, list[str]]] = {
 # Minimum markers required to consider a panel as "detected" in the report
 _MIN_PANEL_HITS = 2
 
+# Coverage weighting. A panel's "expected" list is the *superset* of markers a
+# panel can contain, but most real reports only include a subset (a lab rarely
+# runs every CBC index). Weighting critical markers fully and optional markers
+# partially stops a fully-extracted basic panel from being scored as if half the
+# data were missing — which previously dragged confidence to ~0.45 and triggered
+# needless OCR escalation.
+_CRITICAL_WEIGHT = 1.0
+_OPTIONAL_WEIGHT = 0.4
+
 
 # ── Quality data structure ────────────────────────────────────
 
@@ -118,24 +127,31 @@ def compute_coverage(
     canonical_names: set[str],
     detected_panels: list[str],
 ) -> float:
-    """Coverage = found / expected across all detected panels.
+    """Weighted coverage across detected panels.
+
+    Critical markers contribute full weight; optional markers contribute partial
+    weight (a lab legitimately may not report every optional index of a panel).
+    This avoids penalizing a complete extraction of a deliberately-small panel.
 
     Returns 1.0 when no panels are detected (nothing expected → fully covered).
     """
-    total_expected = 0
-    total_found = 0
+    total_weight = 0.0
+    found_weight = 0.0
 
     for panel_name in detected_panels:
         defn = PANEL_DEFINITIONS.get(panel_name)
         if not defn:
             continue
-        expected = defn["expected"]
-        total_expected += len(expected)
-        total_found += sum(1 for m in expected if m in canonical_names)
+        critical = set(defn.get("critical", []))
+        for marker in defn["expected"]:
+            weight = _CRITICAL_WEIGHT if marker in critical else _OPTIONAL_WEIGHT
+            total_weight += weight
+            if marker in canonical_names:
+                found_weight += weight
 
-    if total_expected == 0:
+    if total_weight == 0:
         return 1.0
-    return round(total_found / total_expected, 4)
+    return round(min(1.0, found_weight / total_weight), 4)
 
 
 def compute_structural_score(biomarkers: list[dict]) -> float:
