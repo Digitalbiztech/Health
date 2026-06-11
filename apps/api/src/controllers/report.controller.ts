@@ -84,15 +84,12 @@ export async function uploadReport(
       }
     }
 
-    // 2. Save the PDF to Supabase Storage bucket: "uploads"
+    // 2. Compute the deterministic storage path + public URL up front.
+    //    The public URL does not depend on the object existing yet, so we can
+    //    persist it and respond before the (slow, ~seconds) storage upload runs.
     const uniqueId = crypto.randomUUID();
     const storagePath = `uploads/${patientId}/${uniqueId}-${file.originalname}`;
-    const fileUrl = await SupabaseStorageService.uploadFile(
-      'uploads',
-      storagePath,
-      file.buffer,
-      file.mimetype,
-    );
+    const fileUrl = SupabaseStorageService.getPublicUrl('uploads', storagePath);
 
     // 3. Create a DB record in the "uploads" table with status "PENDING"
     const upload = await prisma.upload.create({
@@ -108,10 +105,7 @@ export async function uploadReport(
       },
     });
 
-    // 4. Enqueue the BullMQ processing Job asynchronously
-    await enqueueReportProcessing(upload.id);
-
-    // 5. Return success response
+    // 4. Respond immediately — the client now polls the PENDING upload for status.
     res.status(201).json({
       status: 'success',
       message: 'Report uploaded successfully and enqueued for processing',
@@ -119,6 +113,32 @@ export async function uploadReport(
         upload,
       },
     });
+
+    // 5. Push bytes to storage, THEN enqueue processing — in the background.
+    //    Ordering matters: the extraction worker downloads the file from fileUrl,
+    //    so the upload must land before the job is queued. Errors here can no
+    //    longer reach the HTTP response, so we mark the upload FAILED instead.
+    const fileBuffer = file.buffer;
+    const fileMimetype = file.mimetype;
+    void (async () => {
+      try {
+        await SupabaseStorageService.uploadFile(
+          'uploads',
+          storagePath,
+          fileBuffer,
+          fileMimetype,
+        );
+        await enqueueReportProcessing(upload.id);
+      } catch (bgErr) {
+        console.error(
+          `[uploadReport] Background storage/enqueue failed for upload ${upload.id}:`,
+          bgErr,
+        );
+        await prisma.upload
+          .update({ where: { id: upload.id }, data: { status: 'FAILED' } })
+          .catch(() => console.error(`Failed to mark upload ${upload.id} as FAILED`));
+      }
+    })();
   } catch (err) {
     next(err);
   }
@@ -175,6 +195,47 @@ export async function getReportByUploadId(
       throw new AppError('Unauthorized', 401);
     }
 
+    // ── Cheap freshness pre-check ────────────────────────────────
+    // The full report (upload + extraction + biomarkers + reports + patient) is
+    // several sequential round-trips. Most calls are conditional GETs that end in
+    // 304, so first do a lightweight lookup to build a version tag from the rows
+    // that can actually change. If it matches the client's If-None-Match we return
+    // 304 immediately and skip the expensive nested query entirely.
+    const head = await prisma.upload.findUnique({
+      where: { id: uploadId },
+      select: {
+        patientId: true,
+        updatedAt: true,
+        extraction: { select: { updatedAt: true } },
+        reports: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { updatedAt: true },
+        },
+      },
+    });
+
+    if (!head) {
+      throw new AppError('Upload not found', 404);
+    }
+
+    // Security check: ensure user is authorized to view this report
+    if (principal.accountType === 'PATIENT' && head.patientId !== principal.id) {
+      throw new AppError('Forbidden: Access denied', 403);
+    }
+
+    const versionTag = `"${uploadId}:${head.updatedAt.getTime()}:${
+      head.extraction?.updatedAt.getTime() ?? 0
+    }:${head.reports[0]?.updatedAt.getTime() ?? 0}"`;
+
+    res.setHeader('ETag', versionTag);
+    res.setHeader('Cache-Control', 'private, no-cache');
+
+    if (req.headers['if-none-match'] === versionTag) {
+      res.status(304).end();
+      return;
+    }
+
     const upload = await prisma.upload.findUnique({
       where: { id: uploadId },
       include: {
@@ -193,14 +254,6 @@ export async function getReportByUploadId(
 
     if (!upload) {
       throw new AppError('Upload not found', 404);
-    }
-
-    // Security check: ensure user is authorized to view this report
-    if (
-      principal.accountType === 'PATIENT' &&
-      upload.patientId !== principal.id
-    ) {
-      throw new AppError('Forbidden: Access denied', 403);
     }
 
     res.status(200).json({
