@@ -134,6 +134,9 @@ export const extractionWorker = new Worker(
           })),
         });
       }
+    }, {
+      maxWait: 20000,
+      timeout: 40000,
     });
 
     // 4. Trigger the final pipeline step (Report + PDF export)
