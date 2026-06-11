@@ -249,13 +249,26 @@ export default function Dashboard() {
       const res = await apiFetch<{ data: { uploads: UploadRecord[] } }>('/reports/uploads');
 
       const completed = res.data.uploads.filter((u) => u.status === 'COMPLETED').slice(0, 5);
-      const fetchedReports = await Promise.all(
-        completed.map((u) =>
-          apiFetch<{ data: { upload: CompleteReportData } }>(`/reports/upload/${u.id}`)
-            .then((r) => r.data.upload)
-            .catch(() => null)
-        )
-      );
+
+      // Fetch with limited concurrency. Firing all 5 full-report requests at once
+      // starves the API's connection pool (each is several sequential DB round-
+      // trips), making them serialize and balloon to 5s+. A small concurrency
+      // window keeps throughput without the contention; conditional-GET 304s
+      // (via ETag) make repeat fetches cheap.
+      const CONCURRENCY = 2;
+      const fetchedReports: (CompleteReportData | null)[] = [];
+      for (let i = 0; i < completed.length; i += CONCURRENCY) {
+        const batch = completed.slice(i, i + CONCURRENCY);
+        const settled = await Promise.all(
+          batch.map((u) =>
+            apiFetch<{ data: { upload: CompleteReportData } }>(`/reports/upload/${u.id}`)
+              .then((r) => r.data.upload)
+              .catch(() => null)
+          )
+        );
+        fetchedReports.push(...settled);
+      }
+
       setComparisonReports(fetchedReports.filter((r): r is CompleteReportData => r !== null));
     } catch (err) {
       console.error('Failed to prefetch history:', err);
@@ -329,15 +342,32 @@ export default function Dashboard() {
   // ─── POLLING / EXTRACTION JOB STATE ORCHESTRATOR ─────────────
 
   function startStatusPolling(uploadId: string, compareSlot: 'A' | 'B' | null = null) {
-    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
 
-    pollTimerRef.current = setInterval(async () => {
+    // Exponential backoff: the extraction pipeline takes tens of seconds, so a
+    // fixed fast interval just hammers the (heavy) /reports/uploads endpoint.
+    // Start responsive, then back off; give up after an overall ceiling.
+    const INITIAL_DELAY = 1500;
+    const MAX_DELAY = 10000;
+    const BACKOFF_FACTOR = 1.5;
+    const MAX_TOTAL_MS = 5 * 60 * 1000; // stop polling after 5 minutes
+    let delay = INITIAL_DELAY;
+    const startedAt = Date.now();
+
+    const stop = () => {
+      if (pollTimerRef.current) {
+        clearTimeout(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    };
+
+    const poll = async () => {
       try {
         const res = await apiFetch<{ data: { uploads: UploadRecord[] } }>('/reports/uploads');
         const upload = res.data.uploads.find((u) => u.id === uploadId);
 
         if (!upload) {
-          clearInterval(pollTimerRef.current!);
+          stop();
           if (compareSlot) {
             toast.error(`Report ${compareSlot} upload reference was lost.`);
             setCompareUploadSlot(null);
@@ -349,7 +379,7 @@ export default function Dashboard() {
         }
 
         if (upload.status === 'COMPLETED') {
-          clearInterval(pollTimerRef.current!);
+          stop();
           const reportRes = await apiFetch<{ data: { upload: CompleteReportData } }>(`/reports/upload/${uploadId}`);
 
           if (compareSlot === 'A') {
@@ -373,8 +403,11 @@ export default function Dashboard() {
               }
             }
           }
-        } else if (upload.status === 'FAILED') {
-          clearInterval(pollTimerRef.current!);
+          return;
+        }
+
+        if (upload.status === 'FAILED') {
+          stop();
           if (compareSlot) {
             toast.error(`Report ${compareSlot} extraction failed.`);
             setCompareUploadSlot(null);
@@ -382,16 +415,41 @@ export default function Dashboard() {
             setErrorMessage('Lab extraction failed. The PDF structure or biomarker scanning layout is unsupported.');
             setViewState('ERROR');
           }
+          return;
+        }
+
+        // Still PENDING/PROCESSING — give up if we've exceeded the ceiling.
+        if (Date.now() - startedAt > MAX_TOTAL_MS) {
+          stop();
+          if (compareSlot) {
+            toast.error(`Report ${compareSlot} timed out while processing.`);
+            setCompareUploadSlot(null);
+          } else {
+            setErrorMessage('Processing timed out. Please try again in a moment.');
+            setViewState('ERROR');
+          }
+          return;
         }
       } catch (err: any) {
         console.error('Polling error:', err);
+        // Transient error — fall through and retry with backoff.
+        if (Date.now() - startedAt > MAX_TOTAL_MS) {
+          stop();
+          return;
+        }
       }
-    }, 1500);
+
+      // Schedule the next tick with exponential backoff.
+      delay = Math.min(delay * BACKOFF_FACTOR, MAX_DELAY);
+      pollTimerRef.current = setTimeout(poll, delay);
+    };
+
+    pollTimerRef.current = setTimeout(poll, delay);
   }
 
   useEffect(() => {
     return () => {
-      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
     };
   }, []);
 
