@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet, Font, Image, Svg, Circle, Path, Line, Polyline, Defs, LinearGradient, Stop, Rect } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Font, Image, Svg, Circle, Path, Line, Polyline, Rect } from '@react-pdf/renderer';
 import type { LabReport, LabPanel } from '@/types/lab';
 function resolveRange(_name: string, minVal: number | undefined, maxVal: number | undefined, value: number, _gender: string) {
   const min = typeof minVal === 'number' ? minVal : 0;
@@ -1044,29 +1044,35 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
   const criticalCount = allBiomarkers.filter(b => b.status === 'critical').length;
   const totalCount = allBiomarkers.length;
   const flaggedCount = highCount + lowCount + criticalCount;
-  const normalPct = totalCount ? Math.round((normalCount / totalCount) * 100) : 0;
+  const normalPct = typeof report.healthScore === 'number' ? report.healthScore : (totalCount ? Math.round((normalCount / totalCount) * 100) : 0);
   const flaggedPct = totalCount ? Math.round((flaggedCount / totalCount) * 100) : 0;
 
   const scoreColor = normalPct >= 80 ? TEAL_BRIGHT : normalPct >= 60 ? '#f59e0b' : '#ef4444';
   const scoreBg = normalPct >= 80 ? TEAL_TINT : normalPct >= 60 ? '#fffbeb' : '#fef2f2';
   const generatedDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  const panelMapping: Record<string, string> = {
-    'Complete Blood Count (CBC)': 'Blood',
-    'Comprehensive Metabolic Panel (CMP)': 'Metabolic',
-    'Lipid Panel': 'Heart',
-    'Thyroid Panel': 'Thyroid',
-    'Hormones': 'Hormones',
-    'Vitamins & Minerals': 'Nutrients',
-  };
+  const standardPanels = [
+    { label: 'BLOOD', categories: ['CBC', 'Blood'] },
+    { label: 'HEART', categories: ['Lipid Panel', 'Lipid'] },
+    { label: 'HORMONES', categories: ['Hormones', 'Thyroid', 'Thyroid Panel'] },
+    { label: 'NUTRIENTS', categories: ['Vitamins & Minerals', 'Nutrients', 'Vitamins'] },
+    { label: 'METABOLIC', categories: ['Metabolic', 'Comprehensive Metabolic Panel', 'Comprehensive Metabolic Panel (CMP)', 'Kidney', 'Liver', 'Electrolytes'] },
+  ];
 
-  const systemsData = report.panels
-    .filter(p => p.biomarkers.length > 0)
-    .map(p => ({
-      system: panelMapping[p.name] || p.name.split('(')[0].trim().split(' ')[0],
-      score: panelScore(p),
-    }))
-    .sort((a, b) => b.score - a.score);
+  const systemsData = standardPanels.map(panel => {
+    const biomarkersInPanel = report.panels
+      .filter(p => panel.categories.some(c => p.name.toLowerCase().includes(c.toLowerCase()) || c.toLowerCase().includes(p.name.toLowerCase())))
+      .flatMap(p => p.biomarkers);
+      
+    const score = biomarkersInPanel.length
+      ? Math.round((biomarkersInPanel.filter(b => b.status === 'normal').length / biomarkersInPanel.length) * 100)
+      : 100;
+      
+    return {
+      system: panel.label,
+      score,
+    };
+  });
 
   const categoryData = report.panels
     .filter(p => p.biomarkers.length > 0)
@@ -1135,7 +1141,7 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
                   report.patientAge && `${report.patientAge} yrs`,
                   report.patientGender,
                   report.labDate || report.collectionDate,
-                  report.orderedBy && `Dr. ${report.orderedBy}`,
+                  // report.orderedBy && `Dr. ${report.orderedBy}`,
                 ].filter(Boolean).join('  ·  ')}
               </Text>
             </View>
@@ -1304,40 +1310,42 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
 
             <View style={styles.areaChartBody}>
               <Svg width="100%" height="70" viewBox="0 0 400 70" preserveAspectRatio="none">
-                <Defs>
-                  <LinearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0%" stopColor={TEAL_BRIGHT} stopOpacity={0.35} />
-                    <Stop offset="100%" stopColor={TEAL_BRIGHT} stopOpacity={0} />
-                  </LinearGradient>
-                </Defs>
-
                 {/* Grid */}
                 <Line x1="0" y1="10" x2="400" y2="10" stroke={SLATE_100} strokeWidth="0.5" strokeDasharray="2,2" />
                 <Line x1="0" y1="35" x2="400" y2="35" stroke={SLATE_100} strokeWidth="0.5" strokeDasharray="2,2" />
                 <Line x1="0" y1="60" x2="400" y2="60" stroke={SLATE_100} strokeWidth="0.5" />
 
-                {/* Light layered area */}
-                <Path d="M0,55 Q100,52 200,42 T350,22 L400,18 L400,70 L0,70 Z" fill="url(#areaGrad)" />
-                {/* Soft accent stroke (mint) */}
-                <Path d="M0,55 Q100,52 200,42 T350,22 L400,18" fill="none" stroke={TEAL_LIGHT} strokeWidth="2.5" strokeLinecap="round" />
-                {/* Dark accent stroke (emphasised line) */}
-                <Path d="M0,58 Q100,55 200,48 T350,30 L400,26" fill="none" stroke={TEAL_DARK} strokeWidth="2" strokeLinecap="round" />
-
-                {/* Point marker */}
-                <Circle cx="285" cy="28" r="3.5" fill="#ffffff" stroke={TEAL_DARK} strokeWidth="1.5" />
+                {/* Bars */}
+                {systemsData.map((item, idx) => {
+                  const barHeight = (item.score / 100) * 50;
+                  const x = 25 + idx * 80;
+                  const y = 60 - barHeight;
+                  return (
+                    <Rect
+                      key={idx}
+                      x={x}
+                      y={y}
+                      width={30}
+                      height={Math.max(1, barHeight)}
+                      fill={YC_GOLD}
+                      rx={3}
+                    />
+                  );
+                })}
               </Svg>
-
-              {/* Floating badge */}
-              <View style={{ position: 'absolute', top: 6, left: '68%', backgroundColor: SLATE_900, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 }}>
-                <Text style={{ color: '#ffffff', fontSize: 6.5, fontWeight: 'bold' }}>{avgPanelScore}%</Text>
-              </View>
             </View>
 
-            <View style={styles.areaChartXLabels}>
-              <Text style={styles.areaChartXLabel}>{report.panels[0]?.name.split(' ')[0] || 'P1'}</Text>
-              <Text style={styles.areaChartXLabel}>{report.panels[1]?.name.split(' ')[0] || 'P2'}</Text>
-              <Text style={[styles.areaChartXLabel, { color: SLATE_700 }]}>{report.panels[Math.floor(report.panels.length / 2)]?.name.split(' ')[0] || 'Now'}</Text>
-              <Text style={styles.areaChartXLabel}>{report.panels[report.panels.length - 1]?.name.split(' ')[0] || 'Latest'}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+              {systemsData.map((item, idx) => (
+                <View key={idx} style={{ width: '20%', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 6.5, fontWeight: 'bold', color: SLATE_900 }}>
+                    {item.system.charAt(0) + item.system.slice(1).toLowerCase()}
+                  </Text>
+                  <Text style={{ fontSize: 5.5, color: SLATE_400, marginTop: 1, fontWeight: 'bold' }}>
+                    {item.score}%
+                  </Text>
+                </View>
+              ))}
             </View>
           </View>
 
@@ -1493,9 +1501,9 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
             <Text style={styles.overviewCardTitle}>Body System Status</Text>
             <View style={{ gap: 4 }}>
               {systemsData.slice(0, 5).map(item => {
-                const totalSegments = 4;
+                const totalSegments = 10;
                 const filledSegments = Math.round((item.score / 100) * totalSegments);
-                const color = item.score >= 80 ? TEAL_BRIGHT : item.score >= 60 ? '#f59e0b' : '#ef4444';
+                const color = item.score === 100 ? '#11784B' : '#D41717';
                 return (
                   <View key={item.system} style={styles.bodySystemRow}>
                     <View style={styles.bodySystemLabelRow}>
@@ -1509,7 +1517,7 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
                           style={[
                             styles.bodySystemSegment,
                             {
-                              backgroundColor: i < filledSegments ? color : SLATE_100,
+                              backgroundColor: i < filledSegments ? color : 'rgba(100, 116, 139, 0.15)',
                               height: 4,
                             }
                           ]}
@@ -1542,14 +1550,14 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
             <Text style={styles.healthIndexChartTitle}>Body Systems Health Index Comparison</Text>
             <View style={{ gap: 8, marginTop: 4 }}>
               {systemsData.map((item) => {
-                const color = item.score >= 80 ? TEAL_BRIGHT : item.score >= 60 ? '#f59e0b' : '#ef4444';
+                const color = item.score === 100 ? '#11784B' : '#D41717';
                 return (
                   <View key={item.system} style={{ flexDirection: 'row', alignItems: 'center' }}>
                     {/* Label */}
                     <Text style={{ width: '25%', fontSize: 7, fontWeight: 'bold', color: SLATE_700, textTransform: 'uppercase' }}>
                       {item.system}
                     </Text>
-
+ 
                     {/* Bar Track & Fill */}
                     <View style={{ width: '65%', height: 10, backgroundColor: '#f1f5f9', borderRadius: 5, overflow: 'hidden', position: 'relative' }}>
                       <View
@@ -1574,7 +1582,7 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
                         {item.score}%
                       </Text>
                     </View>
-
+ 
                     {/* Status Label badge */}
                     <View style={{ width: '10%', alignItems: 'flex-end' }}>
                       <Text
@@ -1585,7 +1593,7 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
                           textTransform: 'uppercase',
                         }}
                       >
-                        {item.score >= 80 ? 'Optimal' : item.score >= 60 ? 'Fair' : 'Attention'}
+                        {item.score === 100 ? 'Optimal' : 'Attention'}
                       </Text>
                     </View>
                   </View>
