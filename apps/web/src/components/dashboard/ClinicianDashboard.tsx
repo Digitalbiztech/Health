@@ -45,6 +45,7 @@ import { AppointmentRow } from './AppointmentRow';
 import { TaskSidebar } from './TaskSidebar';
 import { OnboardPatientModal } from './OnboardPatientModal';
 import { AppointmentModal } from './AppointmentModal';
+import { ClinicianUploadModal } from './ClinicianUploadModal';
 
 interface ClinicianDashboardProps {
   patients: PatientRecord[];
@@ -65,7 +66,7 @@ interface ClinicianDashboardProps {
   loadPatientTrendsAndDetails: (p: PatientRecord) => void;
   isOnboardingOpen: boolean;
   setIsOnboardingOpen: (open: boolean) => void;
-  handleFileUpload: (file: File, compareSlot?: 'A' | 'B' | null) => Promise<void>;
+  handleFileUpload: (file: File, compareSlot?: 'A' | 'B' | null, targetPatientId?: string) => Promise<void>;
   setReportData: (data: CompleteReportData | null) => void;
   setViewState: (state: DashboardState) => void;
   compareReportA: CompleteReportData | null;
@@ -128,6 +129,7 @@ export function ClinicianDashboard({
   const [staffView, setStaffView] = useState<'overview' | 'patients' | 'appointments' | 'activity'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [compareDragging, setCompareDragging] = useState<'A' | 'B' | null>(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const compareFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -374,7 +376,7 @@ export function ClinicianDashboard({
   }
 
   const summaryCards = (
-    <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <section id="clinician-tour-stats" className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       {[
         { label: 'Registered Patients', val: totalPatients, icon: User, color: 'var(--primary-text)' },
         { label: 'Total Lab Reports', val: totalReports, icon: FileText, color: 'var(--primary)' },
@@ -938,15 +940,26 @@ export function ClinicianDashboard({
           </button>
         </div>
 
-        {/* Onboard patient button */}
-        <button
-          onClick={() => setIsOnboardingOpen(true)}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer border-0"
-          style={{ background: 'var(--primary-text)' }}
-        >
-          <UserPlus className="w-4 h-4" />
-          Onboard Patient
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold border hover:bg-border/20 transition-all cursor-pointer bg-transparent"
+            style={{ color: 'var(--primary-text)', borderColor: 'var(--primary-text)' }}
+          >
+            <Upload className="w-4 h-4" />
+            Upload Lab PDF
+          </button>
+          
+          <button
+            id="clinician-tour-onboard"
+            onClick={() => setIsOnboardingOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer border-0"
+            style={{ background: 'var(--primary-text)' }}
+          >
+            <UserPlus className="w-4 h-4" />
+            Onboard Patient
+          </button>
+        </div>
       </div>
 
       {/* Tab 1: Patients Directory */}
@@ -980,7 +993,7 @@ export function ClinicianDashboard({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div id="clinician-tour-patients" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredPatients.map((patient) => {
                 const age = calculateAge(patient.dateOfBirth);
                 const latestUpload = patient.uploads?.[0];
@@ -1374,12 +1387,13 @@ export function ClinicianDashboard({
     <div className="flex gap-6 max-w-[1600px] mx-auto px-4 lg:px-6 py-6">
       {/* Left Sidebar — App Navigation */}
       <aside className="hidden lg:flex flex-col gap-2 w-56 shrink-0 sticky top-[76px] self-start">
-        <div className="glass-card rounded-2xl p-3 border-border/40 shadow-sm flex flex-col gap-1">
+        <div id="clinician-tour-nav" className="glass-card rounded-2xl p-3 border-border/40 shadow-sm flex flex-col gap-1">
           {navItems.map((item) => {
             const active = !selectedPatient && staffView === item.id;
             return (
               <button
                 key={item.id}
+                id={`clinician-nav-item-${item.id}`}
                 onClick={() => {
                   setSelectedPatient(null);
                   setStaffView(item.id);
@@ -1404,12 +1418,23 @@ export function ClinicianDashboard({
         </div>
 
         <button
+          id="clinician-tour-onboard-sidebar"
           onClick={() => setIsOnboardingOpen(true)}
           className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer border-0"
           style={{ background: 'var(--primary-text)' }}
         >
           <UserPlus className="w-4 h-4" />
           Onboard Patient
+        </button>
+
+        <button
+          id="clinician-tour-upload"
+          onClick={() => setIsUploadModalOpen(true)}
+          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border hover:bg-border/20 transition-colors cursor-pointer bg-transparent"
+          style={{ color: 'var(--primary-text)', borderColor: 'var(--primary-text)' }}
+        >
+          <Upload className="w-4 h-4 shrink-0" />
+          Upload Lab PDF
         </button>
       </aside>
 
@@ -1448,7 +1473,7 @@ export function ClinicianDashboard({
       </main>
 
       {/* Right Sidebar — Task Management */}
-      <aside className="hidden xl:block w-72 shrink-0 sticky top-[76px] self-start">
+      <aside id="clinician-tour-tasks" className="hidden xl:block w-72 shrink-0 sticky top-[76px] self-start">
         <TaskSidebar
           tasks={tasks}
           loading={tasksLoading}
@@ -1470,6 +1495,17 @@ export function ClinicianDashboard({
         onClose={() => setIsApptModalOpen(false)}
         patients={patients}
         onSuccess={fetchAppointments}
+      />
+
+      <ClinicianUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        patients={patients}
+        onUpload={handleFileUpload}
+        onOnboardClick={() => {
+          setIsUploadModalOpen(false);
+          setIsOnboardingOpen(true);
+        }}
       />
     </div>
   );
