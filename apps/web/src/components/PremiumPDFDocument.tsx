@@ -1350,7 +1350,7 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
           </View>
 
           {/* Dark teal callout (Asthma-style) */}
-          <View style={styles.calloutCard}>
+          {/* <View style={styles.calloutCard}>
             <View>
               <View style={styles.calloutHeader}>
                 <View style={styles.calloutIcon}>
@@ -1379,7 +1379,7 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
                 </Text>
               </View>
             </View>
-          </View>
+          </View> */}
         </View>
 
         {/* ─── TRIPLE GRIDS: HEALTH SCORE, CATEGORY DOUGHNUT, & BODY SYSTEM BARS ─── */}
