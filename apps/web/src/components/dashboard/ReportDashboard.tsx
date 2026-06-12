@@ -96,6 +96,8 @@ interface ReportDashboardProps {
   setCompareReportA: (r: CompleteReportData | null) => void;
   compareReportB: CompleteReportData | null;
   setCompareReportB: (r: CompleteReportData | null) => void;
+  isSampleReport?: boolean;
+  onUploadClick?: () => void;
 }
 
 export function ReportDashboard({
@@ -108,6 +110,8 @@ export function ReportDashboard({
   setCompareReportA,
   compareReportB,
   setCompareReportB,
+  isSampleReport = false,
+  onUploadClick,
 }: ReportDashboardProps) {
   const [activeTab, setActiveTab] = useState<'current' | 'trends' | 'ai-chat' | 'compare'>('current');
   const [currentSubTab, setCurrentSubTab] = useState<'clinical' | 'biomarker-analysis'>('clinical');
@@ -184,12 +188,14 @@ export function ReportDashboard({
         {subTabBar}
         
         {/* High-fidelity clinical summary sub-view */}
-        <ClinicalSection reportData={reportData} />
+        <div id="report-tour-summary">
+          <ClinicalSection reportData={reportData} />
+        </div>
 
         {/* ── Biomarker Breakdown ─────────────────────────────── */}
         <div className="mt-8 border-t border-border/20 pt-8">
           {/* Header row */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-5">
+          <div id="report-tour-biomarkers" className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-5">
             <div>
               <h3 className="text-lg font-extrabold text-foreground tracking-tight">Biomarker Breakdown</h3>
               <p className="text-xs text-muted-foreground mt-0.5">Horizontal slider ranges &amp; clinical explanations</p>
@@ -1167,7 +1173,37 @@ export function ReportDashboard({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col gap-6">
+      {/* Sample Report Banner */}
+      {isSampleReport && (
+        <div 
+          id="report-tour-banner"
+          className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4.5 rounded-2xl border border-[var(--primary)]/30 sample-banner-pulse"
+          style={{
+            background: 'linear-gradient(135deg, rgba(201, 125, 10, 0.15), rgba(201, 125, 10, 0.05))',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-xl">📋</span>
+            <div className="text-left">
+              <h4 className="text-xs font-bold text-foreground">Viewing Sample Report</h4>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                This is a static demonstration report with mock values. Upload a blood test PDF to parse and explore your own clinical data.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onUploadClick}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white shadow hover:opacity-90 active:scale-[0.97] transition-all cursor-pointer border-0 shrink-0"
+            style={{
+              background: 'var(--primary-text)',
+            }}
+          >
+            Upload Now
+          </button>
+        </div>
+      )}
+
       {/* ── Patient Banner ─────────────────────────────────── */}
       <section className="glass-card rounded-2xl p-6 border-border/40 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-6 mb-8">
         <div className="flex items-center gap-4 w-full lg:w-auto">
@@ -1258,7 +1294,7 @@ export function ReportDashboard({
       </section>
 
       {/* ── Workspace Tab Selector ─────────────────────────── */}
-      <section className="flex gap-2 p-1.5 rounded-xl border border-border/40 mb-8" style={{ background: 'var(--card)' }}>
+      <section id="report-tour-tabs" className="flex gap-2 p-1.5 rounded-xl border border-border/40 mb-8" style={{ background: 'var(--card)' }}>
         {[
           { id: 'current', label: 'Current Report', icon: FileText },
           { id: 'trends', label: 'Trends', icon: TrendingUp },
@@ -1267,6 +1303,7 @@ export function ReportDashboard({
         ].map((tab) => (
           <button
             key={tab.id}
+            id={`report-tab-btn-${tab.id}`}
             onClick={() => {
               setActiveTab(tab.id as any);
               if (tab.id !== 'compare') {
@@ -1290,7 +1327,7 @@ export function ReportDashboard({
       {/* ── Tab Content ────────────────────────────────────── */}
       {activeTab === 'current' && renderCurrentReportTab()}
       {activeTab === 'trends' && <TrendAnalysisChart biomarkers={biomarkers} comparisonReports={comparisonReports} />}
-      {activeTab === 'ai-chat' && <AIChat biomarkers={biomarkers} patient={patient} />}
+      {activeTab === 'ai-chat' && <AIChat biomarkers={biomarkers} patient={patient} isSampleReport={isSampleReport} />}
       {activeTab === 'compare' &&
         renderCompareTab(
           [reportData, ...comparisonReports]
