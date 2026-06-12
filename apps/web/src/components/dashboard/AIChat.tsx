@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface ChatProps {
   biomarkers: Biomarker[];
   patient?: PatientRecord;
+  isSampleReport?: boolean;
 }
 
 interface Message {
@@ -154,7 +155,19 @@ function AIMessageBubble({ content }: { content: string }) {
   );
 }
 
-export function AIChat({ biomarkers, patient }: ChatProps) {
+const STATIC_QA_RESPONSES: Record<string, string> = {
+  // Patient questions
+  'explain my cholesterol anomalies': 'Your lipid panel indicates elevated **LDL Cholesterol (145 mg/dL)** and elevated **Triglycerides (180 mg/dL)**, coupled with borderline low **HDL Cholesterol (42 mg/dL)**. This is a common pattern of dyslipidemia that suggests a moderate cardiovascular risk. We recommend increasing your intake of soluble fiber and healthy fats while limiting saturated fats and simple sugars.',
+  'is my fasting glucose dangerous?': 'Your fasting **Glucose is 108 mg/dL**, which falls in the **100-125 mg/dL prediabetic / borderline range**. While not an immediate medical emergency, it is an important signal to modify your dietary sugar and carbohydrate intake, engage in regular aerobic exercise, and monitor your fasting glucose trends.',
+  'what exercises help my hdl?': 'Aerobic exercises are highly effective at raising HDL ("good") cholesterol. We recommend aiming for at least **150 minutes per week** of moderate-intensity activities like brisk walking, cycling, or swimming, or 75 minutes of high-intensity training, combined with strength exercises twice a week.',
+  // Clinician questions
+  'analyze longitudinal biomarker trends': 'For this patient, we observe a mild increase in fasting glucose (+8 mg/dL over baseline) and a consistent elevation in LDL-C (+15 mg/dL). CBC parameters (Hb, WBC) remain highly stable. This trend suggests a metabolic shift that may warrant early lifestyle intervention before clinical threshold markers are breached.',
+  'what guidelines exist for critical hba1c?': 'ADA guidelines recommend initiating pharmacotherapy (typically Metformin) for HbA1c >= 6.5%. For prediabetic ranges (5.7% - 6.4%), intensive lifestyle modifications are recommended, targeting 7% weight loss and 150 min/week of moderate physical activity.',
+  'differential diagnosis for elevated alt': 'A mild elevation in ALT (45 U/L) in the context of dyslipidemia (LDL 145, Triglycerides 180) and prediabetic glucose (108) suggests a primary differential of **Metabolic Dysfunction-Associated Steatotic Liver Disease (MASLD)**, formerly known as NAFLD. Other considerations include drug-induced liver stress, alcohol usage, or intense recent exercise.',
+  'review lipid profile and cardiovascular risk': 'The combination of LDL-C 145 mg/dL, Triglycerides 180 mg/dL, and HDL-C 42 mg/dL places the patient in a moderate ASCVD risk category. Recommend calculating the 10-year ASCVD risk score and focusing on therapeutic lifestyle changes (dietary fiber, omega-3s, reduced saturated fats).',
+};
+
+export function AIChat({ biomarkers, patient, isSampleReport }: ChatProps) {
   const { principal } = useAuth();
   const isDoctor = principal?.accountType === 'STAFF';
 
@@ -168,6 +181,17 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
 
   // Load chat sessions list
   async function loadSessions() {
+    if (isSampleReport) {
+      setSessions([
+        {
+          id: 'sample-session-001',
+          title: 'Demo Chat Session',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ]);
+      return;
+    }
     try {
       const data = await getChatSessions(patient?.id);
       setSessions(data);
@@ -179,6 +203,14 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
   // Load persistent history on mount/patient change
   useEffect(() => {
     async function loadHistory() {
+      if (isSampleReport) {
+        const greeting = isDoctor
+          ? `Hello Doctor. I am your Clinical Diagnostic co-pilot. I can help analyze this patient's report, track longitudinal biomarker trends, and reference medical guidelines. How can I assist you with this patient's case today?`
+          : `Hello! I am your Personalized Medical Care chat agent. I can review your lab results, analyze trends, and even read medical flowcharts or guidelines if you upload them. How can I help you today?`;
+        setMessages([{ role: 'assistant', content: greeting }]);
+        setSessionId('sample-session-001');
+        return;
+      }
       try {
         const history = await getChatHistory(patient?.id);
         if (history.messages && history.messages.length > 0) {
@@ -199,7 +231,7 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
     }
     loadHistory();
     loadSessions();
-  }, [patient?.id, isDoctor]);
+  }, [patient?.id, isDoctor, isSampleReport]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -208,6 +240,7 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
 
   // Load a specific session's history
   async function selectSession(selectedSessionId: string) {
+    if (isSampleReport) return;
     if (loading) return;
     setLoading(true);
     try {
@@ -230,6 +263,18 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
 
   // Start a fresh consultation thread
   async function handleNewSession() {
+    if (isSampleReport) {
+      const greeting = isDoctor
+        ? `Hello Doctor. I've started a new clinical consultation thread for this patient. How can I help you analyze their lab reports today?`
+        : `Hello! I've started a new clinical consultation thread for you. How can I help you analyze your lab reports today?`;
+      setMessages([
+        {
+          role: 'assistant',
+          content: greeting,
+        },
+      ]);
+      return;
+    }
     if (loading) return;
     setLoading(true);
     try {
@@ -261,6 +306,17 @@ export function AIChat({ biomarkers, patient }: ChatProps) {
     setMessages(nextMessages);
     setLoading(true);
 
+    if (isSampleReport) {
+      setTimeout(() => {
+        const normalizedQuery = userText.toLowerCase().trim().replace(/[?.]/g, '');
+        const mockReply = STATIC_QA_RESPONSES[normalizedQuery] || 
+          "This is a demo assistant using pre-populated sample reports. To chat in real-time with our clinical AI, please upload your own laboratory report PDF!";
+        
+        setMessages((prev) => [...prev, { role: 'assistant', content: mockReply }]);
+        setLoading(false);
+      }, 800);
+      return;
+    }
     try {
       const { reply, sessionId: returnedSessionId } = await sendChatMessage({
         messages: nextMessages,
