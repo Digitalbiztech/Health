@@ -24,6 +24,11 @@ import { ErrorScreen } from '@/components/dashboard/ErrorScreen';
 import { PatientHome } from '@/components/dashboard/PatientHome';
 import { ReportDashboard } from '@/components/dashboard/ReportDashboard';
 import { ClinicianDashboard } from '@/components/dashboard/ClinicianDashboard';
+import WelcomeModal from '@/components/dashboard/WelcomeModal';
+import HelpDrawer from '@/components/dashboard/HelpDrawer';
+import { useOnboarding } from '@/contexts/OnboardingContext';
+import { useOnboardingTour } from '@/hooks/useOnboardingTour';
+import { SAMPLE_REPORT } from '@/data/sampleReportData';
 
 // Utilities
 import { exportPDF, exportCSV } from '@/components/dashboard/utils';
@@ -41,6 +46,73 @@ export default function Dashboard() {
   // Active report states
   const [currentFileName, setCurrentFileName] = useState('');
   const [reportData, setReportData] = useState<CompleteReportData | null>(null);
+  const [isSampleReport, setIsSampleReport] = useState(false);
+
+  const { showWelcomeModal, dismissWelcome, markSampleViewed } = useOnboarding();
+  const { startTour: startPatientHomeTour } = useOnboardingTour('PATIENT_HOME');
+  const { startTour: startPatientReportTour } = useOnboardingTour('PATIENT_REPORT');
+  const { startTour: startStaffTour } = useOnboardingTour('STAFF');
+
+  useEffect(() => {
+    const activeTour = sessionStorage.getItem('active-onboarding-tour');
+    if (viewState === 'REPORT' && activeTour === 'PATIENT_REPORT') {
+      const timer = setTimeout(() => {
+        startPatientReportTour();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [viewState, startPatientReportTour]);
+
+  const handleSetReportData = (data: CompleteReportData | null) => {
+    setReportData(data);
+    if (data === SAMPLE_REPORT) {
+      setIsSampleReport(true);
+    } else {
+      setIsSampleReport(false);
+    }
+  };
+
+  const handleStartTour = () => {
+    if (principal?.accountType === 'STAFF') {
+      setSelectedPatient(null);
+      startStaffTour();
+    } else {
+      sessionStorage.setItem('active-onboarding-tour', 'PATIENT_HOME');
+      // If patient has no reports, inject the mock sample report item so the dashboard is fully populated for the tour
+      if (patientUploads.length === 0) {
+        setPatientUploads([
+          {
+            id: 'sample-report-id',
+            fileName: 'sample_blood_work_2025.pdf',
+            fileSize: 1024 * 1024 * 1.5,
+            status: 'COMPLETED',
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+        setComparisonReports([SAMPLE_REPORT]);
+      }
+      setPatientView('home');
+      setViewState('UPLOAD');
+      setTimeout(() => {
+        startPatientHomeTour();
+      }, 100);
+    }
+  };
+
+  const handleExploreSample = () => {
+    handleSetReportData(SAMPLE_REPORT);
+    setViewState('REPORT');
+    markSampleViewed();
+    dismissWelcome();
+  };
+
+  const handleUploadClickFromSample = () => {
+    handleSetReportData(null);
+    setViewState('UPLOAD');
+    if (principal?.accountType === 'PATIENT') {
+      setPatientView('upload');
+    }
+  };
 
   // Historical database list (for Trend comparisons)
   const [comparisonReports, setComparisonReports] = useState<CompleteReportData[]>([]);
@@ -277,7 +349,7 @@ export default function Dashboard() {
 
   // ─── FILE UPLOAD HANDLERS ────────────────────────────────────
 
-  async function handleFileUpload(file: File, compareSlot: 'A' | 'B' | null = null) {
+  async function handleFileUpload(file: File, compareSlot: 'A' | 'B' | null = null, targetPatientId?: string) {
     if (file.type !== 'application/pdf') {
       toast.error('Only PDF documents are supported for clinical processing.');
       return;
@@ -301,8 +373,10 @@ export default function Dashboard() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      if (principal?.accountType === 'STAFF' && selectedPatient) {
-        formData.append('patientId', selectedPatient.id);
+      
+      const pId = targetPatientId || (principal?.accountType === 'STAFF' ? selectedPatient?.id : undefined);
+      if (pId) {
+        formData.append('patientId', pId);
       }
 
       const res = await apiFetch<{ status: string; data: { upload: UploadRecord } }>('/reports/upload', {
@@ -391,14 +465,24 @@ export default function Dashboard() {
             setCompareUploadSlot(null);
             toast.success('Report B ready!');
           } else {
-            setReportData(reportRes.data.upload);
+            handleSetReportData(reportRes.data.upload);
             toast.success('Clinical analysis successfully rendered!');
             setViewState('REPORT');
             fetchUploadsHistory();
             if (principal?.accountType === 'STAFF') {
               fetchPatients();
               fetchOrgUploads();
-              if (selectedPatient) {
+              const uploadPatientId = reportRes.data.upload.patient?.id;
+              if (uploadPatientId) {
+                // Find target patient to auto-select
+                const targetPatient = patients.find((p) => p.id === uploadPatientId);
+                if (targetPatient) {
+                  setSelectedPatient(targetPatient);
+                  loadPatientTrendsAndDetails(targetPatient);
+                } else if (selectedPatient) {
+                  loadPatientTrendsAndDetails(selectedPatient);
+                }
+              } else if (selectedPatient) {
                 loadPatientTrendsAndDetails(selectedPatient);
               }
             }
@@ -644,7 +728,7 @@ export default function Dashboard() {
             isOnboardingOpen={isOnboardingOpen}
             setIsOnboardingOpen={setIsOnboardingOpen}
             handleFileUpload={handleFileUpload}
-            setReportData={setReportData}
+            setReportData={handleSetReportData}
             setViewState={setViewState}
             compareReportA={compareReportA}
             setCompareReportA={setCompareReportA}
@@ -672,8 +756,9 @@ export default function Dashboard() {
             setPatientView={setPatientView}
             fetchPatientUploads={fetchPatientUploads}
             fetchUploadsHistory={fetchUploadsHistory}
-            setReportData={setReportData}
+            setReportData={handleSetReportData}
             setViewState={setViewState}
+            onViewSample={handleExploreSample}
           />
         ) : (
           <>
@@ -721,11 +806,32 @@ export default function Dashboard() {
                 setCompareReportA={setCompareReportA}
                 compareReportB={compareReportB}
                 setCompareReportB={setCompareReportB}
+                isSampleReport={isSampleReport}
+                onUploadClick={handleUploadClickFromSample}
               />
             )}
           </>
         )}
       </div>
+
+      {/* Onboarding & Guide Components */}
+      {principal && (
+        <>
+          <WelcomeModal
+            isOpen={showWelcomeModal}
+            role={principal.accountType}
+            onTakeTour={() => {
+              handleStartTour();
+              dismissWelcome();
+            }}
+            onViewSample={handleExploreSample}
+            onSkip={dismissWelcome}
+          />
+          <HelpDrawer
+            onRestartTour={handleStartTour}
+          />
+        </>
+      )}
 
       {/* Footer */}
       <footer className="relative z-10 flex items-center justify-center py-6 mt-12">
