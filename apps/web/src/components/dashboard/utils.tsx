@@ -149,7 +149,7 @@ function convertToLabReport(reportData: CompleteReportData, healthScore: number)
     patientGender: patient?.gender || 'male',
     labDate: activeReport?.createdAt,
     collectionDate: activeReport?.createdAt,
-    orderedBy: 'Auriem Clinical Suite',
+    orderedBy: 'Health Clinical Suite',
     summary: activeReport?.summary,
     aiInsights: activeReport?.insights?.recommendations || [],
     panels,

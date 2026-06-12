@@ -1141,7 +1141,7 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
                   report.patientAge && `${report.patientAge} yrs`,
                   report.patientGender,
                   report.labDate || report.collectionDate,
-                  // report.orderedBy && `Dr. ${report.orderedBy}`,
+                  report.orderedBy && `Dr. ${report.orderedBy}`,
                 ].filter(Boolean).join('  ·  ')}
               </Text>
             </View>
@@ -1880,12 +1880,12 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
                       </View>
                     </View>
 
-                    {/* Low Confidence Alert */}
+                    {/* Low Confidence Alert
                     {m.confidenceScore !== undefined && m.confidenceScore < 70 && (
                       <View style={styles.verificationAlertBadge}>
                         <Text style={styles.verificationAlertText}>⚠️ Verification Alert ({Math.round(m.confidenceScore)}% confidence)</Text>
                       </View>
-                    )}
+                    )} */}
 
                     {/* ── Horizontal Zone Range Bar (mirrors UI) ── */}
                     <View style={{ marginTop: 10, marginBottom: 4 }}>
