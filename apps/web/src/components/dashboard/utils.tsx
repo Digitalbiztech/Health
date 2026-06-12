@@ -115,7 +115,7 @@ export function exportCSV(reportData: CompleteReportData) {
   toast.success('Successfully exported flat CSV matrix.');
 }
 
-function convertToLabReport(reportData: CompleteReportData, healthScore: number): LabReport {
+export function convertToLabReport(reportData: CompleteReportData, healthScore: number): LabReport {
   const patient = reportData.patient;
   const activeReport = reportData.reports?.[0];
   const biomarkers = reportData.extraction?.biomarkers || [];

@@ -30,8 +30,8 @@ import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useOnboardingTour } from '@/hooks/useOnboardingTour';
 import { SAMPLE_REPORT } from '@/data/sampleReportData';
 
-// Utilities
-import { exportPDF, exportCSV } from '@/components/dashboard/utils';
+import { exportCSV } from '@/components/dashboard/utils';
+import { PDFPreviewModal } from '@/components/dashboard/PDFPreviewModal';
 
 export default function Dashboard() {
   const { principal, signOut, principalLoading } = useAuth();
@@ -150,6 +150,9 @@ export default function Dashboard() {
 
   // Onboarding Modal States
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  // PDF Preview Modal State
+  const [isPDFPreviewOpen, setIsPDFPreviewOpen] = useState(false);
 
   // Fetch initial history
   useEffect(() => {
@@ -652,7 +655,7 @@ export default function Dashboard() {
                   <div className="absolute right-0 top-full pt-1.5 w-36 hidden group-hover:flex flex-col z-30">
                     <div className="glass-card rounded-xl border border-border/40 shadow-lg flex flex-col p-1.5">
                       <button
-                        onClick={() => reportData && exportPDF(reportData, healthScore)}
+                        onClick={() => reportData && setIsPDFPreviewOpen(true)}
                         className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-border/30 cursor-pointer border-0 bg-transparent"
                       >
                         PDF Report
@@ -832,6 +835,13 @@ export default function Dashboard() {
           />
         </>
       )}
+
+      <PDFPreviewModal
+        isOpen={isPDFPreviewOpen}
+        onClose={() => setIsPDFPreviewOpen(false)}
+        reportData={reportData}
+        healthScore={healthScore}
+      />
 
       {/* Footer */}
       <footer className="relative z-10 flex items-center justify-center py-6 mt-12">
