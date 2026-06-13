@@ -1,8 +1,13 @@
 import { Document, Page, Text, View, StyleSheet, Font, Image, Svg, Circle, Path, Line, Polyline, Rect } from '@react-pdf/renderer';
 import type { LabReport, LabPanel } from '@/types/lab';
 function resolveRange(_name: string, minVal: number | undefined, maxVal: number | undefined, value: number, _gender: string) {
-  const min = typeof minVal === 'number' ? minVal : 0;
-  const max = typeof maxVal === 'number' ? maxVal : (value > 0 ? value * 1.5 : 100);
+  const minRaw = typeof minVal === 'number' ? minVal : 0;
+  const maxRaw = typeof maxVal === 'number' ? maxVal : (value > 0 ? value * 1.5 : 100);
+  
+  // Round to prevent floating point inaccuracies (e.g. 1.7999999999999998 -> 1.8)
+  const min = parseFloat(minRaw.toFixed(4));
+  const max = parseFloat(maxRaw.toFixed(4));
+  
   return { min, max };
 }
 
