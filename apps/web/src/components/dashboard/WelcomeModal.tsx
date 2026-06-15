@@ -1,4 +1,5 @@
-import { X, Compass, Eye, ShieldCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, Compass, Eye, ShieldCheck, BookOpen } from 'lucide-react';
 import type { AccountType } from '@/contexts/AuthContext';
 
 interface WelcomeModalProps {
@@ -16,6 +17,8 @@ export default function WelcomeModal({
   onViewSample,
   onSkip,
 }: WelcomeModalProps) {
+  const navigate = useNavigate();
+
   if (!isOpen) return null;
 
   const isStaff = role === 'STAFF';
@@ -145,26 +148,38 @@ export default function WelcomeModal({
 
         {/* CTA Buttons */}
         <div className="flex flex-col gap-3">
+          <button
+            onClick={onTakeTour}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold text-white shadow-md hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer border-0 w-full"
+            style={{
+              background: 'var(--primary-text)',
+              boxShadow: 'var(--glow-primary)',
+            }}
+          >
+            <Compass className="w-4.5 h-4.5" />
+            Take Product Tour
+          </button>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
-              onClick={onTakeTour}
-              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold text-white shadow-md hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer border-0"
-              style={{
-                background: 'var(--primary-text)',
-                boxShadow: 'var(--glow-primary)',
-              }}
-            >
-              <Compass className="w-4 h-4" />
-              Take Product Tour
-            </button>
-
-            <button
               onClick={onViewSample}
-              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold border border-border hover:bg-border/20 active:scale-[0.98] transition-all cursor-pointer bg-transparent"
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold border border-border hover:bg-border/20 active:scale-[0.98] transition-all cursor-pointer bg-transparent animate-fade-in"
               style={{ color: 'var(--foreground)' }}
             >
               <Eye className="w-4 h-4" />
               Explore Sample Report
+            </button>
+
+            <button
+              onClick={() => {
+                onSkip();
+                navigate('/guide');
+              }}
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold border border-border hover:bg-border/20 active:scale-[0.98] transition-all cursor-pointer bg-transparent animate-fade-in"
+              style={{ color: 'var(--foreground)' }}
+            >
+              <BookOpen className="w-4 h-4" />
+              Read Platform Guide
             </button>
           </div>
 
