@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { HelpCircle, X, Shield, RefreshCw, ChevronDown, CheckCircle, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { HelpCircle, X, Shield, RefreshCw, ChevronDown, CheckCircle, FileText, BookOpen } from 'lucide-react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 
 interface HelpDrawerProps {
@@ -7,6 +8,7 @@ interface HelpDrawerProps {
 }
 
 export default function HelpDrawer({ onRestartTour }: HelpDrawerProps) {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const { resetOnboarding } = useOnboarding();
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -189,6 +191,17 @@ export default function HelpDrawer({ onRestartTour }: HelpDrawerProps) {
 
         {/* Drawer Footer Actions */}
         <div className="p-5 border-t border-border/20 flex flex-col gap-2 bg-muted/20">
+          <button
+            onClick={() => {
+              setIsOpen(false);
+              navigate('/guide');
+            }}
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold border border-border/60 hover:bg-border/25 active:scale-[0.98] transition-all cursor-pointer bg-transparent"
+            style={{ color: 'var(--foreground)' }}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            View Full User Guide
+          </button>
           <button
             onClick={handleRestartTourClick}
             className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold text-white shadow transition-all hover:opacity-90 active:scale-[0.98] cursor-pointer border-0"
