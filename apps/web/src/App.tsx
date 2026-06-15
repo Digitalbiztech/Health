@@ -7,6 +7,7 @@ import { OnboardingProvider } from '@/contexts/OnboardingContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
+import Guide from '@/pages/Guide';
 import NotFound from '@/pages/NotFound';
 
 const queryClient = new QueryClient({
@@ -37,6 +38,7 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 />
+                <Route path="/guide" element={<Guide />} />
 
                 {/* Catch-all */}
                 <Route path="*" element={<NotFound />} />
