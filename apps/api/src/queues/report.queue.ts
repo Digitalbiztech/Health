@@ -2,6 +2,7 @@ import { Queue, Worker, Job } from 'bullmq';
 import { redisConnection } from '../lib/redis';
 import { prisma } from '../lib/prisma';
 import { extractionQueue } from './extraction.queue';
+import { processReportStep } from '../services/reportPipeline';
 
 // ─── Queue Definition ────────────────────────────────────────
 
@@ -29,27 +30,14 @@ export const reportWorker = new Worker(
   'report-queue',
   async (job: Job<{ uploadId: string }>) => {
     const { uploadId } = job.data;
-    console.log(`[ReportQueue] Starting processing for Upload: ${uploadId}`);
 
-    // 1. Fetch the upload record
-    const upload = await prisma.upload.findUnique({
-      where: { id: uploadId },
-    });
+    // 1. Transition state to PROCESSING (shared pipeline step)
+    await processReportStep(uploadId);
 
-    if (!upload) {
-      throw new Error(`Upload not found: ${uploadId}`);
-    }
-
-    // 2. Transition state to PROCESSING
-    await prisma.upload.update({
-      where: { id: uploadId },
-      data: { status: 'PROCESSING' },
-    });
-
-    // 3. Trigger the next step in the pipeline (Biomarker Extraction)
+    // 2. Trigger the next step in the pipeline (Biomarker Extraction)
     await extractionQueue.add('extract-biomarkers', { uploadId });
 
-    console.log(`[ReportQueue] Upload ${uploadId} transitioned to PROCESSING and extraction queued`);
+    console.log(`[ReportQueue] Upload ${uploadId} extraction queued`);
   },
   {
     connection: redisConnection as any,

@@ -15,10 +15,14 @@ import taskRoutes from './routes/task.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import { extractionService, ExtractionServiceError } from './services/extractionService.js';
 
-// Boot up BullMQ workers
-import './queues/report.queue.js';
-import './queues/extraction.queue.js';
-import './queues/pdf.queue.js';
+// BullMQ workers are DISABLED to avoid Redis usage. Report processing now runs
+// in-process via runReportPipeline (see controllers/report.controller.ts).
+// The queue implementations are intact in queues/*.queue.ts — to re-enable
+// Redis-backed processing, restore the three imports below and switch the
+// controller back to `enqueueReportProcessing`.
+// import './queues/report.queue.js';
+// import './queues/extraction.queue.js';
+// import './queues/pdf.queue.js';
 
 // ─── App Setup ───────────────────────────────────────────────
 

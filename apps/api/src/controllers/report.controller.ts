@@ -1,7 +1,7 @@
 import { type Request, type Response, type NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
 import { SupabaseStorageService } from '../storage/supabase.storage';
-import { enqueueReportProcessing } from '../queues/report.queue';
+import { runReportPipeline } from '../services/reportPipeline';
 import { AppError } from '../middleware/errorHandler';
 import { FileType } from '@prisma/client';
 
@@ -114,10 +114,16 @@ export async function uploadReport(
       },
     });
 
-    // 5. Push bytes to storage, THEN enqueue processing — in the background.
-    //    Ordering matters: the extraction worker downloads the file from fileUrl,
-    //    so the upload must land before the job is queued. Errors here can no
-    //    longer reach the HTTP response, so we mark the upload FAILED instead.
+    // 5. Push bytes to storage, THEN run the processing pipeline — in the background.
+    //    Ordering matters: extraction downloads the file from fileUrl, so the upload
+    //    must land before processing starts. Errors here can no longer reach the HTTP
+    //    response; runReportPipeline marks the upload FAILED on its own, and we also
+    //    guard the storage upload that precedes it.
+    //
+    //    NOTE: this runs the pipeline in-process to avoid Redis usage. The BullMQ
+    //    queues/workers (queues/*.queue.ts) remain implemented and delegate to the
+    //    same pipeline steps — re-enable by re-adding the queue imports in app.ts and
+    //    swapping this call back to `enqueueReportProcessing(upload.id)`.
     const fileBuffer = file.buffer;
     const fileMimetype = file.mimetype;
     void (async () => {
@@ -128,16 +134,24 @@ export async function uploadReport(
           fileBuffer,
           fileMimetype,
         );
-        await enqueueReportProcessing(upload.id);
       } catch (bgErr) {
         console.error(
-          `[uploadReport] Background storage/enqueue failed for upload ${upload.id}:`,
+          `[uploadReport] Background storage upload failed for upload ${upload.id}:`,
           bgErr,
         );
         await prisma.upload
           .update({ where: { id: upload.id }, data: { status: 'FAILED' } })
           .catch(() => console.error(`Failed to mark upload ${upload.id} as FAILED`));
+        return;
       }
+
+      // runReportPipeline handles its own failure bookkeeping (marks FAILED).
+      await runReportPipeline(upload.id).catch((pipelineErr) => {
+        console.error(
+          `[uploadReport] Pipeline processing failed for upload ${upload.id}:`,
+          pipelineErr,
+        );
+      });
     })();
   } catch (err) {
     next(err);
