@@ -1297,6 +1297,146 @@ export function ClinicianDashboard({
             )}
           </div>
         </div>
+
+        {/* Recent File Uploads */}
+        <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-base font-bold text-foreground">Recent File Uploads</h4>
+              <p className="text-xs text-muted-foreground">Monitor the latest clinical reports received.</p>
+            </div>
+            <button
+              onClick={() => {
+                setSelectedPatient(null);
+                setStaffView('activity');
+                fetchOrgUploads();
+              }}
+              className="text-xs font-semibold text-[var(--primary)] hover:underline cursor-pointer bg-transparent border-0"
+            >
+              View All Activity →
+            </button>
+          </div>
+
+          {allUploads.length === 0 ? (
+            <div className="min-h-[120px] flex flex-col items-center justify-center text-center gap-2 border-2 border-dashed border-border/60 rounded-xl p-4">
+              <FileText className="w-8 h-8 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">
+                No recent uploads.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {[...allUploads]
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .slice(0, 3)
+                .map((upload) => {
+                  const date = new Date(upload.createdAt).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  });
+
+                  return (
+                    <div
+                      key={upload.id}
+                      className="p-4 rounded-xl border border-border/40 bg-card/45 flex flex-col justify-between gap-3 hover:border-[var(--primary)]/50 transition-all duration-300 shadow-sm"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                          style={{
+                            background:
+                              upload.status === 'COMPLETED'
+                                ? 'rgba(26, 153, 102, 0.12)'
+                                : upload.status === 'FAILED'
+                                ? 'rgba(212, 23, 23, 0.12)'
+                                : 'rgba(201, 125, 10, 0.12)',
+                          }}
+                        >
+                          <FileText
+                            className="w-5 h-5"
+                            style={{
+                              color:
+                                upload.status === 'COMPLETED'
+                                  ? '#1A9966'
+                                  : upload.status === 'FAILED'
+                                  ? '#D41717'
+                                  : '#C97D0A',
+                            }}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-xs text-foreground truncate" title={upload.fileName}>
+                            {upload.fileName}
+                          </p>
+                          <p className="text-[9px] text-muted-foreground mt-0.5">
+                            {date}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-1 pt-2 border-t border-border/20">
+                        <span
+                          className="text-[9px] uppercase font-extrabold px-2 py-0.5 rounded-full"
+                          style={{
+                            background:
+                              upload.status === 'COMPLETED'
+                                ? 'rgba(26, 153, 102, 0.12)'
+                                : upload.status === 'FAILED'
+                                ? 'rgba(212, 23, 23, 0.12)'
+                                : 'rgba(201, 125, 10, 0.12)',
+                            color:
+                              upload.status === 'COMPLETED'
+                                ? '#1A9966'
+                                : upload.status === 'FAILED'
+                                ? '#D41717'
+                                : '#C97D0A',
+                          }}
+                        >
+                          {upload.status}
+                        </span>
+
+                        <div className="flex items-center gap-1.5">
+                          {upload.fileUrl && (
+                            <button
+                              onClick={() => window.open(upload.fileUrl, '_blank', 'noopener,noreferrer')}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold border border-border/60 text-muted-foreground hover:text-foreground hover:bg-border/20 cursor-pointer transition-all bg-transparent"
+                            >
+                              <Eye className="w-3 h-3" />
+                              PDF
+                            </button>
+                          )}
+
+                          {upload.status === 'COMPLETED' && (
+                            <button
+                              onClick={async () => {
+                                const toastId = toast.loading('Retrieving diagnostic details...');
+                                try {
+                                  const reportRes = await apiFetch<{ data: { upload: CompleteReportData } }>(
+                                    `/reports/upload/${upload.id}`
+                                  );
+                                  setReportData(reportRes.data.upload);
+                                  toast.success('Report successfully loaded!', { id: toastId });
+                                  setViewState('REPORT');
+                                } catch (err) {
+                                  toast.error('Failed to load report analytics.', { id: toastId });
+                                }
+                              }}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-bold text-white shadow-sm hover:opacity-90 cursor-pointer border-0"
+                              style={{ background: 'var(--primary-text)' }}
+                            >
+                              Review
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
