@@ -15,8 +15,8 @@ export default function Login() {
   // ── State ──────────────────────────────────────────────────
   const [isSignUp, setIsSignUp] = useState(false);
   const [accountType, setAccountType] = useState<AccountType>('STAFF');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('user@gmail.com');
+  const [password, setPassword] = useState('password');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -349,6 +349,7 @@ export default function Login() {
               }}
               onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
               onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+              defaultValue={"user@gmail.com"}
             />
           </div>
 
@@ -378,7 +379,7 @@ export default function Login() {
                 }}
                 onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
                 onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-              />
+                />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
