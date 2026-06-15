@@ -288,6 +288,17 @@ export function ReportDashboard({
               const Icon = CATEGORY_ICONS[b.category] || Droplet;
               const effectivePct = getEffectivePct(b);
 
+              const numMin = b.referenceMin != null ? Number(b.referenceMin) : null;
+              const numMax = b.referenceMax != null ? Number(b.referenceMax) : null;
+
+              const displayMin = (numMin != null && !isNaN(numMin))
+                ? parseFloat(Math.max(0, numMin - 2).toFixed(4)).toString()
+                : '0';
+
+              const displayMax = (numMax != null && !isNaN(numMax))
+                ? (numMax === 999 ? 'N/A' : parseFloat((numMax + 2).toFixed(4)).toString())
+                : 'N/A';
+
               return (
                 <div
                   key={b.id}
@@ -316,23 +327,42 @@ export function ReportDashboard({
                       <span>High</span>
                     </div>
                     {(() => {
-                      const track = getSliderTrack(b.canonicalName, b.displayName);
+                      const track = getSliderTrack(b.referenceMin, b.referenceMax);
                       return (
-                        <div className="relative h-2 rounded-full overflow-hidden bg-border/40 flex">
-                          {track.leftPct > 0 && <div className="h-full" style={{ width: `${track.leftPct}%`, background: track.leftColor }} />}
-                          {track.midPct > 0 && <div className="h-full border-x border-border/40" style={{ width: `${track.midPct}%`, background: track.midColor }} />}
-                          {track.rightPct > 0 && <div className="h-full" style={{ width: `${track.rightPct}%`, background: track.rightColor }} />}
-                          <div
-                            className="absolute w-3.5 h-3.5 -top-0.5 rounded-full border border-white shadow transition-all duration-500"
-                            style={{ left: `calc(${effectivePct}% - 7px)`, background: colors.text }}
-                          />
+                        <div className="relative pb-3.5">
+                          <div className="relative h-2 rounded-full overflow-hidden bg-border/40 flex">
+                            {track.leftPct > 0 && <div className="h-full" style={{ width: `${track.leftPct}%`, background: track.leftColor }} />}
+                            {track.midPct > 0 && <div className="h-full border-x border-border/40" style={{ width: `${track.midPct}%`, background: track.midColor }} />}
+                            {track.rightPct > 0 && <div className="h-full" style={{ width: `${track.rightPct}%`, background: track.rightColor }} />}
+                            <div
+                              className="absolute w-3.5 h-3.5 -top-0.5 rounded-full border border-white shadow transition-all duration-500"
+                              style={{ left: `calc(${effectivePct}% - 7px)`, background: colors.text }}
+                            />
+                          </div>
+                          {/* Green corner markers */}
+                          {track.leftPct > 0 && numMin !== null && !isNaN(numMin) && numMin > 0 && (
+                            <div
+                              className="absolute text-[8px] font-bold text-green-500/80 -translate-x-1/2 mt-0.5"
+                              style={{ left: `${track.leftPct}%` }}
+                            >
+                              {numMin}
+                            </div>
+                          )}
+                          {track.rightPct > 0 && numMax !== null && !isNaN(numMax) && numMax !== 999 && (
+                            <div
+                              className="absolute text-[8px] font-bold text-green-500/80 -translate-x-1/2 mt-0.5"
+                              style={{ left: `${track.leftPct + track.midPct}%` }}
+                            >
+                              {numMax}
+                            </div>
+                          )}
                         </div>
                       );
                     })()}
-                    <div className="flex justify-between text-[8px] mt-1" style={{ color: 'var(--muted-foreground)' }}>
-                      <span>Min: {b.referenceMin ?? '0'}</span>
+                    <div className="flex justify-between text-[8px]" style={{ color: 'var(--muted-foreground)' }}>
+                      <span>Min: {displayMin}</span>
                       <span>Optimal: {b.referenceRange}</span>
-                      <span>Max: {b.referenceMax ?? 'N/A'}</span>
+                      <span>Max: {displayMax}</span>
                     </div>
                   </div>
 
@@ -761,7 +791,7 @@ export function ReportDashboard({
 
                         <div className="mt-1">
                           {(() => {
-                            const track = getSliderTrack(b.canonicalName, b.displayName);
+                            const track = getSliderTrack(b.referenceMin, b.referenceMax);
                             return (
                               <div className="relative h-1.5 rounded-full bg-border/20 flex overflow-hidden">
                                 {track.leftPct > 0 && <div className="h-full" style={{ width: `${track.leftPct}%`, background: track.leftColor }} />}
