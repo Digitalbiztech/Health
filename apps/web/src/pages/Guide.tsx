@@ -100,7 +100,7 @@ export default function Guide() {
     },
     {
       q: 'Is my health data secure here?',
-      a: 'Absolutely. Auriem is fully HIPAA-compliant. All uploaded diagnostic PDFs are encrypted both in transit (using SSL/TLS) and at rest (using AES-256). Furthermore, all patient information and extracted biomarkers are sequestered within a secure organizational boundary, ensuring that only authorized clinical staff or yourself have access.'
+      a: 'Absolutely. This platform is fully HIPAA-compliant. All uploaded diagnostic PDFs are encrypted both in transit (using SSL/TLS) and at rest (using AES-256). Furthermore, all patient information and extracted biomarkers are sequestered within a secure organizational boundary, ensuring that only authorized clinical staff or yourself have access.'
     }
   ];
 
@@ -204,7 +204,7 @@ export default function Guide() {
           <div>
             <h1 className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2">
               <Sparkles className="w-5.5 h-5.5 text-[var(--primary-text)]" />
-              Auriem Platform Guide
+              Platform Guide
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">Comprehensive documentation and interactive tool guide</p>
           </div>
@@ -293,7 +293,7 @@ export default function Guide() {
                 Security Standards
               </h4>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Auriem is built on military-grade encryption models and compliant under standard HIPAA health safety protocols. Your reports are sequestered within organization containers.
+                This platform is built on military-grade encryption models and compliant under standard HIPAA health safety protocols. Your reports are sequestered within organization containers.
               </p>
             </div>
           </div>
@@ -309,11 +309,11 @@ export default function Guide() {
                 Onboarding Overview
               </span>
               <h2 className="text-xl md:text-2xl font-black text-foreground mt-3 tracking-tight">🚀 Quick Start Guide</h2>
-              <p className="text-xs text-muted-foreground mt-1">Get up and running with the Auriem Lab Interpretation Suite</p>
+              <p className="text-xs text-muted-foreground mt-1">Get up and running with the Lab Interpretation Suite</p>
             </div>
 
             <p className="text-sm text-foreground/90 leading-relaxed font-medium">
-              Welcome to your dedicated onboarding center. The Auriem Health Suite translates standard, confusing laboratory diagnostic paper sheets and blood-work PDFs into a clean, interactive wellness matrix. 
+              Welcome to your dedicated onboarding center. The Health Suite translates standard, confusing laboratory diagnostic paper sheets and blood-work PDFs into a clean, interactive wellness matrix. 
             </p>
 
             {/* Interactive Journey Flowchart Diagram */}
@@ -880,7 +880,7 @@ export default function Guide() {
                 Interactive AI Chat Console
               </h4>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                The **AI Care** panel allows you to chat directly with Auriem's clinical assistant. You can click on preset prompt suggestions or type custom questions to receive physiological context and food recommendations.
+                The **AI Care** panel allows you to chat directly with our clinical assistant. You can click on preset prompt suggestions or type custom questions to receive physiological context and food recommendations.
               </p>
               <div className="rounded-xl border border-border/40 overflow-hidden bg-muted/10 shadow-md hover:scale-[1.005] transition-transform duration-300">
                 <img 
@@ -943,7 +943,7 @@ export default function Guide() {
                 Quick Action Help Drawer
               </h4>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Need quick help or want to restart the interactive tour? Click the floating **Help Circle** button in the bottom-right corner of the dashboard to trigger the Auriem Help drawer at any time.
+                Need quick help or want to restart the interactive tour? Click the floating **Help Circle** button in the bottom-right corner of the dashboard to trigger the Help drawer at any time.
               </p>
               <div className="rounded-xl border border-border/40 overflow-hidden bg-muted/10 shadow-sm hover:scale-[1.005] transition-transform duration-300">
                 <img 
