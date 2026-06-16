@@ -1,8 +1,11 @@
-import { Document, Page, Text, View, StyleSheet, Font, Image, Svg, Circle, Path, Line, Polyline, Rect } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Font, Image, Svg, Circle, Line, Polyline, Rect } from '@react-pdf/renderer';
 import type { LabReport, LabPanel } from '@/types/lab';
-function resolveRange(_name: string, minVal: number | undefined, maxVal: number | undefined, value: number, _gender: string) {
-  const minRaw = typeof minVal === 'number' ? minVal : 0;
-  const maxRaw = typeof maxVal === 'number' ? maxVal : (value > 0 ? value * 1.5 : 100);
+function resolveRange(_name: string, minVal: any, maxVal: any, value: number, _gender: string) {
+  const numMin = (minVal !== null && minVal !== undefined && minVal !== '') ? Number(minVal) : NaN;
+  const numMax = (maxVal !== null && maxVal !== undefined && maxVal !== '') ? Number(maxVal) : NaN;
+
+  const minRaw = !isNaN(numMin) ? numMin : 0;
+  const maxRaw = !isNaN(numMax) ? numMax : (value > 0 ? value * 1.5 : 100);
   
   // Round to prevent floating point inaccuracies (e.g. 1.7999999999999998 -> 1.8)
   const min = parseFloat(minRaw.toFixed(4));
@@ -15,7 +18,7 @@ function resolveRange(_name: string, minVal: number | undefined, maxVal: number 
 // from CircleProps' typings — alias as `any` for the gauge / doughnut math.
 const CircleAny = Circle as any;
 
-// ─── Embed clean, professional Roboto fonts from cdnjs ────────────────────────
+// ─── Embed clean, professional Roboto, Lora, and Inter fonts ──────────────────
 Font.register({
   family: 'Roboto',
   fonts: [
@@ -24,6 +27,25 @@ Font.register({
     { src: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Medium.ttf', fontWeight: 700 }
   ]
 });
+
+Font.register({
+  family: 'Lora',
+  fonts: [
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/lora@latest/latin-400-normal.woff', fontWeight: 400 },
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/lora@latest/latin-500-normal.woff', fontWeight: 500 },
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/lora@latest/latin-700-normal.woff', fontWeight: 700 }
+  ]
+});
+
+Font.register({
+  family: 'Inter',
+  fonts: [
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff', fontWeight: 400 },
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-500-normal.woff', fontWeight: 500 },
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.woff', fontWeight: 700 }
+  ]
+});
+
 
 // ─── Status colour tokens (preserved clinical semantics) ─────────────────────
 const STATUS_HEX: Record<string, { fg: string; bg: string; light: string; bar: string }> = {
@@ -36,7 +58,7 @@ const STATUS_HEX: Record<string, { fg: string; bg: string; light: string; bar: s
 
 
 const STATUS_LABEL: Record<string, string> = {
-  normal: 'NORMAL', high: 'ELEVATED', low: 'REDUCED', critical: 'CRITICAL', unknown: 'UNKNOWN',
+  normal: 'NORMAL', high: 'HIGH', low: 'LOW', critical: 'CRITICAL', unknown: 'UNKNOWN',
 };
 
 // ─── HealthDashboard-inspired teal/emerald palette ───────────────────────────
@@ -68,7 +90,7 @@ const ACCENT = {
 // ─── Stylesheet using React-PDF Flexbox layout model ────────────────────────────
 const styles = StyleSheet.create({
   page: {
-    fontFamily: 'Roboto',
+    fontFamily: 'Inter',
     paddingTop: 26,
     paddingBottom: 55,
     paddingHorizontal: 28,
@@ -109,6 +131,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: YC_GOLD,
     lineHeight: 1.1,
+    fontFamily: 'Lora',
   },
   headerBrandTag: {
     fontSize: 6.5,
@@ -129,6 +152,7 @@ const styles = StyleSheet.create({
     color: YC_GOLD,
     fontSize: 11,
     fontWeight: 'bold',
+    fontFamily: 'Lora',
   },
   headerSubtitle: {
     color: SLATE_400,
@@ -251,6 +275,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: SLATE_900,
+    fontFamily: 'Lora',
   },
   sectionHeadingSubtitle: {
     fontSize: 7,
@@ -314,6 +339,7 @@ const styles = StyleSheet.create({
     color: SLATE_500,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
+    fontFamily: 'Lora',
   },
   metricChangePill: {
     flexDirection: 'row',
@@ -374,6 +400,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.3,
     marginBottom: 8,
+    fontFamily: 'Lora',
   },
   chartRow: {
     flexDirection: 'row',
@@ -481,6 +508,7 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: 'bold',
     color: SLATE_900,
+    fontFamily: 'Lora',
   },
   conditionLabel: {
     fontSize: 6.5,
@@ -567,6 +595,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     letterSpacing: 0.4,
+    fontFamily: 'Lora',
   },
   calloutSubtitle: {
     color: TEAL_LIGHT,
@@ -638,6 +667,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: 'bold',
     color: SLATE_900,
+    fontFamily: 'Lora',
   },
   summaryText: {
     color: SLATE_700,
@@ -659,6 +689,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.3,
     marginBottom: 8,
+    fontFamily: 'Lora',
   },
   insightsGrid: {
     marginBottom: 14,
@@ -673,6 +704,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: 'bold',
     color: SLATE_900,
+    fontFamily: 'Lora',
   },
   insightsHeaderAccent: {
     width: 16,
@@ -730,6 +762,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: SLATE_900,
+    fontFamily: 'Lora',
   },
   panelMeta: {
     fontSize: 7,
@@ -766,6 +799,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.3,
     marginBottom: 8,
+    fontFamily: 'Lora',
   },
   statusBoardRow: {
     flexDirection: 'row',
@@ -826,6 +860,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 9,
     color: SLATE_900,
+    fontFamily: 'Lora',
   },
   biomarkerRef: {
     fontSize: 7,
@@ -1550,63 +1585,113 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
         )}
 
         {/* ─── BODY SYSTEMS HEALTH INDEX COMPARISON CHART ─── */}
-        {systemsData.length > 0 && (
-          <View style={styles.healthIndexChartContainer} wrap={false}>
-            <Text style={styles.healthIndexChartTitle}>Body Systems Health Index Comparison</Text>
-            <View style={{ gap: 8, marginTop: 4 }}>
-              {systemsData.map((item) => {
-                const color = item.score === 100 ? '#11784B' : '#D41717';
-                return (
-                  <View key={item.system} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    {/* Label */}
-                    <Text style={{ width: '25%', fontSize: 7, fontWeight: 'bold', color: SLATE_700, textTransform: 'uppercase' }}>
-                      {item.system}
-                    </Text>
- 
-                    {/* Bar Track & Fill */}
-                    <View style={{ width: '65%', height: 10, backgroundColor: '#f1f5f9', borderRadius: 5, overflow: 'hidden', position: 'relative' }}>
-                      <View
-                        style={{
-                          width: `${item.score}%`,
-                          height: '100%',
-                          backgroundColor: color,
-                          borderRadius: 5,
-                        }}
-                      />
-                      {/* Inner percentage indicator */}
-                      <Text
-                        style={{
-                          position: 'absolute',
-                          right: 6,
-                          top: 2,
-                          fontSize: 5.5,
-                          fontWeight: 'bold',
-                          color: item.score > 85 ? '#ffffff' : SLATE_500,
-                        }}
-                      >
-                        {item.score}%
-                      </Text>
-                    </View>
- 
-                    {/* Status Label badge */}
-                    <View style={{ width: '10%', alignItems: 'flex-end' }}>
-                      <Text
-                        style={{
-                          fontSize: 6,
-                          fontWeight: 'bold',
-                          color: color,
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {item.score === 100 ? 'Optimal' : 'Attention'}
-                      </Text>
-                    </View>
+        {systemsData.length > 0 && (() => {
+          const optimalSystems = systemsData.filter(s => s.score === 100);
+          const attentionSystems = systemsData.filter(s => s.score < 100);
+
+          return (
+            <View wrap={false}>
+              {optimalSystems.length > 0 && (
+                <View style={styles.healthIndexChartContainer}>
+                  <Text style={styles.healthIndexChartTitle}>Body Systems Health Index Comparison</Text>
+                  <View style={{ gap: 8, marginTop: 4 }}>
+                    {optimalSystems.map((item) => (
+                      <View key={item.system} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {/* Label */}
+                        <Text style={{ width: '25%', fontSize: 7, fontWeight: 'bold', color: SLATE_700, textTransform: 'uppercase' }}>
+                          {item.system}
+                        </Text>
+     
+                        {/* Bar Track & Fill */}
+                        <View style={{ width: '60%', height: 10, backgroundColor: '#f1f5f9', borderRadius: 5, overflow: 'hidden', position: 'relative' }}>
+                          <View
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              backgroundColor: '#11784B',
+                              borderRadius: 5,
+                            }}
+                          />
+                          {/* Inner percentage indicator */}
+                          <Text
+                            style={{
+                              position: 'absolute',
+                              right: 6,
+                              top: 2,
+                              fontSize: 5.5,
+                              fontWeight: 'bold',
+                              color: '#ffffff',
+                            }}
+                          >
+                            100%
+                          </Text>
+                        </View>
+     
+                        {/* Status Label badge */}
+                        <View style={{ width: '15%', alignItems: 'flex-end' }}>
+                          <View style={{
+                            backgroundColor: '#ecfdf5',
+                            borderRadius: 4,
+                            paddingHorizontal: 5,
+                            paddingVertical: 1.5,
+                          }}>
+                            <Text
+                              style={{
+                                fontSize: 6,
+                                fontWeight: 'bold',
+                                color: '#11784B',
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              OPTIMAL
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
                   </View>
-                );
-              })}
+                </View>
+              )}
+
+              {attentionSystems.length > 0 && (
+                <View style={{
+                  borderWidth: 1,
+                  borderColor: '#fca5a5',
+                  backgroundColor: '#fef2f2',
+                  borderRadius: 18,
+                  padding: 12,
+                  marginBottom: 14,
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#b91c1c', fontFamily: 'Lora', textTransform: 'uppercase', letterSpacing: 0.3 }}>⚠️ Clinical Follow-up Required</Text>
+                  </View>
+                  <View style={{ gap: 6 }}>
+                    {attentionSystems.map((item) => (
+                      <View key={item.system} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 7.5, fontWeight: 'bold', color: '#991b1b', textTransform: 'uppercase' }}>
+                          {item.system} System
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Text style={{ fontSize: 8, color: '#7f1d1d', fontWeight: 'bold' }}>Score: {item.score}%</Text>
+                          <View style={{
+                            backgroundColor: '#fee2e2',
+                            borderRadius: 4,
+                            paddingHorizontal: 5,
+                            paddingVertical: 1.5,
+                            borderWidth: 0.5,
+                            borderColor: '#f87171',
+                          }}>
+                            <Text style={{ color: '#b91c1c', fontSize: 6, fontWeight: 'bold' }}>ATTENTION</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
             </View>
-          </View>
-        )}
+          );
+        })()}
 
         {/* ─── KEY INSIGHTS ─── */}
         {report.aiInsights && report.aiInsights.length > 0 && (
@@ -1699,93 +1784,52 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
                   {panel.name} — Status Balance Sheet
                 </Text>
 
+                {/* Table Header */}
+                <View style={{ flexDirection: 'row', borderBottomWidth: 0.8, borderBottomColor: SLATE_300, paddingBottom: 4, marginBottom: 6 }}>
+                  <Text style={{ width: '35%', fontSize: 6.5, fontWeight: 'bold', color: SLATE_500, textTransform: 'uppercase', fontFamily: 'Lora' }}>Biomarker Name</Text>
+                  <Text style={{ width: '35%', fontSize: 6.5, fontWeight: 'bold', color: SLATE_500, textTransform: 'uppercase', fontFamily: 'Lora' }}>Patient Value & Status</Text>
+                  <Text style={{ width: '30%', fontSize: 6.5, fontWeight: 'bold', color: SLATE_500, textTransform: 'uppercase', textAlign: 'right', fontFamily: 'Lora' }}>Reference Interval</Text>
+                </View>
+
                 {panel.biomarkers.map((m, idx) => {
                   const isLast = idx === panel.biomarkers.length - 1;
                   const sc = STATUS_HEX[m.status] || STATUS_HEX.normal;
 
-                  // Zone-aware mini gauge (matches UI logic)
+                  // Resolve range
                   const _miniResolved = resolveRange(m.name, m.min, m.max, m.value, report.patientGender || 'male');
-                  const _miniSpan = Math.max(_miniResolved.max - _miniResolved.min, 1);
-                  const _miniScaleMin = Math.max(0, _miniResolved.min - _miniSpan * 0.35);
-                  const _miniScaleMax = _miniResolved.max + _miniSpan * 0.35;
-                  const _miniTotal = _miniScaleMax - _miniScaleMin || 1;
-                  const _miniAmber = 0.06;
-                  const _miniLowRedEnd = (_miniResolved.min - _miniScaleMin) / _miniTotal;
-                  const _miniLowGreenEnd = _miniLowRedEnd + _miniAmber;
-                  const _miniHighGreenEnd = (_miniResolved.max - _miniScaleMin) / _miniTotal;
-                  const _miniHighRedStart = Math.min(1, _miniHighGreenEnd + _miniAmber);
-                  const _miniStatusClean = (m.status || 'normal').toLowerCase();
-                  let _miniNeedlePct: number;
-                  if (_miniStatusClean === 'low') {
-                    const r2 = _miniResolved.min > 0 ? Math.max(0, Math.min(1, Number(m.value) / _miniResolved.min)) : 0.5;
-                    _miniNeedlePct = _miniLowRedEnd * (0.1 + r2 * 0.75);
-                  } else if (_miniStatusClean === 'high' || _miniStatusClean === 'critical') {
-                    const excess = _miniResolved.max > 0 ? Math.min(1, (Number(m.value) - _miniResolved.max) / Math.max(_miniResolved.max * 0.5, 1)) : 0.5;
-                    _miniNeedlePct = _miniHighRedStart + (1 - _miniHighRedStart) * (0.1 + excess * 0.8);
-                  } else {
-                    const safeMax2 = _miniResolved.max > _miniResolved.min ? _miniResolved.max : _miniResolved.min + 1;
-                    const r2 = Math.max(0, Math.min(1, (Number(m.value) - _miniResolved.min) / (safeMax2 - _miniResolved.min)));
-                    _miniNeedlePct = _miniLowGreenEnd + r2 * (_miniHighGreenEnd - _miniLowGreenEnd);
-                  }
-                  _miniNeedlePct = Math.max(0.01, Math.min(0.99, _miniNeedlePct));
-                  const W2 = 110;
-                  const mz = {
-                    leftRed:    Math.max(0, _miniLowRedEnd * W2),
-                    leftAmber:  Math.max(0, (_miniLowGreenEnd - _miniLowRedEnd) * W2),
-                    green:      Math.max(0, (_miniHighGreenEnd - _miniLowGreenEnd) * W2),
-                    rightAmber: Math.max(0, (_miniHighRedStart - _miniHighGreenEnd) * W2),
-                    rightRed:   Math.max(0, (1 - _miniHighRedStart) * W2),
-                  };
 
                   return (
                     <View
                       key={m.name}
                       style={isLast ? styles.statusBoardRowLast : styles.statusBoardRow}
                     >
-                      {/* Biomarker Name Column */}
+                      {/* Column 1: Biomarker Name */}
                       <Text style={styles.statusBoardLabel}>{m.name}</Text>
 
-                      {/* Micro Range Bar Column — zone-aware */}
-                      <View style={styles.statusBoardGauge}>
-                        <Svg width={W2} height="12" viewBox={`0 0 ${W2} 12`}>
-                          {/* Coloured zone rects */}
-                          {mz.leftRed > 0 && <Rect x={0} y={3} width={mz.leftRed} height={5} fill="#ef4444" rx="2" />}
-                          {mz.leftAmber > 0 && <Rect x={mz.leftRed} y={3} width={mz.leftAmber} height={5} fill="#f59e0b" />}
-                          {mz.green > 0 && <Rect x={mz.leftRed + mz.leftAmber} y={3} width={mz.green} height={5} fill="#10b981" />}
-                          {mz.rightAmber > 0 && <Rect x={mz.leftRed + mz.leftAmber + mz.green} y={3} width={mz.rightAmber} height={5} fill="#f59e0b" />}
-                          {mz.rightRed > 0 && <Rect x={mz.leftRed + mz.leftAmber + mz.green + mz.rightAmber} y={3} width={mz.rightRed} height={5} fill="#ef4444" rx="2" />}
-                          {/* Vertical marker line */}
-                          <Line
-                            x1={_miniNeedlePct * W2}
-                            y1={0}
-                            x2={_miniNeedlePct * W2}
-                            y2={12}
-                            stroke={sc.bar}
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                        </Svg>
-                      </View>
-
-                      {/* Value and Status Badge Column */}
-                      <View style={styles.statusBoardValueCol}>
-                        <Text style={{ fontSize: 8, fontWeight: 'bold', color: SLATE_900 }}>
-                          {m.value} <Text style={{ fontSize: 6, color: SLATE_400, fontWeight: 'medium' }}>{m.unit}</Text>
+                      {/* Column 2: Patient Value & Status Pill */}
+                      <View style={{ width: '35%', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: SLATE_900 }}>
+                          {m.value} <Text style={{ fontSize: 6.5, color: SLATE_400, fontWeight: 'medium' }}>{m.unit}</Text>
                         </Text>
                         <View
                           style={{
                             backgroundColor: sc.light,
-                            borderColor: `${sc.fg}33`,
-                            borderWidth: 0.5,
                             borderRadius: 4,
-                            paddingHorizontal: 4,
-                            paddingVertical: 1,
+                            paddingHorizontal: 5,
+                            paddingVertical: 1.5,
                           }}
                         >
-                          <Text style={{ color: sc.fg, fontSize: 5.5, fontWeight: 'bold' }}>
+                          <Text style={{ color: sc.fg, fontSize: 6, fontWeight: 'bold' }}>
                             {STATUS_LABEL[m.status] || m.status.toUpperCase()}
                           </Text>
                         </View>
+                      </View>
+
+                      {/* Column 3: Clinical Reference Interval */}
+                      <View style={{ width: '30%', alignItems: 'flex-end' }}>
+                        <Text style={{ fontSize: 8, color: SLATE_700, fontWeight: 'medium' }}>
+                          {_miniResolved.min} – {_miniResolved.max} <Text style={{ fontSize: 6.5, color: SLATE_400 }}>{m.unit}</Text>
+                        </Text>
                       </View>
                     </View>
                   );
@@ -1799,58 +1843,20 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
                 const sc = STATUS_HEX[m.status] || STATUS_HEX.normal;
                 const isAbnormal = m.status !== 'normal';
 
-                const val = Number(m.value) || 0;
-                const statusClean = (m.status || 'normal').toLowerCase();
-
                 // Resolve range with gender-aware clinical fallback (mirrors UI)
                 const resolved = resolveRange(m.name, m.min, m.max, m.value, report.patientGender || 'male');
                 const { min, max } = resolved;
 
-                const span = Math.max(max - min, 1);
-                const scaleMin = Math.max(0, min - span * 0.35);
-                const scaleMax = max + span * 0.35;
-                const totalSpan = scaleMax - scaleMin || 1;
+                const statusClean = (m.status || 'normal').toLowerCase();
+                const val = Number(m.value);
+                const hasVal = !isNaN(val);
 
-                const amberWidth = 0.06;
-                const lowRedEnd    = (min - scaleMin) / totalSpan;
-                const lowGreenEnd  = lowRedEnd + amberWidth;
-                const highGreenEnd = (max - scaleMin) / totalSpan;
-                const highRedStart = Math.min(1, highGreenEnd + amberWidth);
-
-                let needlePctBar: number;
-                if (statusClean === 'low') {
-                  const ratio = min > 0 ? Math.max(0, Math.min(1, val / min)) : 0.5;
-                  needlePctBar = lowRedEnd * (0.1 + ratio * 0.75);
-                } else if (statusClean === 'high' || statusClean === 'critical') {
-                  const excess = max > 0 ? Math.min(1, (val - max) / Math.max(max * 0.5, 1)) : 0.5;
-                  needlePctBar = highRedStart + (1 - highRedStart) * (0.1 + excess * 0.8);
-                } else {
-                  const safeMax = max > min ? max : min + 1;
-                  const ratio = Math.max(0, Math.min(1, (val - min) / (safeMax - min)));
-                  needlePctBar = lowGreenEnd + ratio * (highGreenEnd - lowGreenEnd);
-                }
-                needlePctBar = Math.max(0.01, Math.min(0.99, needlePctBar));
-
-                const pointerColor =
-                  statusClean === 'high' || statusClean === 'critical' ? '#ef4444' :
-                  statusClean === 'low' ? '#f59e0b' : '#10b981';
-
-                const W = 200;
-                const z = {
-                  leftRed:    Math.max(0, lowRedEnd * W),
-                  leftAmber:  Math.max(0, (lowGreenEnd - lowRedEnd) * W),
-                  green:      Math.max(0, (highGreenEnd - lowGreenEnd) * W),
-                  rightAmber: Math.max(0, (highRedStart - highGreenEnd) * W),
-                  rightRed:   Math.max(0, (1 - highRedStart) * W),
-                };
-
-                // Tick labels matching UI
-                const ticks = [
-                  { pct: 0,            label: Math.round(scaleMin).toString() },
-                  { pct: lowRedEnd,    label: min.toString() },
-                  { pct: highGreenEnd, label: max.toString() },
-                  { pct: 1,            label: Math.round(scaleMax).toString() },
-                ].filter((t, i, arr) => arr.findIndex(o => Math.abs(o.pct - t.pct) < 0.08) === i);
+                // Compute active zone flag for each of the 5 segments
+                const isZone1Active = hasVal ? (val < min - 2) : false;
+                const isZone2Active = hasVal ? (val >= min - 2 && val < min) : (statusClean === 'low');
+                const isZone3Active = hasVal ? (val >= min && val <= max) : (statusClean === 'normal');
+                const isZone4Active = hasVal ? (val > max && val <= max + 2) : (statusClean === 'high');
+                const isZone5Active = hasVal ? (val > max + 2) : (statusClean === 'critical');
 
                 return (
                   <View
@@ -1866,88 +1872,176 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
                     ]}
                     wrap={false}
                   >
-                    {/* Top detail row */}
+                    {/* Row 1: Biomarker Name & Patient Value */}
                     <View style={styles.biomarkerTopRow}>
                       <View style={styles.biomarkerNameContainer}>
                         <Text style={styles.biomarkerName}>{m.name}</Text>
-                        <Text style={styles.biomarkerRef}>
-                          Reference: <Text style={{ fontWeight: 'bold', color: SLATE_700 }}>{min} – {max} {m.unit}</Text>
-                        </Text>
                       </View>
                       <View style={styles.biomarkerValueContainer}>
                         <View style={styles.biomarkerValueRow}>
                           <Text style={styles.biomarkerValue}>{m.value}</Text>
                           <Text style={styles.biomarkerUnit}>{m.unit}</Text>
                         </View>
-                        <View style={[styles.biomarkerBadge, { backgroundColor: sc.light, color: sc.fg }]}>
+                        <View style={[styles.biomarkerBadge, { backgroundColor: sc.light, borderColor: `${sc.fg}33`, color: sc.fg }]}>
                           <Text style={{ color: sc.fg }}>{STATUS_LABEL[m.status] || m.status.toUpperCase()}</Text>
                         </View>
                       </View>
                     </View>
 
-                    {/* Low Confidence Alert
-                    {m.confidenceScore !== undefined && m.confidenceScore < 70 && (
-                      <View style={styles.verificationAlertBadge}>
-                        <Text style={styles.verificationAlertText}>⚠️ Verification Alert ({Math.round(m.confidenceScore)}% confidence)</Text>
-                      </View>
-                    )} */}
-
-                    {/* ── Horizontal Zone Range Bar (mirrors UI) ── */}
-                    <View style={{ marginTop: 10, marginBottom: 4 }}>
-                      {/* Value bubble row */}
-                      <View style={{ position: 'relative', height: 18, marginBottom: 2 }}>
+                    {/* Row 2: Layout Status Bar */}
+                    <View style={{ marginVertical: 8 }} wrap={false}>
+                      {/* The 5-segment colored bar */}
+                      <View style={{
+                        flexDirection: 'row',
+                        width: '100%',
+                        height: 12,
+                        borderRadius: 6,
+                        overflow: 'hidden',
+                      }}>
+                        {/* Zone 1: Red (Critical Low) */}
                         <View style={{
-                          position: 'absolute',
-                          left: `${needlePctBar * 100}%`,
-                          top: 0,
+                          width: '15%',
+                          backgroundColor: '#d32626ff',
+                          justifyContent: 'center',
                           alignItems: 'center',
                         }}>
-                          <View style={{
-                            backgroundColor: pointerColor,
-                            borderRadius: 4,
-                            paddingHorizontal: 4,
-                            paddingVertical: 2,
-                            minWidth: 24,
-                            alignItems: 'center',
-                          }}>
-                            <Text style={{ color: '#ffffff', fontSize: 7, fontWeight: 'bold' }}>{val}</Text>
-                          </View>
-                          {/* Downward triangle */}
-                          <Svg width="8" height="5" viewBox="0 0 8 5">
-                            <Path d="M0,0 L8,0 L4,5 Z" fill={pointerColor} />
-                          </Svg>
+                          {isZone1Active && (
+                            <View style={{
+                              width: 8,
+                              height: 8,
+                              backgroundColor: '#111827',
+                              borderRadius: 4,
+                            }} />
+                          )}
+                        </View>
+
+                        {/* Zone 2: Yellow (Borderline Low) */}
+                        <View style={{
+                          width: '20%',
+                          backgroundColor: '#f3de42ff',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}>
+                          {isZone2Active && (
+                            <View style={{
+                              width: 8,
+                              height: 8,
+                              backgroundColor: '#111827',
+                              borderRadius: 4,
+                            }} />
+                          )}
+                        </View>
+
+                        {/* Zone 3: Green (Optimal) */}
+                        <View style={{
+                          width: '30%',
+                          backgroundColor: '#17c87bff',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}>
+                          {isZone3Active && (
+                            <View style={{
+                              width: 8,
+                              height: 8,
+                              backgroundColor: '#111827',
+                              borderRadius: 4,
+                            }} />
+                          )}
+                        </View>
+
+                        {/* Zone 4: Yellow (Borderline High) */}
+                        <View style={{
+                          width: '20%',
+                          backgroundColor: '#f3de42ff',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}>
+                          {isZone4Active && (
+                            <View style={{
+                              width: 8,
+                              height: 8,
+                              backgroundColor: '#111827',
+                              borderRadius: 4,
+                            }} />
+                          )}
+                        </View>
+
+                        {/* Zone 5: Red (Critical High) */}
+                        <View style={{
+                          width: '15%',
+                          backgroundColor: '#d32626ff',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}>
+                          {isZone5Active && (
+                            <View style={{
+                              width: 8,
+                              height: 8,
+                              backgroundColor: '#111827',
+                              borderRadius: 4,
+                            }} />
+                          )}
                         </View>
                       </View>
 
-                      {/* Coloured zone bar */}
-                      <Svg width="100%" height="7" viewBox={`0 0 ${W} 7`} preserveAspectRatio="none">
-                        {z.leftRed > 0 && <Rect x={0} y={0} width={z.leftRed} height={7} fill="#ef4444" rx="3" />}
-                        {z.leftAmber > 0 && <Rect x={z.leftRed} y={0} width={z.leftAmber} height={7} fill="#f59e0b" />}
-                        {z.green > 0 && <Rect x={z.leftRed + z.leftAmber} y={0} width={z.green} height={7} fill="#10b981" />}
-                        {z.rightAmber > 0 && <Rect x={z.leftRed + z.leftAmber + z.green} y={0} width={z.rightAmber} height={7} fill="#f59e0b" />}
-                        {z.rightRed > 0 && <Rect x={z.leftRed + z.leftAmber + z.green + z.rightAmber} y={0} width={z.rightRed} height={7} fill="#ef4444" rx="3" />}
-                      </Svg>
-
-                      {/* Tick labels */}
+                      {/* Markers for corners */}
                       <View style={{ position: 'relative', height: 10, marginTop: 2 }}>
-                        {ticks.map((tick, i) => (
-                          <Text
-                            key={i}
-                            style={{
-                              position: 'absolute',
-                              left: `${tick.pct * 100}%`,
-                              fontSize: 6,
-                              color: SLATE_400,
-                              fontWeight: 'bold',
-                            }}
-                          >{tick.label}</Text>
-                        ))}
+                        {/* Left End Corner (less than optimal: min - 2) */}
+                        <Text style={{
+                          position: 'absolute',
+                          left: 0,
+                          fontSize: 6,
+                          color: SLATE_400,
+                          fontWeight: 'bold',
+                        }}>
+                          {parseFloat((min - 2).toFixed(2))}
+                        </Text>
+
+                        {/* Green Left Corner (optimal range start: min) */}
+                        <Text style={{
+                          position: 'absolute',
+                          left: '35%',
+                          fontSize: 6,
+                          color: SLATE_500,
+                          fontWeight: 'bold',
+                        }}>
+                          {min}
+                        </Text>
+
+                        {/* Green Right Corner (optimal range end: max) */}
+                        <Text style={{
+                          position: 'absolute',
+                          left: '65%',
+                          fontSize: 6,
+                          color: SLATE_500,
+                          fontWeight: 'bold',
+                        }}>
+                          {max}
+                        </Text>
+
+                        {/* Right End Corner (more than optimal: max + 2) */}
+                        <Text style={{
+                          position: 'absolute',
+                          right: 0,
+                          fontSize: 6,
+                          color: SLATE_400,
+                          fontWeight: 'bold',
+                        }}>
+                          {parseFloat((max + 2).toFixed(2))}
+                        </Text>
                       </View>
+                    </View>
+
+                    {/* Row 3: Range Text Explanations */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 }}>
+                      <Text style={{ fontSize: 6.5, color: SLATE_400, fontWeight: 'bold' }}></Text>
+                      <Text style={{ fontSize: 6.5, color: SLATE_500, fontWeight: 'bold' }}>Optimal Range: {min} – {max} {m.unit}</Text>
+                      <Text style={{ fontSize: 6.5, color: SLATE_400, fontWeight: 'bold' }}></Text>
                     </View>
 
                     {/* AI Interpretation */}
                     {m.clinicalInterpretation && (
-                      <View style={styles.interpretationBox}>
+                      <View style={[styles.interpretationBox, { marginTop: 8 }]}>
                         <Text style={styles.interpretationLabel}>AI</Text>
                         <Text style={styles.interpretationText}>{m.clinicalInterpretation}</Text>
                       </View>
