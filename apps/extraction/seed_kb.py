@@ -4,6 +4,7 @@ import logging
 import uuid
 import sys
 from app.rag.llm import get_openai_embeddings, get_db_connection
+from app.rag.ingestion import split_text
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -78,47 +79,43 @@ def seed_knowledge_base():
 
     logger.info("Connecting to database...")
     try:
-        conn = get_db_connection()
-    except Exception as e:
-        logger.error("Failed to connect to database: %s", e)
-        sys.exit(1)
-
-    try:
-        with conn:
+        with get_db_connection() as conn:
             with conn.cursor() as cur:
                 # Clear existing knowledge base chunks to avoid duplication
                 logger.info("Clearing existing knowledge base chunks...")
                 cur.execute('DELETE FROM "knowledge_base_chunks"')
                 
-                # Embed and insert each guideline
+                # Embed and insert each guideline, chunking long articles.
+                total_chunks = 0
                 for guideline in BIOMARKER_GUIDELINES:
                     logger.info("Embedding topic: %s", guideline["topic"])
-                    vector = embeddings.embed_query(guideline["content"])
-                    vector_str = f"[{','.join(map(str, vector))}]"
-                    
-                    chunk_id = str(uuid.uuid4())
-                    cur.execute(
-                        """
-                        INSERT INTO "knowledge_base_chunks" (
-                            "id", "topic", "content", "metadata", "embedding"
-                        ) VALUES (%s, %s, %s, %s, %s::vector)
-                        """,
-                        (
-                            chunk_id,
-                            guideline["topic"],
-                            guideline["content"],
-                            json.dumps(guideline["metadata"]),
-                            vector_str,
-                        ),
-                    )
-                    logger.info("Saved chunk %s successfully.", chunk_id)
-        
-        logger.info("Knowledge base successfully seeded with %d items!", len(BIOMARKER_GUIDELINES))
+                    pieces = split_text(guideline["content"]) or [guideline["content"]]
+                    vectors = embeddings.embed_documents(pieces)
+                    for idx, (piece, vector) in enumerate(zip(pieces, vectors)):
+                        vector_str = f"[{','.join(map(str, vector))}]"
+                        chunk_id = str(uuid.uuid4())
+                        metadata = {**guideline["metadata"], "chunk_index": idx, "chunk_count": len(pieces)}
+                        cur.execute(
+                            """
+                            INSERT INTO "knowledge_base_chunks" (
+                                "id", "topic", "content", "metadata", "embedding"
+                            ) VALUES (%s, %s, %s, %s, %s::vector)
+                            """,
+                            (
+                                chunk_id,
+                                guideline["topic"],
+                                piece,
+                                json.dumps(metadata),
+                                vector_str,
+                            ),
+                        )
+                        total_chunks += 1
+                    logger.info("Saved %d chunk(s) for topic: %s", len(pieces), guideline["topic"])
+
+        logger.info("Knowledge base successfully seeded with %d chunks from %d items!", total_chunks, len(BIOMARKER_GUIDELINES))
     except Exception as e:
         logger.error("Failed to seed knowledge base: %s", e)
         sys.exit(1)
-    finally:
-        conn.close()
 
 if __name__ == "__main__":
     seed_knowledge_base()

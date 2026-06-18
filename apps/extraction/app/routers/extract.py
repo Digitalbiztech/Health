@@ -10,6 +10,7 @@ Pipeline for a single PDF:
   6. Generate insights from normalized panel
 """
 
+import asyncio
 import logging
 
 from fastapi import APIRouter, HTTPException
@@ -68,8 +69,13 @@ async def extract(req: ExtractionRequest) -> ExtractionResponse:
         # RAG Ingestion (Non-fatal, patient-scoped)
         if req.patient_id:
             try:
-                from app.rag.ingestion import ingest_extraction
-                ingest_extraction(
+                from app.rag.ingestion import ingest_extraction, parse_report_date
+                # Parse the collection/report date from the RAW (unmasked) text —
+                # PHI masking strips dates, so this must run before masking is used.
+                report_date = parse_report_date(result["text"])
+                # Offload the blocking embed + DB work so it doesn't stall the loop.
+                await asyncio.to_thread(
+                    ingest_extraction,
                     patient_id=req.patient_id,
                     upload_id=req.upload_id,
                     # extraction_id is left unset: the extractions row is created by the
@@ -80,6 +86,7 @@ async def extract(req: ExtractionRequest) -> ExtractionResponse:
                     masked_text=masked_full_text,
                     biomarkers=normalized,
                     insights=insight_dicts,
+                    report_date=report_date,
                 )
                 logger.info("Successfully ingested extraction into RAG vector store for patient %s", req.patient_id)
             except Exception as re:

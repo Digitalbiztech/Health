@@ -7,6 +7,10 @@ import { prisma } from '../lib/prisma.js';
 import { ragService } from './ragService.js';
 import type { AuthenticatedPrincipal } from '../types/index.js';
 
+// Cap how many recent messages (including the just-saved user turn) are loaded
+// and sent downstream, to bound token usage/cost on long sessions.
+const MAX_HISTORY_MESSAGES = 12;
+
 export interface ChatBiomarker {
   displayName: string;
   value: number | string;
@@ -255,16 +259,20 @@ export async function generateChatReply(req: ChatRequest): Promise<{ reply: stri
     },
   });
 
-  // 4. Retrieve complete message history for context
+  // 4. Retrieve message history for context. Cap to the most recent
+  // MAX_HISTORY_MESSAGES turns so token usage stays bounded on long sessions.
   const allDbMessages = await prisma.chatMessage.findMany({
     where: { sessionId: sessionId },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: 'desc' },
+    take: MAX_HISTORY_MESSAGES,
   });
 
-  const messageHistory = allDbMessages.map((m) => ({
-    role: m.role.toLowerCase() as 'user' | 'assistant',
-    content: m.content,
-  }));
+  const messageHistory = allDbMessages
+    .reverse()
+    .map((m) => ({
+      role: m.role.toLowerCase() as 'user' | 'assistant',
+      content: m.content,
+    }));
 
   const userRole = req.principal.accountType === 'STAFF' ? 'doctor' : 'patient';
 
@@ -283,6 +291,8 @@ export async function generateChatReply(req: ChatRequest): Promise<{ reply: stri
         status: b.status,
       })) : null,
       user_role: userRole,
+      // Tenant isolation: restrict retrieval to the caller's organization.
+      organization_id: req.principal.organizationId ?? undefined,
     });
 
     // Save RAG response

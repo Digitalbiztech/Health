@@ -97,6 +97,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
+        ...(env.EXTRACTION_SERVICE_SECRET ? { 'X-Service-Secret': env.EXTRACTION_SERVICE_SECRET } : {}),
         ...(init.headers ?? {}),
       },
       signal: controller.signal,

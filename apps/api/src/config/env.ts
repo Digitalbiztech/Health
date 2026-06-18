@@ -26,6 +26,10 @@ const envSchema = z.object({
   // Extraction microservice (FastAPI — apps/extraction)
   EXTRACTION_SERVICE_URL: z.string().url().default('http://localhost:8001'),
   EXTRACTION_SERVICE_TIMEOUT_MS: z.coerce.number().default(120_000),
+  // Shared secret for service-to-service auth. Optional so local dev works
+  // without it; when set, it is sent as the X-Service-Secret header and the
+  // extraction service enforces it.
+  EXTRACTION_SERVICE_SECRET: z.string().optional(),
 
   // AI chat providers (optional — orchestrator skips any provider whose key is missing)
   OPENAI_API_KEY: z.string().optional(),

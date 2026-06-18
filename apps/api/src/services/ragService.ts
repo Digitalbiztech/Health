@@ -19,6 +19,7 @@ export interface RagChatRequest {
   user_input: string;
   biomarkers?: ChatBiomarker[] | null;
   user_role?: 'doctor' | 'patient';
+  organization_id?: string | null;
 }
 
 export interface RagChatResponse {
@@ -43,6 +44,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
+        ...(env.EXTRACTION_SERVICE_SECRET ? { 'X-Service-Secret': env.EXTRACTION_SERVICE_SECRET } : {}),
         ...(init.headers ?? {}),
       },
       signal: controller.signal,

@@ -61,14 +61,15 @@ model Patient {
   organizationId String?       @map("organization_id")
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
-  uploads       Upload[]
-  reports       Report[]        @relation("PatientReports")
-  chatSessions  ChatSession[]
-  notifications Notification[]
-  auditLogs     AuditLog[]      @relation("PatientAuditLogs")
-  reportExports ReportExport[]
-  appointments  Appointment[]
-  tasks         Task[]
+  uploads        Upload[]
+  reports        Report[]        @relation("PatientReports")
+  chatSessions   ChatSession[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]      @relation("PatientAuditLogs")
+  reportExports  ReportExport[]
+  appointments   Appointment[]
+  tasks          Task[]
+  documentChunks DocumentChunk[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -96,6 +97,7 @@ model Organization {
   reportExports ReportExport[]
   appointments  Appointment[]
   tasks         Task[]
+  documentChunks DocumentChunk[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -129,6 +131,7 @@ model Upload {
   extraction Extraction?
   // Fixed: one-to-many so a report can be regenerated without hitting @unique
   reports    Report[]
+  documentChunks DocumentChunk[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -156,7 +159,8 @@ model Extraction {
   uploadId String @unique @map("upload_id")
   upload   Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
 
-  biomarkers Biomarker[]
+  biomarkers     Biomarker[]
+  documentChunks DocumentChunk[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -437,6 +441,58 @@ model Task {
 
   @@index([organizationId, status])
   @@map("tasks")
+}
+
+// ============================================
+// RAG VECTOR STORE
+// ============================================
+// These tables are read/written by the Python extraction service via pgvector.
+// They MUST be modeled here (not just created via raw SQL) so `prisma migrate
+// dev` doesn't treat them as drift and drop them. The `embedding` column uses a
+// type Prisma can't express natively (`vector`), hence Unsupported(...). The
+// HNSW vector indexes are created via raw SQL in the migration (Prisma can't
+// emit them) and are intentionally not declared here.
+
+model DocumentChunk {
+  id             String        @id
+  patientId      String        @map("patient_id")
+  patient        Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  uploadId       String?       @map("upload_id")
+  upload         Upload?       @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  extractionId   String?       @map("extraction_id")
+  extraction     Extraction?   @relation(fields: [extractionId], references: [id], onDelete: Cascade)
+  organizationId String?       @map("organization_id")
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  chunkType  String  @map("chunk_type")
+  chunkIndex Int     @default(0) @map("chunk_index")
+  content    String
+  metadata   Json?   @default("{}")
+  embedding  Unsupported("vector(1536)")?
+  reportType String? @map("report_type")
+  reportDate DateTime? @map("report_date")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([patientId, chunkType])
+  @@index([organizationId])
+  @@index([reportType])
+  @@index([reportDate])
+  @@index([metadata], type: Gin)
+  @@map("document_chunks")
+}
+
+model KnowledgeBaseChunk {
+  id        String  @id
+  topic     String
+  content   String
+  metadata  Json?   @default("{}")
+  embedding Unsupported("vector(1536)")?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([metadata], type: Gin)
+  @@map("knowledge_base_chunks")
 }
 
 // ============================================

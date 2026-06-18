@@ -74,5 +74,6 @@ langchain-openai>=0.2.0
 langchain-postgres>=0.0.12
 pgvector>=0.3.0
 psycopg[binary]>=3.2.0
+psycopg_pool>=3.2.0
 langchain-text-splitters>=0.3.0
 

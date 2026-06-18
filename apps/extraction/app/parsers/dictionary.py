@@ -604,6 +604,70 @@ BIOMARKER_DICTIONARY: dict[str, dict] = {
         "reference": {"min": 35, "max": 155, "range_str": "35 - 155 pg/mL"},
         "critical": {"low": 15, "high": 250},
     },
+    "bioavailable_testosterone": {
+        "display_name": "Bioavailable Testosterone",
+        "category": "Hormones",
+        "aliases": ["bioavailable testosterone", "testosterone bioavailable", "testosterone, bioavailable", "bioavailable testo", "bio-t"],
+        "abbreviations": [],
+        "preferred_unit": "ng/dL",
+        "unit_conversions": {"nmol/L": lambda v: v * 28.843},
+        "reference": {"min": 110, "max": 575, "range_str": "110 - 575 ng/dL"},
+        "critical": {"low": None, "high": None},
+    },
+    "shbg": {
+        "display_name": "Sex Hormone Binding Globulin",
+        "category": "Hormones",
+        "aliases": ["sex hormone binding globulin", "sex hormone-binding globulin", "shbg"],
+        "abbreviations": ["SHBG"],
+        "preferred_unit": "nmol/L",
+        "unit_conversions": {},
+        "reference": {"min": 10, "max": 57, "range_str": "10 - 57 nmol/L"},
+        "critical": {"low": None, "high": None},
+    },
+
+    # ── LIPID EXTENDED (ADVANCED) ──
+    "apolipoprotein_b": {
+        "display_name": "Apolipoprotein B",
+        "category": "Lipid Panel",
+        "aliases": ["apolipoprotein b", "apolipoprotein-b", "apo b", "apob"],
+        "abbreviations": ["ApoB", "APOB"],
+        "preferred_unit": "mg/dL",
+        "unit_conversions": {"g/L": lambda v: v * 100},
+        "reference": {"min": 0, "max": 90, "range_str": "< 90 mg/dL"},
+        "critical": {"low": None, "high": None},
+    },
+    "lipoprotein_a": {
+        "display_name": "Lipoprotein(a)",
+        "category": "Lipid Panel",
+        "aliases": ["lipoprotein a", "lipoprotein (a)", "lipoprotein(a)", "lp(a)", "lpa", "lp a"],
+        "abbreviations": [],
+        "preferred_unit": "mg/dL",
+        "unit_conversions": {},
+        "reference": {"min": 0, "max": 30, "range_str": "< 30 mg/dL"},
+        "critical": {"low": None, "high": None},
+    },
+    "chol_hdl_ratio": {
+        "display_name": "Cholesterol/HDL Ratio",
+        "category": "Lipid Panel",
+        "aliases": ["cholesterol/hdl ratio", "chol/hdl ratio", "cholesterol hdl ratio", "chol hdl ratio", "total cholesterol/hdl ratio", "tc/hdl ratio", "chol/hdlc ratio", "chol hdlc ratio", "cardiac risk ratio"],
+        "abbreviations": [],
+        "preferred_unit": "ratio",
+        "unit_conversions": {},
+        "reference": {"min": 0, "max": 5.0, "range_str": "< 5.0"},
+        "critical": {"low": None, "high": None},
+    },
+
+    # ── ELECTROLYTES EXTENDED (ADVANCED) ──
+    "carbon_dioxide": {
+        "display_name": "Carbon Dioxide (CO₂)",
+        "category": "Electrolytes",
+        "aliases": ["carbon dioxide", "co2", "total co2", "tco2", "bicarbonate", "hco3"],
+        "abbreviations": ["CO2", "HCO3"],
+        "preferred_unit": "mEq/L",
+        "unit_conversions": {"mmol/L": lambda v: v},
+        "reference": {"min": 23, "max": 29, "range_str": "23 - 29 mEq/L"},
+        "critical": {"low": 10, "high": 40},
+    },
 }
 
 

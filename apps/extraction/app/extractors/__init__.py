@@ -61,6 +61,21 @@ def _process_candidate(result: dict, method: str) -> dict:
     return result
 
 
+def _select_best(candidates: list[dict]) -> dict:
+    """Pick the highest-quality candidate.
+
+    Ranks by quality confidence score, tie-broken by the number of normalized
+    biomarkers (a richer extraction wins an otherwise-even score).
+    """
+    return max(
+        candidates,
+        key=lambda c: (
+            c["quality"].confidence_score,
+            len(c["normalized_biomarkers"]),
+        ),
+    )
+
+
 async def extract_pdf(pdf_bytes: bytes) -> dict:
     """Run the quality-driven cascading extraction pipeline against a PDF byte string.
 
@@ -134,31 +149,39 @@ async def extract_pdf(pdf_bytes: bytes) -> dict:
         if huge_difference:
             logger.info(
                 "Significant discrepancy detected between PyMuPDF (%d markers) and pdfplumber (%d markers). "
-                "Symmetric difference: %d. Routing to Mistral OCR.",
+                "Symmetric difference: %d. Routing to Mistral OCR for a third opinion.",
                 len(set_py),
                 len(set_pl),
                 len(sym_diff),
             )
+            candidates = [pymupdf_candidate, pdfplumber_candidate]
             ocr_result = await extract_with_mistral_ocr(pdf_bytes)
             if ocr_result:
-                logger.info("Mistral OCR extraction succeeded. Evaluating quality...")
                 ocr_candidate = _process_candidate(ocr_result, "mistral_ocr")
                 api_logs["mistral_ocr"] = {
                     "text": ocr_candidate.get("text", ""),
                     "biomarkers": ocr_candidate.get("normalized_biomarkers", []),
                 }
-                ocr_candidate["metadata"]["api_logs"] = api_logs
-                return ocr_candidate
+                candidates.append(ocr_candidate)
             else:
-                logger.warning("Mistral OCR failed. Falling back to the best text extractor candidate.")
-                best_text = max([pymupdf_candidate, pdfplumber_candidate], key=lambda c: c["quality"].confidence_score)
-                best_text["metadata"]["api_logs"] = api_logs
-                return best_text
+                logger.warning("Mistral OCR failed. Selecting among text extractors only.")
+
+            # OCR is a third opinion, not an automatic winner — pick the best score.
+            best = _select_best(candidates)
+            logger.info(
+                "Selected '%s' candidate (confidence=%.4f, markers=%d) among %d candidates.",
+                best["quality"].extractor,
+                best["quality"].confidence_score,
+                len(best["normalized_biomarkers"]),
+                len(candidates),
+            )
+            best["metadata"]["api_logs"] = api_logs
+            return best
         else:
             logger.info(
                 "Slight difference between PyMuPDF and pdfplumber. Selecting highest quality score."
             )
-            best_text = max([pymupdf_candidate, pdfplumber_candidate], key=lambda c: c["quality"].confidence_score)
+            best_text = _select_best([pymupdf_candidate, pdfplumber_candidate])
             best_text["metadata"]["api_logs"] = api_logs
             return best_text
 

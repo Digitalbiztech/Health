@@ -1,7 +1,7 @@
 # apps/extraction/app/rag/llm.py
 import logging
-import psycopg
 from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from app.rag.config import (
     OPENAI_API_KEY,
@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 _chat_model = None
 _embeddings = None
+_pool: ConnectionPool | None = None
 
 def get_chat_model() -> ChatOpenAI:
     """Lazy singleton for ChatOpenAI model."""
@@ -40,10 +41,27 @@ def get_openai_embeddings() -> OpenAIEmbeddings:
         )
     return _embeddings
 
+def _get_pool() -> ConnectionPool:
+    """Lazy singleton connection pool (avoids a TCP+TLS handshake per request)."""
+    global _pool
+    if _pool is None:
+        if not SUPABASE_DB_URL:
+            raise ValueError("SUPABASE_DB_URL is not configured.")
+        _pool = ConnectionPool(
+            conninfo=SUPABASE_DB_URL,
+            min_size=1,
+            max_size=10,
+            kwargs={"row_factory": dict_row},
+            open=True,
+        )
+    return _pool
+
+
 def get_db_connection():
-    """Returns a direct psycopg connection to the Supabase database."""
-    if not SUPABASE_DB_URL:
-        raise ValueError("SUPABASE_DB_URL is not configured.")
-    # Use dict_row for easier access to columns as keys
-    conn = psycopg.connect(SUPABASE_DB_URL, row_factory=dict_row)
-    return conn
+    """Returns a pooled psycopg connection context manager.
+
+    Usage is unchanged for callers: ``with get_db_connection() as conn:`` — the
+    connection is returned to the pool (not closed) on exit. Blocking calls
+    should be wrapped in ``asyncio.to_thread`` from async handlers.
+    """
+    return _get_pool().connection()
