@@ -4,6 +4,7 @@ version = "0.5.0"
 description = "PDF extraction, PHI masking, biomarker parsing, and insight generation microservice."
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi[standard]>=0.115.0",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.34.0",
     "pymupdf>=1.25.0",
