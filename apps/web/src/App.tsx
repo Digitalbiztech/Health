@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { OnboardingProvider } from '@/contexts/OnboardingContext';
+import { BrandingProvider } from '@/contexts/BrandingContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
@@ -22,8 +23,9 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <BrowserRouter>
+      <BrandingProvider>
+        <ThemeProvider>
+          <BrowserRouter>
           <AuthProvider>
             <OnboardingProvider>
               <Routes>
@@ -60,6 +62,7 @@ export default function App() {
           </AuthProvider>
         </BrowserRouter>
       </ThemeProvider>
+      </BrandingProvider>
     </QueryClientProvider>
   );
 }
