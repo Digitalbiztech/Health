@@ -1,6 +1,7 @@
 import type { RefObject } from 'react';
 import { Loader2, Upload, FileText, Activity, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useBranding } from '@/hooks/useBranding';
 
 interface UploadScreenProps {
   uploading: boolean;
@@ -19,16 +20,24 @@ export function UploadScreen({
   fileInputRef,
   onNavigateToDashboard,
 }: UploadScreenProps) {
+  const { branding } = useBranding();
+
   return (
     <main className="max-w-2xl mx-auto px-6 py-16 flex flex-col items-center text-center">
       {/* Centered freestanding logo */}
-      <div className="mb-8 animate-fade-in-up">
-        <img
-          src="/logo/041323 YC LogoDeck_Main-WG copy.png"
-          alt="Your Concierge MD Logo"
-          className="h-28 w-auto object-contain mx-auto"
-        />
-      </div>
+      {branding.logoMainUrl ? (
+        <div className="mb-8 animate-fade-in-up">
+          <img
+            src={branding.logoMainUrl}
+            alt={`${branding.brandName} Logo`}
+            className="h-28 w-auto object-contain mx-auto"
+          />
+        </div>
+      ) : (
+        <div className="mb-8 animate-fade-in-up">
+          <span className="text-3xl font-extrabold tracking-tight text-foreground">{branding.brandName}</span>
+        </div>
+      )}
 
       <p
         className="text-base mb-10 max-w-xl animate-fade-in-up font-medium leading-relaxed"

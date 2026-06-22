@@ -2,6 +2,7 @@ import { User, Calendar, Upload, FileText, CheckCircle2, Loader2, Heart, Stethos
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
+import { useBranding } from '@/hooks/useBranding';
 import type { UploadRecord, CompleteReportData, DashboardState } from '@/types/dashboard';
 import { calculateAge } from './utils';
 import { useOnboardingTour } from '@/hooks/useOnboardingTour';
@@ -32,6 +33,7 @@ export function PatientHome({
   setViewState,
   onViewSample,
 }: PatientHomeProps) {
+  const { branding } = useBranding();
   const patientPrincipal = principal;
   const totalUploads = patientUploads.length;
   const completedUploads = patientUploads.filter(u => u.status === 'COMPLETED').length;
@@ -52,11 +54,17 @@ export function PatientHome({
       {/* ── Profile Card ──────────────────────────────────── */}
       <div id="tour-profile-card" className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-          <img
-            src="/logo/040523 YC LogoDeck_Icon-GS.jpg"
-            alt="YC Logo"
-            className="w-16 h-16 rounded-xl object-cover shrink-0 border border-border/40"
-          />
+          {branding.logoIconUrl ? (
+            <img
+              src={branding.logoIconUrl}
+              alt={`${branding.brandName} Icon`}
+              className="w-16 h-16 rounded-xl object-cover shrink-0 border border-border/40"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-xl flex items-center justify-center bg-primary/20 text-primary-text font-black text-xl border border-border/40 shrink-0">
+              {branding.brandName.substring(0, 2).toUpperCase()}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-bold text-foreground">
               {patientPrincipal?.firstName} {patientPrincipal?.lastName}
@@ -79,11 +87,17 @@ export function PatientHome({
               )}
             </div>
           </div>
-          <img
-            src="/logo/YC_Letterform_WG.png"
-            alt="YC Letterform Logo"
-            className="h-10 w-auto object-contain shrink-0 mx-4 hidden sm:block"
-          />
+          {branding.logoLetterformUrl ? (
+            <img
+              src={branding.logoLetterformUrl}
+              alt={`${branding.brandName} Letterform`}
+              className="h-10 w-auto object-contain shrink-0 mx-4 hidden sm:block"
+            />
+          ) : (
+            <span className="font-semibold text-lg shrink-0 mx-4 hidden sm:block text-muted-foreground">
+              {branding.brandName}
+            </span>
+          )}
           <div className="flex items-center gap-2 shrink-0">
             <button
               id="tour-upload-btn"

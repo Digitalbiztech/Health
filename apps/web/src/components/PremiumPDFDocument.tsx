@@ -1074,9 +1074,19 @@ interface PremiumPDFDocumentProps {
   report: LabReport;
   logoUrl?: string;
   iconLogoUrl?: string;
+  brandName?: string;
+  showPoweredBy?: boolean;
+  poweredByText?: string;
 }
 
-export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFDocumentProps) {
+export function PremiumPDFDocument({
+  report,
+  logoUrl,
+  iconLogoUrl,
+  brandName,
+  showPoweredBy = true,
+  poweredByText,
+}: PremiumPDFDocumentProps) {
   const allBiomarkers = report.panels.flatMap(p => p.biomarkers);
   const normalCount = allBiomarkers.filter(b => b.status === 'normal').length;
   const highCount = allBiomarkers.filter(b => b.status === 'high').length;
@@ -1154,7 +1164,7 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
           {logoUrl ? (
             <Image src={logoUrl} style={styles.logo} />
           ) : (
-            <Text style={{ color: YC_GOLD, fontSize: 13, fontWeight: 'bold' }}>YOUR CONCIERGE MD</Text>
+            <Text style={{ color: YC_GOLD, fontSize: 13, fontWeight: 'bold' }}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
           )}
           <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle}>Bloodwork Analysis Report</Text>
@@ -1723,9 +1733,11 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
           {logoUrl ? (
             <Image src={logoUrl} style={styles.footerLogo} />
           ) : (
-            <Text style={{ color: SLATE_400, fontSize: 7, fontWeight: 'bold' }}>YOUR CONCIERGE MD</Text>
+            <Text style={{ color: SLATE_400, fontSize: 7, fontWeight: 'bold' }}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
           )}
-          <Text style={styles.footerText}>Powered by Huumanize  ·  Confidential Patient Document</Text>
+          <Text style={styles.footerText}>
+            {showPoweredBy ? (poweredByText || 'Powered by Huumanize') + '  ·  ' : ''}Confidential Patient Document
+          </Text>
           <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>
 
@@ -1751,7 +1763,7 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
                       <Text style={{ color: SLATE_900, fontSize: 12, fontWeight: 'bold' }}>⚲</Text>
                     </View>
                     <View>
-                      <Text style={styles.headerBrandName}>Your Concierge MD</Text>
+                      <Text style={styles.headerBrandName}>{brandName || 'Your Concierge MD'}</Text>
                       <Text style={styles.headerBrandTag}>Panel Detail</Text>
                     </View>
                   </>
@@ -2056,9 +2068,11 @@ export function PremiumPDFDocument({ report, logoUrl, iconLogoUrl }: PremiumPDFD
               {logoUrl ? (
                 <Image src={logoUrl} style={styles.footerLogo} />
               ) : (
-                <Text style={{ color: SLATE_400, fontSize: 7, fontWeight: 'bold' }}>YOUR CONCIERGE MD</Text>
+                <Text style={{ color: SLATE_400, fontSize: 7, fontWeight: 'bold' }}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
               )}
-              <Text style={styles.footerText}>Powered by Huumanize  ·  Confidential Patient Document</Text>
+              <Text style={styles.footerText}>
+                {showPoweredBy ? (poweredByText || 'Powered by Huumanize') + '  ·  ' : ''}Confidential Patient Document
+              </Text>
               <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
             </View>
 

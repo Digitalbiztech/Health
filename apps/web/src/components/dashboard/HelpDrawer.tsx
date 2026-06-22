@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HelpCircle, X, Shield, RefreshCw, ChevronDown, CheckCircle, FileText, BookOpen } from 'lucide-react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { useBranding } from '@/hooks/useBranding';
 
 interface HelpDrawerProps {
   onRestartTour: () => void;
@@ -9,6 +10,7 @@ interface HelpDrawerProps {
 
 export default function HelpDrawer({ onRestartTour }: HelpDrawerProps) {
   const navigate = useNavigate();
+  const { branding } = useBranding();
   const [isOpen, setIsOpen] = useState(false);
   const { resetOnboarding } = useOnboarding();
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -81,7 +83,7 @@ export default function HelpDrawer({ onRestartTour }: HelpDrawerProps) {
         <div className="flex items-center justify-between p-5 border-b border-border/20">
           <div className="flex items-center gap-2">
             <HelpCircle className="w-5 h-5 text-[var(--primary-text)]" />
-            <h3 className="text-sm font-bold text-foreground">Auriem Help & Support</h3>
+            <h3 className="text-sm font-bold text-foreground">{branding.brandName} Help & Support</h3>
           </div>
           <button
             onClick={() => setIsOpen(false)}

@@ -46,6 +46,7 @@ import { TrendAnalysisChart } from './TrendAnalysisChart';
 import { AIChat } from './AIChat';
 import { ComparisonView } from './ComparisonView';
 import { ClinicalSection } from './ClinicalSection';
+import { useBranding } from '@/hooks/useBranding';
 
 const CustomYAxisTick = (props: any) => {
   const { x, y, payload } = props;
@@ -113,6 +114,7 @@ export function ReportDashboard({
   isSampleReport = false,
   onUploadClick,
 }: ReportDashboardProps) {
+  const { branding } = useBranding();
   const [activeTab, setActiveTab] = useState<'current' | 'trends' | 'ai-chat' | 'compare'>('current');
   const [currentSubTab, setCurrentSubTab] = useState<'clinical' | 'biomarker-analysis'>('clinical');
   const [selectedPanel, setSelectedPanel] = useState<string>('All');
@@ -1237,11 +1239,17 @@ export function ReportDashboard({
       {/* ── Patient Banner ─────────────────────────────────── */}
       <section className="glass-card rounded-2xl p-6 border-border/40 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-6 mb-8">
         <div className="flex items-center gap-4 w-full lg:w-auto">
-          <img
-            src="/logo/YC_Icon_GS.png"
-            alt="Patient Avatar"
-            className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border/40"
-          />
+          {branding.logoIconUrl ? (
+            <img
+              src={branding.logoIconUrl}
+              alt={`${branding.brandName} Icon`}
+              className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border/40"
+            />
+          ) : (
+            <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-primary/20 text-primary-text font-black text-lg border border-border/40 shrink-0">
+              {branding.brandName.substring(0, 2).toUpperCase()}
+            </div>
+          )}
           <div>
             <h3 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>
               {pName}
@@ -1276,11 +1284,17 @@ export function ReportDashboard({
           ))}
         </div>
 
-        <img
-          src="/logo/YC_Letterform_WG.png"
-          alt="YC Letterform Logo"
-          className="h-10 w-auto object-contain shrink-0 mx-4 hidden lg:block"
-        />
+        {branding.logoLetterformUrl ? (
+          <img
+            src={branding.logoLetterformUrl}
+            alt={`${branding.brandName} Letterform`}
+            className="h-10 w-auto object-contain shrink-0 mx-4 hidden lg:block"
+          />
+        ) : (
+          <span className="font-semibold text-lg shrink-0 mx-4 hidden lg:block text-muted-foreground">
+            {branding.brandName}
+          </span>
+        )}
 
         <button
           onClick={() => setShowApiLogs(true)}

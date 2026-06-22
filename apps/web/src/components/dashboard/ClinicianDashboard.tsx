@@ -28,6 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
+import { useBranding } from '@/hooks/useBranding';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip } from 'recharts';
 import type {
   PatientRecord,
@@ -126,6 +127,7 @@ export function ClinicianDashboard({
   isApptModalOpen,
   setIsApptModalOpen,
 }: ClinicianDashboardProps) {
+  const { branding } = useBranding();
   const [staffView, setStaffView] = useState<'overview' | 'patients' | 'appointments' | 'activity'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [compareDragging, setCompareDragging] = useState<'A' | 'B' | null>(null);
@@ -420,11 +422,17 @@ export function ClinicianDashboard({
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <img
-            src="/logo/040523 YC LogoDeck_Icon-GS.jpg"
-            alt="YC Logo"
-            className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border/40"
-          />
+          {branding.logoIconUrl ? (
+            <img
+              src={branding.logoIconUrl}
+              alt={`${branding.brandName} Icon`}
+              className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border/40"
+            />
+          ) : (
+            <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-primary/20 text-primary-text font-black text-lg border border-border/40 shrink-0">
+              {branding.brandName.substring(0, 2).toUpperCase()}
+            </div>
+          )}
           <div>
             <h3 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--foreground)' }}>
               {selectedPatient.firstName} {selectedPatient.lastName}
@@ -1006,11 +1014,17 @@ export function ClinicianDashboard({
                     className="glass-card rounded-xl p-5 border-border/40 hover:border-[var(--primary)]/65 hover:shadow-md cursor-pointer transition-all flex flex-col gap-4 bg-card group"
                   >
                     <div className="flex items-center gap-3">
-                      <img
-                        src="/logo/040523 YC LogoDeck_Main-FC.jpg"
-                        alt="YC Logo"
-                        className="w-11 h-11 rounded-lg object-cover transition-transform group-hover:scale-105 border border-border/40 shrink-0"
-                      />
+                      {branding.logoIconUrl ? (
+                        <img
+                          src={branding.logoIconUrl}
+                          alt={`${branding.brandName} Icon`}
+                          className="w-11 h-11 rounded-lg object-cover transition-transform group-hover:scale-105 border border-border/40 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-11 h-11 rounded-lg flex items-center justify-center bg-primary/20 text-primary-text font-black text-xs border border-border/40 shrink-0">
+                          {branding.brandName.substring(0, 2).toUpperCase()}
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-xs text-foreground truncate">
                           {patient.firstName} {patient.lastName}

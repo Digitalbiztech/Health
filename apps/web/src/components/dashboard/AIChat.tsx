@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { sendChatMessage, getChatHistory, createChatSession, getChatSessions, type ChatSessionPayload } from '@/lib/api';
 import type { Biomarker, PatientRecord } from '@/types/dashboard';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBranding } from '@/hooks/useBranding';
 
 interface ChatProps {
   biomarkers: Biomarker[];
@@ -170,6 +171,7 @@ const STATIC_QA_RESPONSES: Record<string, string> = {
 export function AIChat({ biomarkers, patient, isSampleReport }: ChatProps) {
   const { principal } = useAuth();
   const isDoctor = principal?.accountType === 'STAFF';
+  const { branding } = useBranding();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -205,8 +207,8 @@ export function AIChat({ biomarkers, patient, isSampleReport }: ChatProps) {
     async function loadHistory() {
       if (isSampleReport) {
         const greeting = isDoctor
-          ? `Hello Doctor. I am your Clinical Diagnostic co-pilot. I can help analyze this patient's report, track longitudinal biomarker trends, and reference medical guidelines. How can I assist you with this patient's case today?`
-          : `Hello! I am your Personalized Medical Care chat agent. I can review your lab results, analyze trends, and even read medical flowcharts or guidelines if you upload them. How can I help you today?`;
+          ? `Hello Doctor. I am your ${branding.brandName} Clinical Diagnostic co-pilot. I can help analyze this patient's report, track longitudinal biomarker trends, and reference medical guidelines. How can I assist you with this patient's case today?`
+          : `Hello! I am your ${branding.brandName} Personalized Medical Care chat agent. I can review your lab results, analyze trends, and even read medical flowcharts or guidelines if you upload them. How can I help you today?`;
         setMessages([{ role: 'assistant', content: greeting }]);
         setSessionId('sample-session-001');
         return;
@@ -218,8 +220,8 @@ export function AIChat({ biomarkers, patient, isSampleReport }: ChatProps) {
         } else {
           // No history, set the default greeting!
           const greeting = isDoctor
-            ? `Hello Doctor. I am your Clinical Diagnostic co-pilot. I can help analyze this patient's report, track longitudinal biomarker trends, and reference medical guidelines. How can I assist you with this patient's case today?`
-            : `Hello! I am your Personalized Medical Care chat agent. I can review your lab results, analyze trends, and even read medical flowcharts or guidelines if you upload them. How can I help you today?`;
+            ? `Hello Doctor. I am your ${branding.brandName} Clinical Diagnostic co-pilot. I can help analyze this patient's report, track longitudinal biomarker trends, and reference medical guidelines. How can I assist you with this patient's case today?`
+            : `Hello! I am your ${branding.brandName} Personalized Medical Care chat agent. I can review your lab results, analyze trends, and even read medical flowcharts or guidelines if you upload them. How can I help you today?`;
           setMessages([{ role: 'assistant', content: greeting }]);
         }
         if (history.sessionId) {
@@ -422,7 +424,7 @@ export function AIChat({ biomarkers, patient, isSampleReport }: ChatProps) {
               <Menu className="w-4 h-4" />
             </button>
             <div className="w-9 h-9 rounded-full border border-border flex items-center justify-center font-serif text-sm font-bold text-[var(--primary-text)] bg-background shrink-0 select-none shadow-inner">
-              C
+              {branding.brandName.substring(0, 1).toUpperCase()}
             </div>
             <div>
               <h5 className="text-[11px] font-bold tracking-wider text-[var(--primary-text)] uppercase">
@@ -462,7 +464,7 @@ export function AIChat({ biomarkers, patient, isSampleReport }: ChatProps) {
                 {/* Avatar */}
                 {isAI ? (
                   <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center bg-[var(--primary-glow)] shrink-0 font-serif text-xs font-bold text-[var(--primary-text)] select-none shadow-md">
-                    C
+                    {branding.brandName.substring(0, 1).toUpperCase()}
                   </div>
                 ) : (
                   <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center bg-muted/50 shrink-0 text-[var(--primary-text)] select-none shadow-md">
@@ -491,7 +493,7 @@ export function AIChat({ biomarkers, patient, isSampleReport }: ChatProps) {
           {loading && (
             <div className="flex items-start gap-3 w-full justify-start animate-pulse">
               <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center bg-[var(--primary-glow)] shrink-0 font-serif text-xs font-bold text-[var(--primary-text)] select-none shadow-md">
-                C
+                {branding.brandName.substring(0, 1).toUpperCase()}
               </div>
               <div className="bg-muted/30 border border-border/80 text-muted-foreground rounded-2xl rounded-tl-none p-4 flex items-center gap-2.5 text-xs shadow-sm max-w-[650px] w-full">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--primary-text)]" />
@@ -538,8 +540,8 @@ export function AIChat({ biomarkers, patient, isSampleReport }: ChatProps) {
             onChange={(e) => setInput(e.target.value)}
             placeholder={
               isDoctor
-                ? "Ask Auriem AI about clinical insights, trends, or guidelines for this patient..."
-                : "Ask Auriem AI about your clinical laboratory report insights..."
+                ? `Ask ${branding.brandName} AI about clinical insights, trends, or guidelines for this patient...`
+                : `Ask ${branding.brandName} AI about your clinical laboratory report insights...`
             }
             className="flex-1 text-xs border border-border p-3 rounded-xl bg-background text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[var(--primary-text)] focus:ring-1 focus:ring-[var(--primary-text)]"
             onKeyDown={(e) => {

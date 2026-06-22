@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { X, Compass, Eye, ShieldCheck, BookOpen } from 'lucide-react';
 import type { AccountType } from '@/contexts/AuthContext';
+import { useBranding } from '@/hooks/useBranding';
 
 interface WelcomeModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export default function WelcomeModal({
   onSkip,
 }: WelcomeModalProps) {
   const navigate = useNavigate();
+  const { branding } = useBranding();
 
   if (!isOpen) return null;
 
@@ -41,13 +43,19 @@ export default function WelcomeModal({
 
         {/* Header Section */}
         <div className="flex flex-col items-center text-center gap-3">
-          <div className="p-3.5 rounded-2xl bg-[var(--primary)]/10 border border-[var(--primary)]/20 animate-float">
-            <img height={120} width={120} src="/logo/YC_Letterform_WH.png" alt="company log0" />
-          </div>
+          {branding.logoLetterformUrl ? (
+            <div className="p-3.5 rounded-2xl bg-[var(--primary)]/10 border border-[var(--primary)]/20 animate-float">
+              <img height={120} width={120} src={branding.logoLetterformUrl} alt={`${branding.brandName} Logo`} className="object-contain" />
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl bg-[var(--primary)]/10 border border-[var(--primary)]/20 animate-float flex items-center justify-center min-w-[120px] min-h-[40px]">
+              <span className="text-xl font-bold text-foreground">{branding.brandName}</span>
+            </div>
+          )}
 
           <div>
             <h2 className="text-2xl font-bold text-foreground tracking-tight">
-              Welcome to Health Dashboard
+              Welcome to {branding.brandName}
             </h2>
             <p className="text-sm text-muted-foreground mt-2 max-w-sm">
               {isStaff

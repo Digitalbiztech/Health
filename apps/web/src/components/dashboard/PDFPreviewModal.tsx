@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { PremiumPDFDocument } from '../PremiumPDFDocument';
 import { convertToLabReport } from './utils';
 import type { CompleteReportData } from '@/types/dashboard';
+import { useBranding } from '@/hooks/useBranding';
 
 interface PDFPreviewModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export function PDFPreviewModal({
   reportData,
   healthScore,
 }: PDFPreviewModalProps) {
+  const { branding } = useBranding();
   const [loading, setLoading] = useState(true);
   const [pdfUrl, setPdfUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -38,10 +40,23 @@ export function PDFPreviewModal({
     async function generatePdf() {
       try {
         const labReport = convertToLabReport(reportData!, healthScore);
-        const logoUrl = window.location.origin + '/logo/041323 YC LogoDeck_Main-WG copy.png';
-        const iconLogoUrl = window.location.origin + '/logo/040523 YC LogoDeck_Icon-GS.jpg';
+        const logoUrl = branding.logoMainUrl
+          ? (branding.logoMainUrl.startsWith('http') ? branding.logoMainUrl : window.location.origin + branding.logoMainUrl)
+          : window.location.origin + '/logo/041323 YC LogoDeck_Main-WG copy.png';
+        const iconLogoUrl = branding.logoIconUrl
+          ? (branding.logoIconUrl.startsWith('http') ? branding.logoIconUrl : window.location.origin + branding.logoIconUrl)
+          : window.location.origin + '/logo/040523 YC LogoDeck_Icon-GS.jpg';
 
-        const doc = <PremiumPDFDocument report={labReport} logoUrl={logoUrl} iconLogoUrl={iconLogoUrl} />;
+        const doc = (
+          <PremiumPDFDocument
+            report={labReport}
+            logoUrl={logoUrl}
+            iconLogoUrl={iconLogoUrl}
+            brandName={branding.brandName}
+            showPoweredBy={branding.showPoweredBy}
+            poweredByText={branding.poweredByText}
+          />
+        );
         const blob = await pdf(doc).toBlob();
 
         if (active) {
