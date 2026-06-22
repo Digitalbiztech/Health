@@ -13,6 +13,7 @@ import patientRoutes from './routes/patient.routes.js';
 import appointmentRoutes from './routes/appointment.routes.js';
 import taskRoutes from './routes/task.routes.js';
 import chatRoutes from './routes/chat.routes.js';
+import brandingRoutes from './routes/branding.routes.js';
 import { extractionService, ExtractionServiceError } from './services/extractionService.js';
 
 // BullMQ workers are DISABLED to avoid Redis usage. Report processing now runs
@@ -68,6 +69,7 @@ app.use('/patients', patientRoutes);
 app.use('/appointments', appointmentRoutes);
 app.use('/tasks', taskRoutes);
 app.use('/chat', chatRoutes);
+app.use('/branding', brandingRoutes);
 
 // ─── Error Handling ──────────────────────────────────────────
 

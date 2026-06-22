@@ -27,12 +27,41 @@ async function getOrCreateMockPrincipal(accountType: 'STAFF' | 'PATIENT'): Promi
 
 async function resolveMockPrincipal(accountType: 'STAFF' | 'PATIENT'): Promise<AuthenticatedPrincipal> {
   // Find or create default organization
-  let org = await prisma.organization.findFirst();
+  let org = await prisma.organization.findFirst({
+    include: { branding: true },
+  });
   if (!org) {
     org = await prisma.organization.create({
       data: {
         name: 'Mock Organization',
         slug: 'mock-organization',
+        branding: {
+          create: {
+            brandName: 'Health Dashboard',
+            tagline: 'AI-Powered Clinical Insights',
+            logoMainUrl: '/logo/041323 YC LogoDeck_Main-WG copy.png',
+            logoIconUrl: '/logo/040523 YC LogoDeck_Icon-GS.jpg',
+            logoLetterformUrl: '/logo/YC_Letterform_WH.png',
+            faviconUrl: '/logo/040523 YC LogoDeck_Icon-GS.jpg',
+            showPoweredBy: true,
+            poweredByText: 'POWERED BY HUUMANIZE',
+          },
+        },
+      },
+      include: { branding: true },
+    });
+  } else if (!org.branding) {
+    await prisma.organizationBranding.create({
+      data: {
+        organizationId: org.id,
+        brandName: 'Health Dashboard',
+        tagline: 'AI-Powered Clinical Insights',
+        logoMainUrl: '/logo/041323 YC LogoDeck_Main-WG copy.png',
+        logoIconUrl: '/logo/040523 YC LogoDeck_Icon-GS.jpg',
+        logoLetterformUrl: '/logo/YC_Letterform_WH.png',
+        faviconUrl: '/logo/040523 YC LogoDeck_Icon-GS.jpg',
+        showPoweredBy: true,
+        poweredByText: 'POWERED BY HUUMANIZE',
       },
     });
   }

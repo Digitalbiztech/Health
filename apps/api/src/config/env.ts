@@ -36,6 +36,9 @@ const envSchema = z.object({
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
   GEMINI_API_KEY: z.string().optional(),
   MISTRAL_API_KEY: z.string().optional(),
+
+  // Branding Cache TTL
+  BRANDING_CACHE_TTL_MS: z.coerce.number().default(300_000),
 });
 
 const parsed = envSchema.safeParse(process.env);
