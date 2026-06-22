@@ -98,11 +98,60 @@ model Organization {
   appointments  Appointment[]
   tasks         Task[]
   documentChunks DocumentChunk[]
+  branding      OrganizationBranding?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("organizations")
+}
+
+model OrganizationBranding {
+  id               String  @id @default(uuid())
+  
+  // ── Identity ──
+  brandName        String  @default("Auriem") @map("brand_name")
+  tagline          String? // e.g., "AI-Powered Clinical Insights"
+  poweredByText    String  @default("POWERED BY HUUMANIZE") @map("powered_by_text")
+  
+  // ── Logos (Supabase Storage URLs) ──
+  logoMainUrl      String? @map("logo_main_url")       // Full horizontal logo
+  logoIconUrl      String? @map("logo_icon_url")       // Square icon/favicon
+  logoLetterformUrl String? @map("logo_letterform_url") // Compact lettermark
+  faviconUrl       String? @map("favicon_url")
+  
+  // ── Color Palette (stored as HSL strings for CSS var injection) ──
+  // Light mode
+  colorPrimary          String @default("25 31% 75%") @map("color_primary")
+  colorPrimaryForeground String @default("0 0% 100%") @map("color_primary_foreground")
+  colorPrimaryText      String @default("25 20% 48%") @map("color_primary_text")
+  colorPrimaryGlow      String @default("25 31% 75%") @map("color_primary_glow")
+  colorAccent           String @default("30 11% 69%") @map("color_accent")
+  
+  // Dark mode overrides
+  colorPrimaryDark          String @default("27 15% 49%") @map("color_primary_dark")
+  colorPrimaryForegroundDark String @default("0 0% 100%") @map("color_primary_fg_dark")
+  colorPrimaryTextDark      String @default("27 25% 65%") @map("color_primary_text_dark")
+  colorAccentDark           String @default("30 11% 45%") @map("color_accent_dark")
+  
+  // ── PDF Theme ──
+  pdfAccentColor    String @default("#D4BDAD") @map("pdf_accent_color") // Hex for react-pdf
+  pdfHeaderBg       String @default("#1f2937") @map("pdf_header_bg")
+  pdfThemePreset    String @default("warm-gold") @map("pdf_theme_preset")
+  
+  // ── Feature Flags (plan-gated) ──
+  showPoweredBy     Boolean @default(true) @map("show_powered_by")
+  customFontsEnabled Boolean @default(false) @map("custom_fonts_enabled")
+  fontFamily        String? @map("font_family") // Google Fonts family name
+  
+  // ── Relation ──
+  organizationId String       @unique @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@map("organization_brandings")
 }
 
 // ============================================
