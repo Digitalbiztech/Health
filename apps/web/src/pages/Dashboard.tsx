@@ -32,9 +32,11 @@ import { SAMPLE_REPORT } from '@/data/sampleReportData';
 
 import { exportCSV } from '@/components/dashboard/utils';
 import { PDFPreviewModal } from '@/components/dashboard/PDFPreviewModal';
+import { useBranding } from '@/hooks/useBranding';
 
 export default function Dashboard() {
   const { principal, signOut, principalLoading } = useAuth();
+  const { branding } = useBranding();
   const [viewState, setViewState] = useState<DashboardState>('UPLOAD');
   const [patientView, setPatientView] = useState<'home' | 'upload'>('upload');
   const [patientUploads, setPatientUploads] = useState<UploadRecord[]>([]);
@@ -578,11 +580,17 @@ export default function Dashboard() {
               }
             }}
           >
-            <img
-              src="/logo/041323 YC LogoDeck_Main-WG copy.png"
-              alt="Auriem Logo"
-              className="h-10 w-auto object-contain"
-            />
+            {branding.logoMainUrl ? (
+              <img
+                src={branding.logoMainUrl}
+                alt={`${branding.brandName} Logo`}
+                className="h-10 w-auto object-contain"
+              />
+            ) : (
+              <span className="text-xl font-bold tracking-tight" style={{ color: 'var(--foreground)' }}>
+                {branding.brandName}
+              </span>
+            )}
           </div>
 
           {/* Right — Actions */}
@@ -844,11 +852,13 @@ export default function Dashboard() {
       />
 
       {/* Footer */}
-      <footer className="relative z-10 flex items-center justify-center py-6 mt-12">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-35" style={{ color: 'var(--muted-foreground)' }}>
-          POWERED BY HUUMANIZE
-        </p>
-      </footer>
+      {branding.showPoweredBy && (
+        <footer className="relative z-10 flex items-center justify-center py-6 mt-12">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-35" style={{ color: 'var(--muted-foreground)' }}>
+            {branding.poweredByText || 'POWERED BY HUUMANIZE'}
+          </p>
+        </footer>
+      )}
     </div>
   );
 }

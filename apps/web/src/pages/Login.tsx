@@ -7,10 +7,12 @@ import { apiFetch, BYPASS_AUTH } from '@/lib/api';
 import { useAuth, type AccountType } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
+import { useBranding } from '@/hooks/useBranding';
 
 export default function Login() {
   const navigate = useNavigate();
   const { setPreferredAccountType, mockLogin } = useAuth();
+  const { branding } = useBranding();
 
   // ── State ──────────────────────────────────────────────────
   const [isSignUp, setIsSignUp] = useState(false);
@@ -134,11 +136,17 @@ export default function Login() {
 
       {/* Logo */}
       <div className="mb-8 animate-fade-in-up flex flex-col items-center">
-        <img
-          src="/logo/041323 YC LogoDeck_Main-WG copy.png"
-          alt="Auriem Logo"
-          className="h-24 w-auto object-contain"
-        />
+        {branding.logoMainUrl ? (
+          <img
+            src={branding.logoMainUrl}
+            alt={`${branding.brandName} Logo`}
+            className="h-24 w-auto object-contain"
+          />
+        ) : (
+          <span className="text-3xl font-bold tracking-tight" style={{ color: 'var(--foreground)' }}>
+            {branding.brandName}
+          </span>
+        )}
       </div>
 
       {/* Card */}
@@ -435,12 +443,14 @@ export default function Login() {
       </div>
 
       {/* Footer */}
-      <p
-        className="mt-8 text-[10px] font-semibold uppercase tracking-[0.3em] opacity-35 animate-fade-in-up"
-        style={{ color: 'var(--muted-foreground)', animationDelay: '0.2s' }}
-      >
-        POWERED BY HUUMANIZE
-      </p>
+      {branding.showPoweredBy && (
+        <p
+          className="mt-8 text-[10px] font-semibold uppercase tracking-[0.3em] opacity-35 animate-fade-in-up"
+          style={{ color: 'var(--muted-foreground)', animationDelay: '0.2s' }}
+        >
+          {branding.poweredByText || 'POWERED BY HUUMANIZE'}
+        </p>
+      )}
     </div>
   );
 }
