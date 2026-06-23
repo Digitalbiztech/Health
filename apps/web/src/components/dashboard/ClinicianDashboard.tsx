@@ -23,14 +23,12 @@ import {
   Heart,
   AlertTriangle,
   BarChart2,
-  Palette,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 import { useBranding } from '@/hooks/useBranding';
-import { useAuth } from '@/contexts/AuthContext';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip } from 'recharts';
 import type {
   PatientRecord,
@@ -49,7 +47,6 @@ import { TaskSidebar } from './TaskSidebar';
 import { OnboardPatientModal } from './OnboardPatientModal';
 import { AppointmentModal } from './AppointmentModal';
 import { ClinicianUploadModal } from './ClinicianUploadModal';
-import { BrandingAdmin } from './BrandingAdmin';
 
 interface ClinicianDashboardProps {
   patients: PatientRecord[];
@@ -131,8 +128,7 @@ export function ClinicianDashboard({
   setIsApptModalOpen,
 }: ClinicianDashboardProps) {
   const { branding } = useBranding();
-  const { principal } = useAuth();
-  const [staffView, setStaffView] = useState<'overview' | 'patients' | 'appointments' | 'activity' | 'branding'>('overview');
+  const [staffView, setStaffView] = useState<'overview' | 'patients' | 'appointments' | 'activity'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [compareDragging, setCompareDragging] = useState<'A' | 'B' | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -1529,10 +1525,6 @@ export function ClinicianDashboard({
     { id: 'appointments', label: 'Appointments', icon: CalendarDays },
     { id: 'activity', label: 'Activity', icon: Activity },
   ];
-  if (principal?.accountType === 'STAFF' && principal.role === 'ADMIN') {
-    navItems.push({ id: 'branding', label: 'Branding', icon: Palette });
-  }
-
   // Coordinate staff tabs and clinicianTab
   const mainContent = selectedPatient ? (
     patientCaseFile
@@ -1540,8 +1532,6 @@ export function ClinicianDashboard({
     renderOverview()
   ) : staffView === 'appointments' ? (
     renderAppointments()
-  ) : staffView === 'branding' ? (
-    <BrandingAdmin />
   ) : (
     directoryAndActivity
   );
