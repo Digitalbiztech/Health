@@ -20,6 +20,7 @@ import {
   Search,
   Terminal,
   ShieldAlert,
+  ArrowRight,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -99,6 +100,7 @@ interface ReportDashboardProps {
   setCompareReportB: (r: CompleteReportData | null) => void;
   isSampleReport?: boolean;
   onUploadClick?: () => void;
+  setReportData?: (r: CompleteReportData | null) => void;
 }
 
 export function ReportDashboard({
@@ -113,8 +115,32 @@ export function ReportDashboard({
   setCompareReportB,
   isSampleReport = false,
   onUploadClick,
+  setReportData,
 }: ReportDashboardProps) {
   const { branding } = useBranding();
+
+  // Unique completed reports timeline sorting & parsing helpers
+  const allReports = [reportData, ...comparisonReports]
+    .filter((r): r is CompleteReportData => r !== null)
+    .filter((r, i, a) => a.findIndex((x) => x.id === r.id) === i);
+
+  const getReportTimestamp = (r: CompleteReportData) => {
+    const dateStr = r.reports?.[0]?.createdAt || (r as any).createdAt || (r as any).extraction?.createdAt;
+    if (!dateStr) return 0;
+    const t = new Date(dateStr).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
+  const getReportDate = (r: CompleteReportData) => {
+    const dateStr = r.reports?.[0]?.createdAt || (r as any).createdAt || (r as any).extraction?.createdAt;
+    if (!dateStr) return 'Recent';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'Recent';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const sortedReports = [...allReports].sort((a, b) => getReportTimestamp(a) - getReportTimestamp(b));
+
   const [activeTab, setActiveTab] = useState<'current' | 'trends' | 'ai-chat' | 'compare'>('current');
   const [currentSubTab, setCurrentSubTab] = useState<'clinical' | 'biomarker-analysis'>('clinical');
   const [selectedPanel, setSelectedPanel] = useState<string>('All');
@@ -1333,6 +1359,114 @@ export function ReportDashboard({
             <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
               {healthScore >= 80 ? 'Excellent lab results' : healthScore >= 60 ? 'Moderate anomalies' : 'Action recommended'}
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Timeline Chart ─────────────────────────────────── */}
+      <section className="glass-card rounded-2xl p-6 border-border/40 shadow-sm relative overflow-hidden mb-8">
+        <div className="flex items-center gap-2 mb-8">
+          <Activity className="w-4 h-4 text-[var(--primary-text)]" />
+          <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--primary-text)]">
+            Report Timeline &amp; Progress
+          </h4>
+        </div>
+
+        <div className="relative flex justify-between items-center w-full min-h-[220px] py-6 px-10 overflow-x-auto select-none gap-6">
+          {/* Horizontal Connection Track Line */}
+          <div className="absolute left-16 right-16 top-[50%] h-[2px] bg-border/40 -translate-y-1/2 z-0" />
+
+          {sortedReports.map((r, index) => {
+            const isSelected = r.id === reportData.id;
+            const isOdd = index % 2 === 0;
+            const reportDate = getReportDate(r);
+            const label = r.id === 'sample-report-001' ? 'Sample Lab Report' : r.reports?.[0]?.title || 'Clinical Lab Report';
+
+            return (
+              <div
+                key={r.id}
+                onClick={() => {
+                  if (setReportData) {
+                    setReportData(r);
+                  }
+                }}
+                className="flex flex-col items-center relative flex-1 z-10 cursor-pointer min-w-[120px]"
+              >
+                {/* Tooltip Card (above the node) */}
+                {isOdd && (
+                  <div className="absolute bottom-full mb-4 flex flex-col items-center w-36 transition-all duration-300 hover:scale-105">
+                    <div className="bg-card border border-border/50 rounded-xl py-2 px-3 shadow-md text-center w-full">
+                      <p className="font-extrabold text-[11px] text-foreground tracking-tight leading-tight">{label}</p>
+                      <p className="text-[9px] text-muted-foreground mt-1 font-medium">{reportDate}</p>
+                    </div>
+                    {/* Triangle pointing down */}
+                    <div className="w-2.5 h-2.5 bg-card border-r border-b border-border/50 rotate-45 -mt-[5px] z-0" />
+                  </div>
+                )}
+
+                {/* Circle Node on the line */}
+                <div className="relative flex items-center justify-center">
+                  {isSelected ? (
+                    /* Selected node with double ring */
+                    <div className="w-10 h-10 rounded-full bg-card border-2 border-orange-400 p-[2px] flex items-center justify-center shadow-lg transition-transform duration-300 scale-110">
+                      <div className="w-full h-full rounded-full bg-orange-500 flex items-center justify-center text-white">
+                        <FileText className="w-4.5 h-4.5" />
+                      </div>
+                    </div>
+                  ) : (
+                    /* Normal completed report node */
+                    <div className="w-10 h-10 rounded-full bg-card border border-border/40 flex items-center justify-center shadow-md hover:border-teal-400 hover:scale-105 transition-all duration-200">
+                      <div className="w-7.5 h-7.5 rounded-full bg-teal-600 flex items-center justify-center text-white">
+                        <FileText className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tooltip Card (below the node) */}
+                {!isOdd && (
+                  <div className="absolute top-full mt-4 flex flex-col items-center w-36 transition-all duration-300 hover:scale-105">
+                    {/* Triangle pointing up */}
+                    <div className="w-2.5 h-2.5 bg-card border-l border-t border-border/50 rotate-45 -mb-[5px] z-0" />
+                    <div className="bg-card border border-border/50 rounded-xl py-2 px-3 shadow-md text-center w-full">
+                      <p className="font-extrabold text-[11px] text-foreground tracking-tight leading-tight">{label}</p>
+                      <p className="text-[9px] text-muted-foreground mt-1 font-medium">{reportDate}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Action Plan Node */}
+          <div
+            onClick={() => {
+              setActiveTab('current');
+              setCurrentSubTab('clinical');
+              setTimeout(() => {
+                const el = document.getElementById('report-tour-summary');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }, 100);
+            }}
+            className="flex flex-col items-center relative flex-1 z-10 cursor-pointer min-w-[120px]"
+          >
+            {/* Tooltip Card/Button (always above the node) */}
+            <div className="absolute bottom-full mb-4 flex flex-col items-center w-36 transition-all duration-300 hover:scale-105">
+              <button className="bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-[11px] tracking-wide py-2.5 px-3 rounded-xl shadow-md border-0 w-full text-center cursor-pointer transition-colors">
+                Go To Action Plan
+              </button>
+              {/* Orange triangle pointing down */}
+              <div className="w-2.5 h-2.5 bg-orange-500 rotate-45 -mt-[5px] z-0" />
+            </div>
+
+            {/* Circle Node (white/gray border with orange right-pointing arrow) */}
+            <div className="relative flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-white border-2 border-orange-500/80 flex items-center justify-center shadow-md hover:scale-105 transition-all duration-200">
+                <ArrowRight className="w-4.5 h-4.5 text-orange-500" />
+              </div>
+            </div>
           </div>
         </div>
       </section>
