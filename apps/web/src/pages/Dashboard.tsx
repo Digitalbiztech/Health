@@ -819,6 +819,7 @@ export default function Dashboard() {
                 setCompareReportB={setCompareReportB}
                 isSampleReport={isSampleReport}
                 onUploadClick={handleUploadClickFromSample}
+                setReportData={handleSetReportData}
               />
             )}
           </>
