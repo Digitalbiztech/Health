@@ -136,3 +136,42 @@ export async function getChatSessions(patientId?: string): Promise<ChatSessionPa
   return res.data;
 }
 
+// ─── Branding Admin API ──────────────────────────────────────
+
+import type { TenantBranding } from '@app/shared';
+
+/**
+ * Fetch the current organization's branding configuration.
+ */
+export async function getBrandingMe(): Promise<TenantBranding> {
+  const res = await apiFetch<{ data: TenantBranding }>('/branding/me');
+  return res.data;
+}
+
+/**
+ * Update the current organization's branding configuration.
+ */
+export async function updateBrandingMe(data: Partial<TenantBranding>): Promise<TenantBranding> {
+  const res = await apiFetch<{ data: TenantBranding }>('/branding/me', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+  return res.data;
+}
+
+/**
+ * Upload a logo image for a specific branding slot.
+ * @param file - The image file to upload.
+ * @param slot - One of 'main', 'icon', 'letterform', 'favicon'.
+ */
+export async function uploadBrandingLogo(file: File, slot: string): Promise<TenantBranding> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('slot', slot);
+
+  const res = await apiFetch<{ data: TenantBranding }>('/branding/me/logo', {
+    method: 'POST',
+    body: formData,
+  });
+  return res.data;
+}
