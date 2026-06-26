@@ -135,6 +135,7 @@ model OrganizationBranding {
   colorAccentDark           String @default("30 11% 45%") @map("color_accent_dark")
   
   // ── PDF Theme ──
+  pdfPrimaryColor   String @default("#0DA58E") @map("pdf_primary_color") // Base hex for palette derivation
   pdfAccentColor    String @default("#D4BDAD") @map("pdf_accent_color") // Hex for react-pdf
   pdfHeaderBg       String @default("#1f2937") @map("pdf_header_bg")
   pdfThemePreset    String @default("warm-gold") @map("pdf_theme_preset")

@@ -3,6 +3,7 @@ import type { Biomarker, CompleteReportData } from '@/types/dashboard';
 import { pdf } from '@react-pdf/renderer';
 import { PremiumPDFDocument } from '../PremiumPDFDocument';
 import type { LabReport } from '../../types/lab';
+import { buildPdfPalette } from '@app/shared';
 
 export function calculateAge(dobString: string): number {
   const birthDate = new Date(dobString);
@@ -158,6 +159,9 @@ export async function exportPDF(
         brandName={branding?.brandName}
         showPoweredBy={branding?.showPoweredBy}
         poweredByText={branding?.poweredByText}
+        pdfPalette={buildPdfPalette(branding?.pdf?.primaryColor || '#0DA58E')}
+        accentColor={branding?.pdf?.accentColor}
+        headerBg={branding?.pdf?.headerBg}
       />
     );
     const blob = await pdf(doc).toBlob();

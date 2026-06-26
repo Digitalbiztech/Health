@@ -29,6 +29,7 @@ export interface TenantBranding {
   
   // PDF
   pdf: {
+    primaryColor: string; // hex — base color for auto-derived palette
     accentColor: string;  // hex
     headerBg: string;     // hex
     themePreset: string;
@@ -63,6 +64,7 @@ export const DEFAULT_BRANDING: TenantBranding = {
     },
   },
   pdf: {
+    primaryColor: '#0DA58E',
     accentColor: '#D4BDAD',
     headerBg: '#1f2937',
     themePreset: 'warm-gold',
@@ -70,3 +72,6 @@ export const DEFAULT_BRANDING: TenantBranding = {
   showPoweredBy: true,
   fontFamily: null,
 };
+
+export { buildPdfPalette, DEFAULT_PDF_PALETTE } from './pdfPalette.js';
+export type { PdfPalette } from './pdfPalette.js';

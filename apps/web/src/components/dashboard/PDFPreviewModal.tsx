@@ -6,6 +6,7 @@ import { PremiumPDFDocument } from '../PremiumPDFDocument';
 import { convertToLabReport } from './utils';
 import type { CompleteReportData } from '@/types/dashboard';
 import { useBranding } from '@/hooks/useBranding';
+import { buildPdfPalette } from '@app/shared';
 
 interface PDFPreviewModalProps {
   isOpen: boolean;
@@ -55,6 +56,9 @@ export function PDFPreviewModal({
             brandName={branding.brandName}
             showPoweredBy={branding.showPoweredBy}
             poweredByText={branding.poweredByText}
+            pdfPalette={buildPdfPalette(branding.pdf?.primaryColor || '#0DA58E')}
+            accentColor={branding.pdf?.accentColor}
+            headerBg={branding.pdf?.headerBg}
           />
         );
         const blob = await pdf(doc).toBlob();

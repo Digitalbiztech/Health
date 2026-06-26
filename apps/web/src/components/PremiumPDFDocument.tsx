@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
 
   // ── HEADER (light, dashboard-style) ───────────────────────────────────────
   header: {
-    backgroundColor: SLATE_900,
+    backgroundColor: SLATE_900, // overridden inline
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     borderBottomWidth: 3,
-    borderBottomColor: YC_GOLD,
+    borderBottomColor: YC_GOLD, // overridden inline
   },
   headerBrand: {
     flexDirection: 'row',
@@ -1070,6 +1070,9 @@ const DEFAULT_COLORS = ['#0DA58E', '#06b6d4', '#3b82f6', '#34d399', '#f59e0b', '
 
 
 // ─── PDF Document React-PDF Component ───────────────────────────────────────────
+import type { PdfPalette } from '@app/shared';
+import { DEFAULT_PDF_PALETTE } from '@app/shared';
+
 interface PremiumPDFDocumentProps {
   report: LabReport;
   logoUrl?: string;
@@ -1077,6 +1080,9 @@ interface PremiumPDFDocumentProps {
   brandName?: string;
   showPoweredBy?: boolean;
   poweredByText?: string;
+  pdfPalette?: PdfPalette;
+  accentColor?: string;
+  headerBg?: string;
 }
 
 export function PremiumPDFDocument({
@@ -1086,6 +1092,9 @@ export function PremiumPDFDocument({
   brandName,
   showPoweredBy = true,
   poweredByText,
+  pdfPalette: palette = DEFAULT_PDF_PALETTE,
+  accentColor = YC_GOLD,
+  headerBg = SLATE_900,
 }: PremiumPDFDocumentProps) {
   const allBiomarkers = report.panels.flatMap(p => p.biomarkers);
   const normalCount = allBiomarkers.filter(b => b.status === 'normal').length;
@@ -1097,8 +1106,8 @@ export function PremiumPDFDocument({
   const normalPct = typeof report.healthScore === 'number' ? report.healthScore : (totalCount ? Math.round((normalCount / totalCount) * 100) : 0);
   const flaggedPct = totalCount ? Math.round((flaggedCount / totalCount) * 100) : 0;
 
-  const scoreColor = normalPct >= 80 ? TEAL_BRIGHT : normalPct >= 60 ? '#f59e0b' : '#ef4444';
-  const scoreBg = normalPct >= 80 ? TEAL_TINT : normalPct >= 60 ? '#fffbeb' : '#fef2f2';
+  const scoreColor = normalPct >= 80 ? palette.bright : normalPct >= 60 ? '#f59e0b' : '#ef4444';
+  const scoreBg = normalPct >= 80 ? palette.tint : normalPct >= 60 ? '#fffbeb' : '#fef2f2';
   const generatedDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
   const standardPanels = [
@@ -1160,14 +1169,14 @@ export function PremiumPDFDocument({
       <Page size="A4" style={styles.page}>
 
         {/* ─── HEADER ─── */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: headerBg, borderBottomColor: accentColor }]}>
           {logoUrl ? (
             <Image src={logoUrl} style={styles.logo} />
           ) : (
-            <Text style={{ color: YC_GOLD, fontSize: 13, fontWeight: 'bold' }}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
+            <Text style={{ color: accentColor, fontSize: 13, fontWeight: 'bold' }}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
           )}
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Bloodwork Analysis Report</Text>
+            <Text style={[styles.headerTitle, { color: accentColor }]}>Bloodwork Analysis Report</Text>
             <Text style={styles.headerSubtitle}>Generated: {generatedDate}</Text>
           </View>
         </View>
@@ -1176,10 +1185,10 @@ export function PremiumPDFDocument({
         <View style={styles.patientBanner}>
           <View style={styles.patientInfo}>
             {iconLogoUrl ? (
-              <Image src={iconLogoUrl} style={styles.patientIcon} />
+              <Image src={iconLogoUrl} style={[styles.patientIcon, { borderColor: palette.tint }]} />
             ) : (
-              <View style={styles.patientIconFallback}>
-                <Text style={styles.patientIconFallbackText}>
+              <View style={[styles.patientIconFallback, { backgroundColor: palette.tint, borderColor: palette.border }]}>
+                <Text style={[styles.patientIconFallbackText, { color: palette.primaryDark }]}>
                   {(report.patientName || 'P').trim().charAt(0).toUpperCase()}
                 </Text>
               </View>
@@ -1198,8 +1207,8 @@ export function PremiumPDFDocument({
           </View>
 
           <View style={styles.statContainer}>
-            <View style={[styles.statPill, { borderColor: TEAL_BORDER, backgroundColor: TEAL_TINT }]}>
-              <Text style={[styles.statCount, { color: TEAL_DARK }]}>{normalCount}</Text>
+            <View style={[styles.statPill, { borderColor: palette.border, backgroundColor: palette.tint }]}>
+              <Text style={[styles.statCount, { color: palette.primaryDark }]}>{normalCount}</Text>
               <Text style={styles.statLabel}>Normal</Text>
             </View>
             <View style={[styles.statPill, { borderColor: '#fee2e2', backgroundColor: '#fef2f2' }]}>
@@ -1230,7 +1239,7 @@ export function PremiumPDFDocument({
             <Text style={styles.sectionHeadingSubtitle}>Holistic body metrics & biomarkers summary</Text>
           </View>
           <View style={styles.sectionHeadingPill}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: TEAL_PRIMARY }} />
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: palette.primary }} />
             <Text style={styles.sectionHeadingPillText}>This Report</Text>
           </View>
         </View>
@@ -1350,7 +1359,7 @@ export function PremiumPDFDocument({
                 <Text style={[styles.conditionLabel, { marginTop: 6 }]}>Average Panel Score</Text>
                 <View style={[styles.conditionValueRow, { marginTop: 2 }]}>
                   <Text style={styles.conditionValue}>{avgPanelScore}%</Text>
-                  <Text style={styles.conditionDelta}>▲ {Math.max(1, Math.round(avgPanelScore / 25))}%</Text>
+                  <Text style={[styles.conditionDelta, { backgroundColor: palette.primaryDark }]}>▲ {Math.max(1, Math.round(avgPanelScore / 25))}%</Text>
                 </View>
               </View>
               <View style={styles.conditionRangePill}>
@@ -1377,7 +1386,7 @@ export function PremiumPDFDocument({
                       y={y}
                       width={30}
                       height={Math.max(1, barHeight)}
-                      fill={YC_GOLD}
+                      fill={accentColor}
                       rx={3}
                     />
                   );
@@ -1583,10 +1592,10 @@ export function PremiumPDFDocument({
 
         {/* ─── AI CLINICAL SUMMARY ─── */}
         {report.summary && (
-          <View style={styles.summaryContainer} wrap={false}>
+          <View style={[styles.summaryContainer, { borderLeftColor: palette.primary }]} wrap={false}>
             <View style={styles.summaryHeader}>
-              <View style={styles.summaryBadge}>
-                <Text style={styles.summaryBadgeText}>AI ANALYSIS</Text>
+              <View style={[styles.summaryBadge, { backgroundColor: palette.tint }]}>
+                <Text style={[styles.summaryBadgeText, { color: palette.primaryDark }]}>AI ANALYSIS</Text>
               </View>
               <Text style={styles.summaryTitle}>Clinical Summary</Text>
             </View>
@@ -1707,13 +1716,13 @@ export function PremiumPDFDocument({
         {report.aiInsights && report.aiInsights.length > 0 && (
           <View style={styles.insightsGrid} wrap={false}>
             <View style={styles.insightsHeader}>
-              <View style={styles.insightsHeaderAccent} />
+              <View style={[styles.insightsHeaderAccent, { backgroundColor: palette.primary }]} />
               <Text style={styles.insightsHeaderText}>Key Clinical Findings</Text>
             </View>
             {report.aiInsights.slice(0, 3).map((insight, i) => (
               <View key={i} style={styles.insightCard}>
-                <View style={styles.insightNumber}>
-                  <Text style={{ color: TEAL_DARK }}>{i + 1}</Text>
+                <View style={[styles.insightNumber, { backgroundColor: palette.tint, borderColor: palette.border }]}>
+                  <Text style={{ color: palette.primaryDark, fontWeight: 'bold' }}>{i + 1}</Text>
                 </View>
                 <Text style={styles.insightText}>{insight}</Text>
               </View>
@@ -1746,37 +1755,37 @@ export function PremiumPDFDocument({
       {/* ─── ADDITIONAL PAGES FOR BIOMARKER DETAILED VIEWS ─── */}
       {report.panels.map((panel) => {
         const pPct = panelScore(panel);
-        const pColor = pPct >= 80 ? TEAL_BRIGHT : pPct >= 60 ? '#f59e0b' : '#ef4444';
+        const pColor = pPct >= 80 ? palette.bright : pPct >= 60 ? '#f59e0b' : '#ef4444';
         const flagged = panel.biomarkers.filter(b => b.status !== 'normal');
 
         return (
           <Page size="A4" style={styles.page} key={panel.name}>
 
             {/* Header on sub-pages */}
-            <View style={styles.header}>
+            <View style={[styles.header, { backgroundColor: headerBg, borderBottomColor: accentColor }]}>
               <View style={styles.headerBrand}>
                 {logoUrl ? (
                   <Image src={logoUrl} style={styles.logo} />
                 ) : (
                   <>
-                    <View style={styles.headerLogoCircle}>
-                      <Text style={{ color: SLATE_900, fontSize: 12, fontWeight: 'bold' }}>⚲</Text>
+                    <View style={[styles.headerLogoCircle, { borderColor: headerBg }]}>
+                      <Text style={{ color: headerBg, fontSize: 12, fontWeight: 'bold' }}>⚲</Text>
                     </View>
                     <View>
-                      <Text style={styles.headerBrandName}>{brandName || 'Your Concierge MD'}</Text>
+                      <Text style={[styles.headerBrandName, { color: accentColor }]}>{brandName || 'Your Concierge MD'}</Text>
                       <Text style={styles.headerBrandTag}>Panel Detail</Text>
                     </View>
                   </>
                 )}
               </View>
               <View style={styles.headerTextContainer}>
-                <Text style={styles.headerTitle}>Bloodwork Analysis Report</Text>
+                <Text style={[styles.headerTitle, { color: accentColor }]}>Bloodwork Analysis Report</Text>
                 <Text style={styles.headerSubtitle}>{panel.name}</Text>
               </View>
             </View>
 
             {/* Panel summary card */}
-            <View style={styles.panelHeader}>
+            <View style={[styles.panelHeader, { borderLeftColor: palette.primary }]}>
               <View>
                 <Text style={styles.panelTitle}>{panel.name}</Text>
                 <Text style={styles.panelMeta}>
@@ -2053,8 +2062,8 @@ export function PremiumPDFDocument({
 
                     {/* AI Interpretation */}
                     {m.clinicalInterpretation && (
-                      <View style={[styles.interpretationBox, { marginTop: 8 }]}>
-                        <Text style={styles.interpretationLabel}>AI</Text>
+                      <View style={[styles.interpretationBox, { marginTop: 8, backgroundColor: palette.tint, borderLeftColor: palette.primary, borderColor: palette.border }]}>
+                        <Text style={[styles.interpretationLabel, { color: palette.primaryDark, borderColor: palette.border }]}>AI</Text>
                         <Text style={styles.interpretationText}>{m.clinicalInterpretation}</Text>
                       </View>
                     )}

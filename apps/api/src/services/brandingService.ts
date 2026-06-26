@@ -39,6 +39,7 @@ function mapBranding(dbBranding: any): TenantBranding {
       },
     },
     pdf: {
+      primaryColor: dbBranding.pdfPrimaryColor,
       accentColor: dbBranding.pdfAccentColor,
       headerBg: dbBranding.pdfHeaderBg,
       themePreset: dbBranding.pdfThemePreset,
@@ -118,6 +119,7 @@ export const brandingService = {
       if (data.colors.dark.accent !== undefined) dbData.colorAccentDark = data.colors.dark.accent;
     }
     if (data.pdf) {
+      if (data.pdf.primaryColor !== undefined) dbData.pdfPrimaryColor = data.pdf.primaryColor;
       if (data.pdf.accentColor !== undefined) dbData.pdfAccentColor = data.pdf.accentColor;
       if (data.pdf.headerBg !== undefined) dbData.pdfHeaderBg = data.pdf.headerBg;
       if (data.pdf.themePreset !== undefined) dbData.pdfThemePreset = data.pdf.themePreset;
