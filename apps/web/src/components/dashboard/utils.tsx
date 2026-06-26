@@ -3,7 +3,7 @@ import type { Biomarker, CompleteReportData } from '@/types/dashboard';
 import { pdf } from '@react-pdf/renderer';
 import { PremiumPDFDocument } from '../PremiumPDFDocument';
 import type { LabReport } from '../../types/lab';
-import { buildPdfPalette } from '@app/shared';
+import { buildPdfPalette, type TenantBranding } from '@app/shared';
 
 export function calculateAge(dobString: string): number {
   const birthDate = new Date(dobString);
@@ -128,13 +128,7 @@ export function convertToLabReport(reportData: CompleteReportData, healthScore: 
 export async function exportPDF(
   reportData: CompleteReportData,
   healthScore: number,
-  branding?: {
-    logoMainUrl?: string;
-    logoIconUrl?: string;
-    brandName?: string;
-    showPoweredBy?: boolean;
-    poweredByText?: string;
-  }
+  branding?: TenantBranding
 ) {
   if (!reportData || !reportData.extraction) return;
   const activeReport = reportData.reports?.[0];

@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useBranding } from '@/hooks/useBranding';
 import { getBrandingMe, updateBrandingMe, uploadBrandingLogo } from '@/lib/api';
-import { DEFAULT_BRANDING, type TenantBranding } from '@app/shared';
+import { DEFAULT_BRANDING, type TenantBranding, buildPdfPalette } from '@app/shared';
 
 // ─── Color Helpers ───────────────────────────────────────────
 
@@ -187,9 +187,10 @@ function LivePreview({ draft }: { draft: TenantBranding }) {
           <div className="w-1 h-6 rounded-full" style={{ background: draft.pdf.accentColor }} />
           <span className="text-xs font-bold text-white">{draft.brandName} — PDF Report</span>
         </div>
-        <div className="px-4 py-2 flex items-center gap-2 bg-card">
+        <div className="px-4 py-2 flex items-center gap-3 bg-card">
+          <div className="h-3 w-3 rounded-full animate-pulse" style={{ background: draft.pdf.primaryColor || '#0DA58E' }} title="PDF Primary Color" />
           <div className="h-2 w-20 rounded-full" style={{ background: draft.pdf.accentColor, opacity: 0.5 }} />
-          <div className="h-2 w-32 rounded-full bg-border/40" />
+          <div className="h-2 w-24 rounded-full bg-border/40" />
         </div>
       </div>
 
@@ -206,7 +207,7 @@ function LivePreview({ draft }: { draft: TenantBranding }) {
       <div className="flex flex-col gap-2 p-3 rounded-xl border border-border/30 bg-muted/10">
         <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Palette</span>
         <div className="flex gap-2">
-          {[lightPrimary, lightText, lightAccent, draft.pdf.accentColor, draft.pdf.headerBg].map((c, i) => (
+          {[lightPrimary, lightText, lightAccent, draft.pdf.accentColor, draft.pdf.headerBg, draft.pdf.primaryColor].filter(Boolean).map((c, i) => (
             <div key={i} className="w-8 h-8 rounded-lg border border-border shadow-sm" style={{ background: c }} title={c} />
           ))}
         </div>
@@ -445,7 +446,28 @@ export function BrandingAdmin() {
           {/* ── PDF Theme ── */}
           <SectionHeader icon={FileText} title="PDF Theme" open={openSections.pdf} onToggle={() => toggle('pdf')} />
           {openSections.pdf && (
-            <div className="pl-11 pb-5 flex flex-col gap-3 animate-fade-in">
+            <div className="pl-11 pb-5 flex flex-col gap-4 animate-fade-in">
+              <div className="flex items-center gap-3">
+                <label className="text-xs text-muted-foreground w-32 shrink-0 font-medium">PDF Primary Color</label>
+                <input type="color" value={draft.pdf.primaryColor || '#0DA58E'} onChange={(e) => updatePdf('primaryColor', e.target.value)}
+                  className="w-9 h-9 rounded-lg border border-border cursor-pointer p-0.5" />
+                <span className="text-[10px] font-mono text-muted-foreground">{draft.pdf.primaryColor || '#0DA58E'}</span>
+              </div>
+
+              {(draft.pdf.primaryColor || '#0DA58E') && (
+                <div className="flex flex-col gap-2 p-3 rounded-xl bg-muted/30 border border-border/40">
+                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Derived PDF Palette</span>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(buildPdfPalette(draft.pdf.primaryColor || '#0DA58E')).map(([key, val]) => (
+                      <div key={key} className="flex flex-col items-center gap-1">
+                        <div className="w-8 h-8 rounded-lg border border-border shadow-sm" style={{ backgroundColor: val }} title={`${key}: ${val}`} />
+                        <span className="text-[8px] text-muted-foreground capitalize font-mono">{key.replace('primary', '') || 'base'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <label className="text-xs text-muted-foreground w-32 shrink-0">Accent Color</label>
                 <input type="color" value={draft.pdf.accentColor} onChange={(e) => updatePdf('accentColor', e.target.value)}

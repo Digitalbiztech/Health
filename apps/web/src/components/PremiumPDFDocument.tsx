@@ -65,7 +65,6 @@ const STATUS_LABEL: Record<string, string> = {
 const TEAL_DEEP = '#044E45';   // dark teal — asthma-callout background
 const TEAL_DARK = '#065f46';   // emerald-800 — strong line / heading
 const TEAL_PRIMARY = '#0DA58E';   // brand teal — buttons / primary
-const TEAL_BRIGHT = '#10b981';   // emerald-500 — accents / sparklines
 const TEAL_LIGHT = '#a7f3d0';   // emerald-200 — soft fills
 const TEAL_TINT = '#ecfdf5';   // emerald-50 — card tints
 const TEAL_BORDER = '#d1fae5';   // emerald-100 — soft borders
