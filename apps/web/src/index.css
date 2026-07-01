@@ -32,6 +32,15 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
 
+  --color-status-normal: var(--status-normal);
+  --color-status-normal-bg: var(--status-normal-bg);
+  --color-status-high: var(--status-high);
+  --color-status-high-bg: var(--status-high-bg);
+  --color-status-low: var(--status-low);
+  --color-status-low-bg: var(--status-low-bg);
+  --color-status-critical: var(--status-critical);
+  --color-status-critical-bg: var(--status-critical-bg);
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
