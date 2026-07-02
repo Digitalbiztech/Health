@@ -39,7 +39,7 @@ export default function Login() {
         if (mockLogin) {
           mockLogin(email, accountType);
           toast.success('Signed in successfully (Bypass Mode)!');
-          navigate('/', { replace: true });
+          navigate('/dashboard', { replace: true });
         }
         setLoading(false);
         return;
@@ -76,7 +76,7 @@ export default function Login() {
             });
             setPreferredAccountType('PATIENT');
             toast.success('Account created successfully!');
-            navigate('/', { replace: true });
+            navigate('/dashboard', { replace: true });
           } else {
             toast.success('Account created! Please sign in.');
             setIsSignUp(false);
@@ -112,7 +112,7 @@ export default function Login() {
 
         setPreferredAccountType(accountType);
         toast.success('Signed in successfully!');
-        navigate('/', { replace: true });
+        navigate('/dashboard', { replace: true });
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong';
