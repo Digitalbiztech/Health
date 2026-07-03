@@ -8,6 +8,7 @@ import { useAuth, type AccountType } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
 import { useBranding } from '@/hooks/useBranding';
+import { getDashboardPath } from '@/lib/navigation';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export default function Login() {
         if (mockLogin) {
           mockLogin(email, accountType);
           toast.success('Signed in successfully (Bypass Mode)!');
-          navigate('/dashboard', { replace: true });
+          navigate(getDashboardPath(), { replace: true });
         }
         setLoading(false);
         return;
@@ -76,7 +77,7 @@ export default function Login() {
             });
             setPreferredAccountType('PATIENT');
             toast.success('Account created successfully!');
-            navigate('/dashboard', { replace: true });
+            navigate(getDashboardPath(), { replace: true });
           } else {
             toast.success('Account created! Please sign in.');
             setIsSignUp(false);
@@ -112,7 +113,7 @@ export default function Login() {
 
         setPreferredAccountType(accountType);
         toast.success('Signed in successfully!');
-        navigate('/dashboard', { replace: true });
+        navigate(getDashboardPath(), { replace: true });
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong';
