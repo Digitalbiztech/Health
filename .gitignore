@@ -18,3 +18,5 @@ ui-ux-feedback.md
 DEPLOYMENT_GUIDE.md
 apps/extraction/extraction-bug-fix.md
 Docs/*
+apps/web/src/components/dashboard/ReportDashboard.tsx.bak
+apps/web/src/components/dashboard/ReportDashboard.bak.tsx
