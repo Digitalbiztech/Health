@@ -10,7 +10,6 @@ import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 import Guide from '@/pages/Guide';
 import NotFound from '@/pages/NotFound';
-import Landing from '@/pages/Landing';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,11 +30,10 @@ export default function App() {
             <OnboardingProvider>
               <Routes>
                 {/* Public */}
-                <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
                 {/* Protected */}
                 <Route
-                  path="/dashboard"
+                  path="/"
                   element={
                     <ProtectedRoute>
                       <Dashboard />
