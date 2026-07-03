@@ -176,7 +176,7 @@ export function ClinicianDashboard({
           <div className="flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <span
-                className="w-5 h-5 rounded-md flex items-center justify-center text-white text-[10px] font-black"
+                className="w-5 h-5 rounded-md flex items-center justify-center text-white text-xs font-black"
                 style={{ background: slot === 'A' ? 'var(--primary-text)' : 'var(--primary)' }}
               >
                 {slot}
@@ -186,7 +186,7 @@ export function ClinicianDashboard({
             {selected && (
               <button
                 onClick={onClear}
-                className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1 hover:underline bg-transparent border-0"
+                className="text-xs text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1 hover:underline bg-transparent border-0"
               >
                 <X className="w-3 h-3" /> Clear
               </button>
@@ -194,28 +194,27 @@ export function ClinicianDashboard({
           </div>
 
           {isPolling && (
-            <div className="glass-card rounded-xl p-4 border-border/40 flex items-center gap-3 border">
-              <Loader2 className="w-5 h-5 animate-spin text-[var(--primary-text)] shrink-0" />
+            <div className="bg-card rounded-xl p-4 border border-border flex items-center gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-primary-text shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-foreground">Analyzing Report {slot}…</p>
-                <p className="text-[10px] text-muted-foreground">Usually 15–30 seconds.</p>
+                <p className="text-xs text-muted-foreground">Usually 15–30 seconds.</p>
               </div>
             </div>
           )}
 
           {selected && !isPolling && (
             <div
-              className="flex items-center gap-2.5 p-3 rounded-xl border-2 text-xs"
-              style={{
-                borderColor: slot === 'A' ? 'var(--primary-text)' : 'var(--primary)',
-                background: slot === 'A' ? 'rgba(138,122,106,0.08)' : 'var(--primary-glow)',
-              }}
+              className={cn(
+                "flex items-center gap-2.5 p-3 rounded-xl border text-xs",
+                slot === 'A' ? "border-primary-text bg-primary-text/8" : "border-primary bg-primary-glow"
+              )}
             >
-              <FileText className="w-4 h-4 shrink-0" style={{ color: slot === 'A' ? 'var(--primary-text)' : 'var(--primary)' }} />
+              <FileText className={cn("w-4 h-4 shrink-0", slot === 'A' ? "text-primary-text" : "text-primary")} />
               <div className="min-w-0">
                 <p className="font-semibold text-foreground truncate">{selected.fileName}</p>
                 {selected.reports?.[0]?.createdAt && (
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {new Date(selected.reports[0].createdAt).toLocaleDateString(undefined, {
                       year: 'numeric',
                       month: 'short',
@@ -224,7 +223,7 @@ export function ClinicianDashboard({
                   </p>
                 )}
               </div>
-              <CheckCircle2 className="w-4 h-4 shrink-0 ml-auto" style={{ color: slot === 'A' ? 'var(--primary-text)' : 'var(--primary)' }} />
+              <CheckCircle2 className={cn("w-4 h-4 shrink-0 ml-auto", slot === 'A' ? "text-primary-text" : "text-primary")} />
             </div>
           )}
 
@@ -241,21 +240,18 @@ export function ClinicianDashboard({
                     className={cn(
                       'flex items-center gap-2.5 p-3 rounded-xl border text-xs text-left transition-all cursor-pointer w-full',
                       isSelected
-                        ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-foreground'
+                        ? 'border-primary bg-primary/10 text-foreground font-semibold'
                         : isUsedByOther
                         ? 'border-border/30 opacity-40 cursor-not-allowed'
-                        : 'border-border/50 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5 text-foreground'
+                        : 'border-border hover:border-primary/60 hover:bg-primary/5 text-foreground'
                     )}
                   >
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: isSelected ? 'var(--primary-glow)' : 'var(--primary-glow)' }}
-                    >
-                      <FileText className="w-4 h-4 text-[var(--primary-text)]" />
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-primary-glow">
+                      <FileText className="w-4 h-4 text-primary-text" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold truncate">{r.fileName}</p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {r.extraction?.biomarkers?.length ?? 0} markers
                         {r.reports?.[0]?.createdAt
                           ? ' · ' +
@@ -267,8 +263,8 @@ export function ClinicianDashboard({
                           : ''}
                       </p>
                     </div>
-                    {isSelected && <CheckCircle2 className="w-4 h-4 text-[var(--primary-text)] shrink-0" />}
-                    {isUsedByOther && <span className="text-[9px] text-muted-foreground shrink-0">In use</span>}
+                    {isSelected && <CheckCircle2 className="w-4 h-4 text-primary-text shrink-0" />}
+                    {isUsedByOther && <span className="text-xs text-muted-foreground shrink-0">In use</span>}
                   </button>
                 );
               })}
@@ -276,7 +272,7 @@ export function ClinicianDashboard({
               <div
                 className={cn(
                   'flex items-center gap-2.5 p-3 rounded-xl border-2 border-dashed text-xs transition-all cursor-pointer group',
-                  dragActive ? 'border-[var(--primary)] bg-[var(--primary)]/10' : 'border-border/50 hover:border-[var(--primary)]/60 hover:bg-[var(--primary)]/5'
+                  dragActive ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/60 hover:bg-primary/5'
                 )}
                 onClick={() => {
                   pendingCompareSlotRef.current = slot;
@@ -294,21 +290,18 @@ export function ClinicianDashboard({
                   if (f) handleFileUpload(f, slot);
                 }}
               >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
-                  style={{ background: 'var(--primary-glow)' }}
-                >
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-primary-glow">
                   {isUploading ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-[var(--primary-text)]" />
+                    <Loader2 className="w-4 h-4 animate-spin text-primary-text" />
                   ) : (
-                    <Upload className="w-4 h-4 text-[var(--primary-text)]" />
+                    <Upload className="w-4 h-4 text-primary-text" />
                   )}
                 </div>
                 <div>
                   <p className="font-semibold text-foreground">
                     {isUploading ? 'Uploading…' : 'Upload new PDF'}
                   </p>
-                  <p className="text-[10px] text-muted-foreground">PDF only · Max 20MB</p>
+                  <p className="text-xs text-muted-foreground">PDF only · Max 20MB</p>
                 </div>
               </div>
             </div>
@@ -339,17 +332,15 @@ export function ClinicianDashboard({
           className="hidden"
         />
 
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-border/10 border border-border/40">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 border border-border/60">
           <span
-            className="flex items-center gap-1.5 text-xs font-semibold"
-            style={{ color: compareReportA ? '#1A9966' : 'var(--muted-foreground)' }}
+            className={cn("flex items-center gap-1.5 text-xs font-semibold", compareReportA ? "text-status-normal" : "text-muted-foreground")}
           >
             {compareReportA ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />} Report A
           </span>
           <div className="flex-1 h-0.5 rounded-full bg-border" />
           <span
-            className="flex items-center gap-1.5 text-xs font-semibold"
-            style={{ color: compareReportB ? '#1A9966' : 'var(--muted-foreground)' }}
+            className={cn("flex items-center gap-1.5 text-xs font-semibold", compareReportB ? "text-status-normal" : "text-muted-foreground")}
           >
             {compareReportB ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />} Report B
           </span>
@@ -382,22 +373,19 @@ export function ClinicianDashboard({
       {[
         { label: 'Registered Patients', val: totalPatients, icon: User, color: 'var(--primary-text)' },
         { label: 'Total Lab Reports', val: totalReports, icon: FileText, color: 'var(--primary)' },
-        { label: 'Processing Queue', val: processingQueue, icon: Loader2, color: '#C97D0A', animate: processingQueue > 0 },
-        { label: 'Failed Extractions', val: failedReports, icon: ShieldAlert, color: '#D41717' },
+        { label: 'Processing Queue', val: processingQueue, icon: Loader2, color: 'var(--status-low)', animate: processingQueue > 0 },
+        { label: 'Failed Extractions', val: failedReports, icon: ShieldAlert, color: 'var(--status-critical)' },
       ].map((stat, idx) => (
-        <div key={idx} className="glass-card rounded-2xl p-5 border-border/40 shadow-sm flex items-center justify-between">
+        <div key={idx} className="bg-card rounded-2xl p-5 border border-border flex items-center justify-between">
           <div>
-            <p className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
+            <p className="text-2xl font-bold text-foreground">
               {stat.val}
             </p>
-            <p className="text-[10px] uppercase font-semibold text-muted-foreground mt-0.5">
+            <p className="text-xs uppercase font-semibold text-muted-foreground mt-0.5">
               {stat.label}
             </p>
           </div>
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: 'var(--primary-glow)' }}
-          >
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary-glow">
             <stat.icon
               className={cn('w-5 h-5', stat.animate ? 'animate-spin' : '')}
               style={{ color: stat.color }}
@@ -411,7 +399,7 @@ export function ClinicianDashboard({
   const patientCaseFile = selectedPatient && (
     <div className="flex flex-col gap-6 animate-fade-in">
       {/* Header / Profile banner */}
-      <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-card rounded-2xl p-6 border border-border flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <button
             onClick={() => {
@@ -426,25 +414,22 @@ export function ClinicianDashboard({
             <img
               src={branding.logoIconUrl}
               alt={`${branding.brandName} Icon`}
-              className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border/40"
+              className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border"
             />
           ) : (
-            <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-primary/20 text-primary-text font-black text-lg border border-border/40 shrink-0">
+            <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-primary/20 text-primary-text font-black text-lg border border-border shrink-0">
               {branding.brandName.substring(0, 2).toUpperCase()}
             </div>
           )}
           <div>
-            <h3 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--foreground)' }}>
+            <h3 className="text-xl font-bold flex items-center gap-2 text-foreground">
               {selectedPatient.firstName} {selectedPatient.lastName}
-              <span
-                className="text-xs font-semibold px-2 py-0.5 rounded-full uppercase"
-                style={{ background: 'var(--primary-glow)', color: 'var(--primary-text)' }}
-              >
+              <span className="bg-primary-glow text-primary-text text-xs font-semibold px-2 py-0.5 rounded-full uppercase">
                 {selectedPatient.gender}
               </span>
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              DOB: {new Date(selectedPatient.dateOfBirth).toLocaleDateString()} · Age:{' '}
+              DOB: {new Date(selectedPatient.dateOfBirth).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })} · Age:{' '}
               {calculateAge(selectedPatient.dateOfBirth)} · Email: {selectedPatient.email}
             </p>
           </div>
@@ -464,8 +449,7 @@ export function ClinicianDashboard({
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer border-0"
-            style={{ background: 'var(--primary-text)' }}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-primary-text hover:opacity-90 transition-opacity cursor-pointer border-0 shadow-sm"
           >
             <Upload className="w-3.5 h-3.5" />
             Upload Lab PDF
@@ -477,18 +461,18 @@ export function ClinicianDashboard({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column - Notes & General info */}
         <div className="lg:col-span-4 flex flex-col gap-6">
-          <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
-            <h4 className="text-sm font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--muted-foreground)' }}>
+          <div className="bg-card rounded-2xl p-6 border border-border">
+            <h4 className="text-xs font-bold uppercase tracking-wider mb-3 text-muted-foreground">
               Clinical Intake Notes
             </h4>
-            <p className="text-xs leading-relaxed text-foreground bg-border/10 p-3.5 rounded-xl border border-border/40 whitespace-pre-wrap">
+            <p className="text-sm leading-relaxed text-foreground bg-muted/30 p-3.5 rounded-xl border border-border/50 whitespace-pre-wrap">
               {selectedPatient.note ||
                 'No clinical intake notes entered for this patient. Click "Onboard Patient" or manage records to append details.'}
             </p>
           </div>
 
-          <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
-            <h4 className="text-sm font-bold uppercase tracking-wider mb-4" style={{ color: 'var(--muted-foreground)' }}>
+          <div className="bg-card rounded-2xl p-6 border border-border">
+            <h4 className="text-xs font-bold uppercase tracking-wider mb-4 text-muted-foreground">
               Diagnostic Summary Indicators
             </h4>
             {selectedPatientReports.length === 0 ? (
@@ -497,33 +481,33 @@ export function ClinicianDashboard({
               </p>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-[var(--primary)]/5 border border-[var(--primary)]/20 rounded-xl">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-[var(--primary-text)] bg-[var(--primary)]/20">
+                <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-primary-text bg-primary/20">
                     {selectedPatientReports[0].reports?.[0]?.insights?.recommendations?.length || 0}
                   </div>
                   <div>
                     <p className="text-xs font-bold text-foreground">AI Action Items</p>
-                    <p className="text-[10px] text-muted-foreground">Action points suggested in latest labs.</p>
+                    <p className="text-xs text-muted-foreground">Action points suggested in latest labs.</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-3 bg-[#1A9966]/5 border border-[#1A9966]/20 rounded-xl">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-[#1A9966] bg-[#1A9966]/20">
+                <div className="flex items-center gap-3 p-3 bg-status-normal/5 border border-status-normal/20 rounded-xl">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-status-normal bg-status-normal/20">
                     {selectedPatientReports[0].extraction?.biomarkers?.filter((b) => b.status === 'NORMAL').length || 0}
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#1A9966]">Balanced Markers</p>
-                    <p className="text-[10px] text-muted-foreground">Monitored metrics within reference range.</p>
+                    <p className="text-xs font-bold text-status-normal">Balanced Markers</p>
+                    <p className="text-xs text-muted-foreground">Monitored metrics within reference range.</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-3 bg-[#F04E14]/5 border border-[#F04E14]/20 rounded-xl">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-[#F04E14] bg-[#F04E14]/20">
+                <div className="flex items-center gap-3 p-3 bg-status-high/5 border border-status-high/20 rounded-xl">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-status-high bg-status-high/20">
                     {selectedPatientReports[0].extraction?.biomarkers?.filter((b) => b.status !== 'NORMAL').length || 0}
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#F04E14]">Anomaly Deviants</p>
-                    <p className="text-[10px] text-muted-foreground">Markers showing deviation alerts.</p>
+                    <p className="text-xs font-bold text-status-high">Anomaly Deviants</p>
+                    <p className="text-xs text-muted-foreground">Markers showing deviation alerts.</p>
                   </div>
                 </div>
               </div>
@@ -534,7 +518,7 @@ export function ClinicianDashboard({
         {/* Right Column - Reports List or Trends charts */}
         <div className="lg:col-span-8 flex flex-col gap-6">
           {/* Case File Sub-Tab Selector */}
-          <div className="flex gap-2 p-1 rounded-xl border border-border/40" style={{ background: 'var(--card)' }}>
+          <div className="flex gap-2 p-1 rounded-xl border border-border/40 bg-card">
             {[
               { id: 'reports', label: 'Uploads', icon: FileText },
               { id: 'insights', label: 'Lab Insights', icon: BarChart2 },
@@ -551,9 +535,9 @@ export function ClinicianDashboard({
                   }
                 }}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all cursor-pointer border-0 bg-transparent',
+                  'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border-0 bg-transparent',
                   patientSubTab === subTab.id
-                    ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] font-bold shadow-sm'
+                    ? 'bg-primary/15 text-primary-text font-bold'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >
@@ -564,15 +548,15 @@ export function ClinicianDashboard({
           </div>
 
           {patientSubTab === 'reports' ? (
-            <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm flex flex-col gap-4">
-              <h4 className="text-sm font-bold text-foreground">Lab Reports Case History</h4>
+            <div className="bg-card rounded-2xl p-6 border border-border flex flex-col gap-4">
+              <h4 className="text-sm font-bold text-foreground font-semibold">Lab Reports Case History</h4>
 
               {allUploads.filter((u) => u.patientId === selectedPatient.id).length === 0 ? (
                 <div className="min-h-[180px] rounded-xl border border-dashed border-border flex flex-col items-center justify-center gap-3 p-6 text-center">
                   <Upload className="w-8 h-8 text-muted-foreground" />
                   <div>
                     <p className="font-semibold text-xs text-foreground">No Laboratory Files</p>
-                    <p className="text-[10px] text-muted-foreground max-w-xs mt-0.5">
+                    <p className="text-xs text-muted-foreground max-w-xs mt-0.5">
                       Upload a clinical standard blood work PDF to begin secure biomarker data scanning and analysis.
                     </p>
                   </div>
@@ -592,37 +576,26 @@ export function ClinicianDashboard({
                       return (
                         <div
                           key={upload.id}
-                          className="p-4 rounded-xl border border-border/40 bg-card/65 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow transition-shadow"
+                          className="p-4 rounded-xl border border-border/40 bg-card/65 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-primary/50 transition-colors"
                         >
                           <div className="flex items-center gap-3">
                             <div
-                              className="w-9 h-9 rounded-lg flex items-center justify-center"
-                              style={{
-                                background:
-                                  upload.status === 'COMPLETED'
-                                    ? 'rgba(26, 153, 102, 0.15)'
-                                    : upload.status === 'FAILED'
-                                    ? 'rgba(212, 23, 23, 0.15)'
-                                    : 'rgba(201, 125, 10, 0.15)',
-                              }}
+                              className={cn(
+                                "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                                upload.status === 'COMPLETED'
+                                  ? "bg-status-normal/15 text-status-normal"
+                                  : upload.status === 'FAILED'
+                                  ? "bg-status-critical/15 text-status-critical"
+                                  : "bg-status-low/15 text-status-low"
+                              )}
                             >
-                              <FileText
-                                className="w-5 h-5"
-                                style={{
-                                  color:
-                                    upload.status === 'COMPLETED'
-                                      ? '#1A9966'
-                                      : upload.status === 'FAILED'
-                                      ? '#D41717'
-                                      : '#C97D0A',
-                                }}
-                              />
+                              <FileText className="w-5 h-5" />
                             </div>
                             <div>
                               <p className="font-semibold text-xs text-foreground truncate max-w-[220px]">
                                 {upload.fileName}
                               </p>
-                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                              <p className="text-xs text-muted-foreground mt-0.5">
                                 {date} · {sizeMb} MB
                               </p>
                             </div>
@@ -630,21 +603,14 @@ export function ClinicianDashboard({
 
                           <div className="flex items-center gap-3">
                             <span
-                              className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full"
-                              style={{
-                                background:
-                                  upload.status === 'COMPLETED'
-                                    ? 'rgba(26, 153, 102, 0.12)'
-                                    : upload.status === 'FAILED'
-                                    ? 'rgba(212, 23, 23, 0.12)'
-                                    : 'rgba(201, 125, 10, 0.12)',
-                                color:
-                                  upload.status === 'COMPLETED'
-                                    ? '#1A9966'
-                                    : upload.status === 'FAILED'
-                                    ? '#D41717'
-                                    : '#C97D0A',
-                              }}
+                              className={cn(
+                                "text-xs uppercase font-bold px-2 py-0.5 rounded-full",
+                                upload.status === 'COMPLETED'
+                                  ? "bg-status-normal/12 text-status-normal"
+                                  : upload.status === 'FAILED'
+                                  ? "bg-status-critical/12 text-status-critical"
+                                  : "bg-status-low/12 text-status-low"
+                              )}
                             >
                               {upload.status}
                             </span>
@@ -652,7 +618,7 @@ export function ClinicianDashboard({
                             {upload.fileUrl && (
                               <button
                                 onClick={() => window.open(upload.fileUrl, '_blank', 'noopener,noreferrer')}
-                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-border/60 text-muted-foreground hover:text-foreground hover:bg-border/20 cursor-pointer transition-all bg-transparent"
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-border/60 text-muted-foreground hover:text-foreground hover:bg-border/20 cursor-pointer transition-all bg-transparent"
                                 title="View uploaded PDF"
                               >
                                 <Eye className="w-3.5 h-3.5" />
@@ -675,8 +641,7 @@ export function ClinicianDashboard({
                                     toast.error('Failed to load report analytics.', { id: toastId });
                                   }
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white shadow-sm hover:opacity-90 cursor-pointer border-0"
-                                style={{ background: 'var(--primary-text)' }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-primary-text hover:opacity-90 cursor-pointer border-0 shadow-sm"
                               >
                                 Review
                               </button>
@@ -692,7 +657,7 @@ export function ClinicianDashboard({
             (() => {
               const report = selectedPatientReports[0];
               if (!report) return (
-                <div className="glass-card rounded-2xl p-12 border-border/40 flex flex-col items-center justify-center gap-3 text-center">
+                <div className="bg-card rounded-2xl p-12 border border-border flex flex-col items-center justify-center gap-3 text-center">
                   <BarChart2 className="w-10 h-10 text-muted-foreground" />
                   <p className="text-sm font-semibold text-foreground">No Lab Data Yet</p>
                   <p className="text-xs text-muted-foreground max-w-xs">Upload and process a lab PDF to unlock the Lab Insights dashboard.</p>
@@ -704,12 +669,16 @@ export function ClinicianDashboard({
               const healthScore = Math.max(0, Math.min(100, Math.round(100 - (flagged.length * 12.5))));
               const categories = Array.from(new Set(biomarkers.map(b => b.category)));
 
-              // System bars data
+              // System bars data using design system variables
               const systemMap: Record<string, { color: string }> = {
-                CBC: { color: '#10b981' }, Blood: { color: '#10b981' },
-                Metabolic: { color: '#f59e0b' }, 'Lipid Panel': { color: '#3b82f6' },
-                Hormones: { color: '#8b5cf6' }, Thyroid: { color: '#8b5cf6' },
-                'Vitamins & Minerals': { color: '#ec4899' }, Nutrients: { color: '#ec4899' },
+                CBC: { color: 'var(--status-normal)' },
+                Blood: { color: 'var(--status-normal)' },
+                Metabolic: { color: 'var(--status-low)' },
+                'Lipid Panel': { color: 'var(--primary-text)' },
+                Hormones: { color: 'var(--accent)' },
+                Thyroid: { color: 'var(--accent)' },
+                'Vitamins & Minerals': { color: 'var(--primary)' },
+                Nutrients: { color: 'var(--primary)' },
               };
               const systemBars = categories.map(cat => {
                 const catMarkers = biomarkers.filter(b => b.category === cat);
@@ -721,45 +690,43 @@ export function ClinicianDashboard({
                 return { label: cat.toUpperCase(), score, color, blocks, filled };
               });
 
-
-
               return (
                 <div className="flex flex-col gap-5 animate-fade-in">
                   {/* KPI Row */}
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { label: 'HEALTH SCORE', val: healthScore, unit: '/100', icon: Heart, color: healthScore >= 80 ? '#1A9966' : healthScore >= 60 ? '#C97D0A' : '#F04E14', sub: 'OVERALL' },
+                      { label: 'HEALTH SCORE', val: healthScore, unit: '/100', icon: Heart, color: healthScore >= 80 ? 'var(--status-normal)' : healthScore >= 60 ? 'var(--status-low)' : 'var(--status-high)', sub: 'OVERALL' },
                       { label: 'BIOMARKERS', val: biomarkers.length, unit: `/${categories.length} panels`, icon: Activity, color: 'var(--primary-text)', sub: 'TESTED' },
-                      { label: 'FLAGGED', val: flagged.length, unit: `/${biomarkers.length}`, icon: AlertTriangle, color: flagged.length === 0 ? '#1A9966' : '#F04E14', sub: 'NEEDS REVIEW' },
+                      { label: 'FLAGGED', val: flagged.length, unit: `/${biomarkers.length}`, icon: AlertTriangle, color: flagged.length === 0 ? 'var(--status-normal)' : 'var(--status-high)', sub: 'NEEDS REVIEW' },
                     ].map(kpi => (
-                      <div key={kpi.label} className="glass-card rounded-xl p-4 border border-border/40 flex flex-col gap-2">
+                      <div key={kpi.label} className="bg-card rounded-xl p-4 border border-border flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                          <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{kpi.label}</p>
+                          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{kpi.label}</p>
                           <kpi.icon className="w-3.5 h-3.5" style={{ color: kpi.color }} />
                         </div>
                         <div className="flex items-baseline gap-1">
                           <span className="text-2xl font-extrabold" style={{ color: kpi.color }}>{kpi.val}</span>
-                          <span className="text-[10px] text-muted-foreground">{kpi.unit}</span>
+                          <span className="text-xs text-muted-foreground">{kpi.unit}</span>
                         </div>
-                        <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{kpi.sub}</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{kpi.sub}</p>
                         <div className="h-0.5 rounded-full" style={{ background: kpi.color, opacity: 0.4 }} />
                       </div>
                     ))}
                   </div>
 
                   {/* Body System Status */}
-                  <div className="glass-card rounded-xl p-5 border border-border/40">
+                  <div className="bg-card rounded-xl p-5 border border-border">
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-sm font-bold text-foreground">Body System Status</h4>
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">SCORE BY PANEL</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">SCORE BY PANEL</span>
                     </div>
                     <div className="flex flex-col gap-3">
                       {systemBars.map(sys => (
                         <div key={sys.label} className="flex items-center gap-3">
-                          <span className="text-[9px] font-bold w-28 shrink-0 tracking-wider" style={{ color: 'var(--muted-foreground)' }}>{sys.label}</span>
+                          <span className="text-xs font-bold w-28 shrink-0 tracking-wider text-muted-foreground">{sys.label}</span>
                           <div className="flex gap-[3px] flex-1">
                             {Array.from({ length: sys.blocks }).map((_, idx) => (
-                              <div key={idx} className="flex-1 h-3 rounded-sm" style={{ background: idx < sys.filled ? sys.color : 'rgba(255,255,255,0.06)' }} />
+                              <div key={idx} className="flex-1 h-3 rounded-sm" style={{ background: idx < sys.filled ? sys.color : 'var(--border)' }} />
                             ))}
                           </div>
                           <span className="text-xs font-bold w-10 text-right" style={{ color: sys.color }}>{sys.score}%</span>
@@ -771,11 +738,11 @@ export function ClinicianDashboard({
                   {/* Categories + Things to Watch */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Category Health Breakdown */}
-                    <div className="glass-card rounded-xl p-5 border border-border/40 flex flex-col justify-between">
+                    <div className="bg-card rounded-xl p-5 border border-border flex flex-col justify-between">
                       <div>
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="text-sm font-bold text-foreground">Category Health Breakdown</h4>
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Normal / Flagged</span>
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Normal / Flagged</span>
                         </div>
                         <div className="flex flex-col gap-3 overflow-y-auto max-h-[160px] pr-1.5 custom-scrollbar">
                           {categories.map((cat) => {
@@ -787,9 +754,9 @@ export function ClinicianDashboard({
 
                             return (
                               <div key={cat} className="flex flex-col gap-1">
-                                <div className="flex justify-between items-center text-[10px]">
+                                <div className="flex justify-between items-center text-xs">
                                   <span className="font-bold text-foreground truncate max-w-[120px]">{cat}</span>
-                                  <span className="text-[9px] text-muted-foreground font-medium">
+                                  <span className="text-xs text-muted-foreground font-medium">
                                     {catNormal}/{catMarkers.length} Normal
                                   </span>
                                 </div>
@@ -827,7 +794,7 @@ export function ClinicianDashboard({
                     </div>
 
                     {/* Things to Watch */}
-                    <div className="glass-card rounded-xl p-5 border border-border/40 flex flex-col gap-3 overflow-hidden">
+                    <div className="bg-card rounded-xl p-5 border border-border flex flex-col gap-3 overflow-hidden">
                       <h4 className="text-sm font-bold text-foreground">Things to Watch</h4>
                       {flagged.length === 0 ? (
                         <div className="flex flex-col items-center justify-center flex-1 gap-2 py-4">
@@ -839,7 +806,7 @@ export function ClinicianDashboard({
                           {flagged.map(b => {
                             const isCritical = b.status === 'CRITICAL';
                             const isHigh = b.status === 'HIGH';
-                            const color = isCritical ? '#D41717' : isHigh ? '#F04E14' : '#C97D0A';
+                            const color = isCritical ? 'var(--status-critical)' : isHigh ? 'var(--status-high)' : 'var(--status-low)';
                             const pct = b.referenceMin != null && b.referenceMax != null
                               ? Math.max(5, Math.min(95, ((b.value - b.referenceMin) / (b.referenceMax - b.referenceMin)) * 100))
                               : b.status === 'HIGH' ? 85 : 15;
@@ -853,13 +820,13 @@ export function ClinicianDashboard({
                                   <span className="font-extrabold text-xs" style={{ color }}>{b.value} {b.unit}</span>
                                 </div>
                                 <div>
-                                  <div className="flex justify-between text-[8px] mb-1 text-muted-foreground">
+                                  <div className="flex justify-between text-xs mb-1 text-muted-foreground">
                                     <span>Low</span><span className="font-semibold text-foreground">Normal</span><span>High</span>
                                   </div>
                                   <div className="relative h-1.5 rounded-full bg-border/30 flex overflow-hidden">
-                                    <div className="h-full w-[25%]" style={{ background: 'rgba(201,125,10,0.2)' }} />
-                                    <div className="h-full w-[50%]" style={{ background: 'rgba(26,153,102,0.2)' }} />
-                                    <div className="h-full w-[25%]" style={{ background: 'rgba(240,78,20,0.2)' }} />
+                                    <div className="h-full w-[25%] bg-status-low/20" />
+                                    <div className="h-full w-[50%] bg-status-normal/20" />
+                                    <div className="h-full w-[25%] bg-status-high/20" />
                                     <div className="absolute w-3 h-3 -top-[3px] rounded-full border border-white shadow" style={{ left: `calc(${pct}% - 6px)`, background: color }} />
                                   </div>
                                 </div>
@@ -876,8 +843,8 @@ export function ClinicianDashboard({
           ) : patientSubTab === 'trends' ? (
             <div>
               {trendsLoading ? (
-                <div className="glass-card rounded-2xl p-8 border-border/40 shadow-sm flex flex-col items-center justify-center min-h-[220px]">
-                  <Loader2 className="w-6 h-6 animate-spin text-[var(--primary-text)] mb-2" />
+                <div className="bg-card rounded-2xl p-8 border border-border flex flex-col items-center justify-center min-h-[220px]">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary-text mb-2" />
                   <span className="text-xs text-muted-foreground">Aggregating historical biomarkers...</span>
                 </div>
               ) : (
@@ -891,7 +858,7 @@ export function ClinicianDashboard({
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <SplitSquareVertical className="w-4 h-4 text-[var(--primary-text)]" />
+                  <SplitSquareVertical className="w-4 h-4 text-primary-text" />
                   Compare Reports
                 </h4>
                 {(compareReportA || compareReportB) && (
@@ -900,7 +867,7 @@ export function ClinicianDashboard({
                       setCompareReportA(null);
                       setCompareReportB(null);
                     }}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-border/60 text-muted-foreground hover:text-foreground cursor-pointer hover:bg-border/20 bg-transparent"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border border-border/60 text-muted-foreground hover:text-foreground cursor-pointer hover:bg-border/20 bg-transparent"
                   >
                     <RotateCcw className="w-3 h-3" />
                     Reset
@@ -920,13 +887,13 @@ export function ClinicianDashboard({
       {/* Header and Directory navigation */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         {/* Tab toggles */}
-        <div className="flex gap-2 p-1 rounded-xl border border-border/40" style={{ background: 'var(--card)' }}>
+        <div className="flex gap-2 p-1 rounded-xl border border-border/40 bg-card">
           <button
             onClick={() => setClinicianTab('directory')}
             className={cn(
               'px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all border-0 bg-transparent',
               clinicianTab === 'directory'
-                ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] font-bold shadow-sm'
+                ? 'bg-primary/15 text-primary-text font-bold'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -940,7 +907,7 @@ export function ClinicianDashboard({
             className={cn(
               'px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all border-0 bg-transparent',
               clinicianTab === 'activity'
-                ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] font-bold shadow-sm'
+                ? 'bg-primary/15 text-primary-text font-bold'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -951,8 +918,7 @@ export function ClinicianDashboard({
         <div className="flex gap-2">
           <button
             onClick={() => setIsUploadModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold border hover:bg-border/20 transition-all cursor-pointer bg-transparent"
-            style={{ color: 'var(--primary-text)', borderColor: 'var(--primary-text)' }}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold border border-primary-text hover:bg-border/20 text-primary-text transition-all cursor-pointer bg-transparent shadow-sm"
           >
             <Upload className="w-4 h-4" />
             Upload Lab PDF
@@ -961,8 +927,7 @@ export function ClinicianDashboard({
           <button
             id="clinician-tour-onboard"
             onClick={() => setIsOnboardingOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer border-0"
-            style={{ background: 'var(--primary-text)' }}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-primary-text hover:opacity-90 transition-opacity cursor-pointer border-0 shadow-sm"
           >
             <UserPlus className="w-4 h-4" />
             Onboard Patient
@@ -981,17 +946,17 @@ export function ClinicianDashboard({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search patients by name or email..."
-              className="w-full text-xs pl-9 pr-4 py-2.5 rounded-xl border border-border/60 bg-card text-foreground outline-none focus:border-[var(--primary)] transition-colors"
+              className="w-full text-xs pl-9 pr-4 py-2.5 rounded-xl border border-border/60 bg-card text-foreground outline-none focus:border-primary transition-colors"
             />
           </div>
 
           {patientsLoading ? (
             <div className="min-h-[200px] flex flex-col items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-[var(--primary-text)]" />
+              <Loader2 className="w-8 h-8 animate-spin text-primary-text" />
               <p className="text-xs text-muted-foreground mt-2">Loading patients directory...</p>
             </div>
           ) : filteredPatients.length === 0 ? (
-            <div className="glass-card rounded-2xl p-12 border-border/40 shadow-sm text-center flex flex-col items-center justify-center min-h-[220px]">
+            <div className="bg-card rounded-2xl p-12 border border-border text-center flex flex-col items-center justify-center min-h-[220px]">
               <User className="w-10 h-10 text-muted-foreground mb-3" />
               <h5 className="font-semibold text-sm text-foreground">No Patients Found</h5>
               <p className="text-xs text-muted-foreground mt-1 max-w-sm">
@@ -1011,7 +976,7 @@ export function ClinicianDashboard({
                   <div
                     key={patient.id}
                     onClick={() => loadPatientTrendsAndDetails(patient)}
-                    className="glass-card rounded-xl p-5 border-border/40 hover:border-[var(--primary)]/65 hover:shadow-md cursor-pointer transition-all flex flex-col gap-4 bg-card group"
+                    className="bg-card rounded-xl p-5 border border-border hover:border-primary/65 hover:bg-muted/10 cursor-pointer transition-all flex flex-col gap-4 group"
                   >
                     <div className="flex items-center gap-3">
                       {branding.logoIconUrl ? (
@@ -1029,41 +994,34 @@ export function ClinicianDashboard({
                         <p className="font-bold text-xs text-foreground truncate">
                           {patient.firstName} {patient.lastName}
                         </p>
-                        <p className="text-[10px] text-muted-foreground truncate mt-0.5">{patient.email}</p>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{patient.email}</p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                     </div>
 
-                    <div className="border-t border-border/40 pt-3 flex justify-between text-[10px] text-muted-foreground">
+                    <div className="border-t border-border/40 pt-3 flex justify-between text-xs text-muted-foreground">
                       <span>
-                        Age: <strong className="text-foreground">{age}</strong> · {patient.gender}
+                        Age: <strong className="text-foreground font-semibold">{age}</strong> · {patient.gender}
                       </span>
                       <span>
-                        Reports: <strong className="text-[var(--primary-text)]">{totalUploadsCount}</strong>
+                        Reports: <strong className="text-primary-text font-semibold">{totalUploadsCount}</strong>
                       </span>
                     </div>
 
                     {latestUpload && (
-                      <div className="border-t border-border/30 pt-2 flex items-center justify-between text-[9px]">
+                      <div className="border-t border-border/30 pt-2 flex items-center justify-between text-xs">
                         <span className="text-muted-foreground truncate max-w-[150px]">
                           Labs: {latestUpload.fileName}
                         </span>
                         <span
-                          className="uppercase font-bold px-1.5 py-0.5 rounded-full text-[8px]"
-                          style={{
-                            background:
-                              latestUpload.status === 'COMPLETED'
-                                ? 'rgba(26, 153, 102, 0.12)'
-                                : latestUpload.status === 'FAILED'
-                                ? 'rgba(212, 23, 23, 0.12)'
-                                : 'rgba(201, 125, 10, 0.12)',
-                            color:
-                              latestUpload.status === 'COMPLETED'
-                                ? '#1A9966'
-                                : latestUpload.status === 'FAILED'
-                                ? '#D41717'
-                                : '#C97D0A',
-                          }}
+                          className={cn(
+                            "uppercase font-bold px-1.5 py-0.5 rounded-full text-xs",
+                            latestUpload.status === 'COMPLETED'
+                              ? "bg-status-normal/12 text-status-normal"
+                              : latestUpload.status === 'FAILED'
+                              ? "bg-status-critical/12 text-status-critical"
+                              : "bg-status-low/12 text-status-low"
+                          )}
                         >
                           {latestUpload.status}
                         </span>
@@ -1077,12 +1035,12 @@ export function ClinicianDashboard({
         </div>
       ) : (
         /* Tab 2: Org Activity Feed */
-        <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm flex flex-col gap-4">
+        <div className="bg-card rounded-2xl p-6 border border-border flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-bold text-foreground">Clinic Active Lab Scan Statuses</h4>
             <button
               onClick={fetchOrgUploads}
-              className="text-[10px] font-semibold border border-border hover:bg-border/20 px-2 py-1 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition-all bg-transparent"
+              className="text-xs font-semibold border border-border hover:bg-border/20 px-2 py-1 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition-all bg-transparent"
             >
               Refresh
             </button>
@@ -1105,37 +1063,26 @@ export function ClinicianDashboard({
                 return (
                   <div
                     key={upload.id}
-                    className="p-3.5 rounded-xl border border-border/40 bg-card/65 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    className="p-3.5 rounded-xl border border-border/40 bg-card/65 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-primary/40 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center"
-                        style={{
-                          background:
-                            upload.status === 'COMPLETED'
-                              ? 'rgba(26, 153, 102, 0.15)'
-                              : upload.status === 'FAILED'
-                              ? 'rgba(212, 23, 23, 0.15)'
-                              : 'rgba(201, 125, 10, 0.15)',
-                        }}
+                        className={cn(
+                          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                          upload.status === 'COMPLETED'
+                            ? "bg-status-normal/15 text-status-normal"
+                            : upload.status === 'FAILED'
+                            ? "bg-status-critical/15 text-status-critical"
+                            : "bg-status-low/15 text-status-low"
+                        )}
                       >
-                        <FileText
-                          className="w-4.5 h-4.5"
-                          style={{
-                            color:
-                              upload.status === 'COMPLETED'
-                                ? '#1A9966'
-                                : upload.status === 'FAILED'
-                                ? '#D41717'
-                                : '#C97D0A',
-                          }}
-                        />
+                        <FileText className="w-4.5 h-4.5" />
                       </div>
                       <div>
                         <p className="font-semibold text-xs text-foreground truncate max-w-[240px]">
                           {upload.fileName}
                         </p>
-                        <p className="text-[9px] text-muted-foreground mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           Organization Upload · {date}
                         </p>
                       </div>
@@ -1143,21 +1090,14 @@ export function ClinicianDashboard({
 
                     <div className="flex items-center gap-3">
                       <span
-                        className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full"
-                        style={{
-                          background:
-                            upload.status === 'COMPLETED'
-                              ? 'rgba(26, 153, 102, 0.12)'
-                              : upload.status === 'FAILED'
-                              ? 'rgba(212, 23, 23, 0.12)'
-                              : 'rgba(201, 125, 10, 0.12)',
-                          color:
-                            upload.status === 'COMPLETED'
-                              ? '#1A9966'
-                              : upload.status === 'FAILED'
-                              ? '#D41717'
-                              : '#C97D0A',
-                        }}
+                        className={cn(
+                          "text-xs uppercase font-bold px-2 py-0.5 rounded-full",
+                          upload.status === 'COMPLETED'
+                            ? "bg-status-normal/12 text-status-normal"
+                            : upload.status === 'FAILED'
+                            ? "bg-status-critical/12 text-status-critical"
+                            : "bg-status-low/12 text-status-low"
+                        )}
                       >
                         {upload.status}
                       </span>
@@ -1165,7 +1105,7 @@ export function ClinicianDashboard({
                       {upload.fileUrl && (
                         <button
                           onClick={() => window.open(upload.fileUrl, '_blank', 'noopener,noreferrer')}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-bold border border-border/60 text-muted-foreground hover:text-foreground hover:bg-border/20 cursor-pointer transition-all bg-transparent"
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border border-border/60 text-muted-foreground hover:text-foreground hover:bg-border/20 cursor-pointer transition-all bg-transparent"
                           title="View uploaded PDF"
                         >
                           <Eye className="w-3.5 h-3.5" />
@@ -1196,24 +1136,24 @@ export function ClinicianDashboard({
         {/* Patient Growth + Upcoming Appointments */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
           {/* Patient Growth Line Graph */}
-          <div className="xl:col-span-7 glass-card rounded-2xl p-6 border-border/40 shadow-sm">
+          <div className="xl:col-span-7 bg-card rounded-2xl p-6 border border-border">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h4 className="text-base font-bold text-foreground">Patient Growth</h4>
                 <p className="text-xs text-muted-foreground">Cumulative registered patients by gender.</p>
               </div>
-              <div className="flex items-center gap-3 text-[10px] font-semibold">
+              <div className="flex items-center gap-3 text-xs font-semibold">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--primary-text)' }} /> Male
+                  <span className="w-2.5 h-2.5 rounded-full bg-primary-text" /> Male
                 </span>
                 <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--primary)' }} /> Female
+                  <span className="w-2.5 h-2.5 rounded-full bg-primary" /> Female
                 </span>
               </div>
             </div>
 
             {!hasGrowth ? (
-              <div className="min-h-[240px] rounded-xl border-2 border-dashed border-border/60 flex flex-col items-center justify-center gap-3 p-6 text-center">
+              <div className="min-h-[240px] rounded-xl border border-dashed border-border flex flex-col items-center justify-center gap-3 p-6 text-center">
                 <TrendingUp className="w-10 h-10 text-muted-foreground animate-float" />
                 <div>
                   <p className="font-semibold text-sm text-foreground">Not Enough History</p>
@@ -1233,7 +1173,7 @@ export function ClinicianDashboard({
                       content={({ active, payload, label }) => {
                         if (active && payload && payload.length) {
                           return (
-                            <div className="glass-card rounded-xl p-3 border border-border/40 shadow-md text-xs bg-card">
+                            <div className="bg-card rounded-xl p-3 border border-border text-xs">
                               <p className="font-bold text-foreground mb-1">{label}</p>
                               {payload.map((p) => (
                                 <p key={p.dataKey as string} className="font-semibold" style={{ color: p.color }}>
@@ -1280,7 +1220,7 @@ export function ClinicianDashboard({
           </div>
 
           {/* Upcoming Appointments snapshot */}
-          <div className="xl:col-span-5 glass-card rounded-2xl p-6 border-border/40 shadow-sm flex flex-col gap-4">
+          <div className="xl:col-span-5 bg-card rounded-2xl p-6 border border-border flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-base font-bold text-foreground">Upcoming Appointments</h4>
@@ -1288,8 +1228,7 @@ export function ClinicianDashboard({
               </div>
               <button
                 onClick={() => setIsApptModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white cursor-pointer shadow hover:opacity-90 border-0"
-                style={{ background: 'var(--primary-text)' }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-primary-text cursor-pointer shadow-sm hover:opacity-90 border-0"
               >
                 New
               </button>
@@ -1313,7 +1252,7 @@ export function ClinicianDashboard({
         </div>
 
         {/* Recent File Uploads */}
-        <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm flex flex-col gap-4">
+        <div className="bg-card rounded-2xl p-6 border border-border flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-base font-bold text-foreground">Recent File Uploads</h4>
@@ -1325,14 +1264,14 @@ export function ClinicianDashboard({
                 setStaffView('activity');
                 fetchOrgUploads();
               }}
-              className="text-xs font-semibold text-[var(--primary)] hover:underline cursor-pointer bg-transparent border-0"
+              className="text-xs font-semibold text-primary-text hover:underline cursor-pointer bg-transparent border-0"
             >
               View All Activity →
             </button>
           </div>
 
           {allUploads.length === 0 ? (
-            <div className="min-h-[120px] flex flex-col items-center justify-center text-center gap-2 border-2 border-dashed border-border/60 rounded-xl p-4">
+            <div className="min-h-[120px] flex flex-col items-center justify-center text-center gap-2 border border-dashed border-border rounded-xl p-4">
               <FileText className="w-8 h-8 text-muted-foreground" />
               <p className="text-xs text-muted-foreground">
                 No recent uploads.
@@ -1354,37 +1293,26 @@ export function ClinicianDashboard({
                   return (
                     <div
                       key={upload.id}
-                      className="p-4 rounded-xl border border-border/40 bg-card/45 flex flex-col justify-between gap-3 hover:border-[var(--primary)]/50 transition-all duration-300 shadow-sm"
+                      className="p-4 rounded-xl border border-border/40 bg-card/45 flex flex-col justify-between gap-3 hover:border-primary/50 transition-all duration-300"
                     >
                       <div className="flex items-start gap-3">
                         <div
-                          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                          style={{
-                            background:
-                              upload.status === 'COMPLETED'
-                                ? 'rgba(26, 153, 102, 0.12)'
-                                : upload.status === 'FAILED'
-                                ? 'rgba(212, 23, 23, 0.12)'
-                                : 'rgba(201, 125, 10, 0.12)',
-                          }}
+                          className={cn(
+                            "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                            upload.status === 'COMPLETED'
+                              ? "bg-status-normal/12 text-status-normal"
+                              : upload.status === 'FAILED'
+                              ? "bg-status-critical/12 text-status-critical"
+                              : "bg-status-low/12 text-status-low"
+                          )}
                         >
-                          <FileText
-                            className="w-5 h-5"
-                            style={{
-                              color:
-                                upload.status === 'COMPLETED'
-                                  ? '#1A9966'
-                                  : upload.status === 'FAILED'
-                                  ? '#D41717'
-                                  : '#C97D0A',
-                            }}
-                          />
+                          <FileText className="w-5 h-5" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="font-semibold text-xs text-foreground truncate" title={upload.fileName}>
                             {upload.fileName}
                           </p>
-                          <p className="text-[9px] text-muted-foreground mt-0.5">
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             {date}
                           </p>
                         </div>
@@ -1392,21 +1320,14 @@ export function ClinicianDashboard({
 
                       <div className="flex items-center justify-between mt-1 pt-2 border-t border-border/20">
                         <span
-                          className="text-[9px] uppercase font-extrabold px-2 py-0.5 rounded-full"
-                          style={{
-                            background:
-                              upload.status === 'COMPLETED'
-                                ? 'rgba(26, 153, 102, 0.12)'
-                                : upload.status === 'FAILED'
-                                ? 'rgba(212, 23, 23, 0.12)'
-                                : 'rgba(201, 125, 10, 0.12)',
-                            color:
-                              upload.status === 'COMPLETED'
-                                ? '#1A9966'
-                                : upload.status === 'FAILED'
-                                ? '#D41717'
-                                : '#C97D0A',
-                          }}
+                          className={cn(
+                            "text-xs uppercase font-extrabold px-2 py-0.5 rounded-full",
+                            upload.status === 'COMPLETED'
+                              ? "bg-status-normal/12 text-status-normal"
+                              : upload.status === 'FAILED'
+                              ? "bg-status-critical/12 text-status-critical"
+                              : "bg-status-low/12 text-status-low"
+                          )}
                         >
                           {upload.status}
                         </span>
@@ -1415,7 +1336,7 @@ export function ClinicianDashboard({
                           {upload.fileUrl && (
                             <button
                               onClick={() => window.open(upload.fileUrl, '_blank', 'noopener,noreferrer')}
-                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold border border-border/60 text-muted-foreground hover:text-foreground hover:bg-border/20 cursor-pointer transition-all bg-transparent"
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold border border-border/60 text-muted-foreground hover:text-foreground hover:bg-border/20 cursor-pointer transition-all bg-transparent"
                             >
                               <Eye className="w-3 h-3" />
                               PDF
@@ -1437,8 +1358,7 @@ export function ClinicianDashboard({
                                   toast.error('Failed to load report analytics.', { id: toastId });
                                 }
                               }}
-                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-bold text-white shadow-sm hover:opacity-90 cursor-pointer border-0"
-                              style={{ background: 'var(--primary-text)' }}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-white bg-primary-text hover:opacity-90 cursor-pointer border-0 shadow-sm"
                             >
                               Review
                             </button>
@@ -1467,10 +1387,10 @@ export function ClinicianDashboard({
     );
 
     const Section = ({ title, items }: { title: string; items: AppointmentRecord[] }) => (
-      <div className="glass-card rounded-2xl p-6 border-border/40 shadow-sm flex flex-col gap-3">
+      <div className="bg-card rounded-2xl p-6 border border-border flex flex-col gap-3">
         <h4 className="text-sm font-bold text-foreground flex items-center justify-between">
           <span>{title}</span>
-          <span className="text-[10px] font-semibold text-muted-foreground">{items.length}</span>
+          <span className="text-xs font-semibold text-muted-foreground">{items.length}</span>
         </h4>
         {items.length === 0 ? (
           <p className="text-xs text-muted-foreground py-3 text-center">Nothing here.</p>
@@ -1493,8 +1413,7 @@ export function ClinicianDashboard({
           </div>
           <button
             onClick={() => setIsApptModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer border-0"
-            style={{ background: 'var(--primary-text)' }}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-primary-text shadow hover:opacity-90 transition-opacity cursor-pointer border-0 shadow-sm"
           >
             New Appointment
           </button>
@@ -1502,7 +1421,7 @@ export function ClinicianDashboard({
 
         {appointmentsLoading ? (
           <div className="min-h-[200px] flex flex-col items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-[var(--primary-text)]" />
+            <Loader2 className="w-8 h-8 animate-spin text-primary-text" />
             <p className="text-xs text-muted-foreground mt-2">Loading schedule...</p>
           </div>
         ) : (
@@ -1541,7 +1460,7 @@ export function ClinicianDashboard({
     <div className="flex gap-6 max-w-[1600px] mx-auto px-4 lg:px-6 py-6">
       {/* Left Sidebar — App Navigation */}
       <aside className="hidden lg:flex flex-col gap-2 w-56 shrink-0 sticky top-[76px] self-start">
-        <div id="clinician-tour-nav" className="glass-card rounded-2xl p-3 border-border/40 shadow-sm flex flex-col gap-1">
+        <div id="clinician-tour-nav" className="bg-card rounded-2xl p-3 border border-border flex flex-col gap-1">
           {navItems.map((item) => {
             const active = !selectedPatient && staffView === item.id;
             return (
@@ -1560,7 +1479,7 @@ export function ClinicianDashboard({
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer text-left border-0 bg-transparent',
                   active
-                    ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] shadow-sm font-bold'
+                    ? 'bg-primary/15 text-primary-text font-bold shadow-sm'
                     : 'text-muted-foreground hover:text-foreground hover:bg-border/20'
                 )}
               >
@@ -1574,8 +1493,7 @@ export function ClinicianDashboard({
         <button
           id="clinician-tour-onboard-sidebar"
           onClick={() => setIsOnboardingOpen(true)}
-          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-white shadow hover:opacity-90 transition-opacity cursor-pointer border-0"
-          style={{ background: 'var(--primary-text)' }}
+          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary-text hover:opacity-90 transition-opacity cursor-pointer border-0 shadow-sm"
         >
           <UserPlus className="w-4 h-4" />
           Onboard Patient
@@ -1584,8 +1502,7 @@ export function ClinicianDashboard({
         <button
           id="clinician-tour-upload"
           onClick={() => setIsUploadModalOpen(true)}
-          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border hover:bg-border/20 transition-colors cursor-pointer bg-transparent"
-          style={{ color: 'var(--primary-text)', borderColor: 'var(--primary-text)' }}
+          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold border border-primary-text hover:bg-border/20 text-primary-text transition-colors cursor-pointer bg-transparent shadow-sm"
         >
           <Upload className="w-4 h-4 shrink-0" />
           Upload Lab PDF
@@ -1612,7 +1529,7 @@ export function ClinicianDashboard({
                   }}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border',
-                    active ? 'bg-[var(--primary)]/15 text-[var(--primary-text)] border-transparent shadow-sm' : 'border-border/50 text-muted-foreground bg-transparent'
+                    active ? 'bg-primary/15 text-primary-text border-transparent shadow-sm' : 'border-border/50 text-muted-foreground bg-transparent'
                   )}
                 >
                   <item.icon className="w-3.5 h-3.5" />

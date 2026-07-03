@@ -52,7 +52,7 @@ export function PatientHome({
     <div className="max-w-[1200px] mx-auto px-4 lg:px-6 py-6 flex flex-col gap-6">
 
       {/* ── Profile Card ──────────────────────────────────── */}
-      <div id="tour-profile-card" className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
+      <div id="tour-profile-card" className="bg-card rounded-2xl p-6 border border-border">
         <div className="flex flex-col sm:flex-row sm:items-center gap-5">
           {branding.logoIconUrl ? (
             <img
@@ -125,13 +125,13 @@ export function PatientHome({
       <section id="tour-stats-section" className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Reports', val: totalUploads, icon: FileText, color: 'var(--primary-text)' },
-          { label: 'Analyzed', val: completedUploads, icon: CheckCircle2, color: '#1A9966' },
-          { label: 'Processing', val: pendingUploads, icon: Loader2, color: '#C97D0A', animate: pendingUploads > 0 },
-          { label: 'Normal Markers', val: normalCount, icon: Heart, color: '#1A9966' },
+          { label: 'Analyzed', val: completedUploads, icon: CheckCircle2, color: 'var(--status-normal)' },
+          { label: 'Processing', val: pendingUploads, icon: Loader2, color: 'var(--status-low)', animate: pendingUploads > 0 },
+          { label: 'Normal Markers', val: normalCount, icon: Heart, color: 'var(--status-normal)' },
         ].map((stat, idx) => (
           <div
             key={idx}
-            className="glass-card rounded-2xl p-5 border-border/40 shadow-sm flex items-center justify-between"
+            className="bg-card rounded-2xl p-5 border border-border flex items-center justify-between"
           >
             <div>
               <p className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>{stat.val}</p>
@@ -151,27 +151,27 @@ export function PatientHome({
         <div className="lg:col-span-4 flex flex-col gap-6">
 
           {/* Latest Health Summary */}
-          <div id="tour-health-snapshot" className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
+          <div id="tour-health-snapshot" className="bg-card rounded-2xl p-6 border border-border">
             <h4 className="text-sm font-bold uppercase tracking-wider mb-4" style={{ color: 'var(--muted-foreground)' }}>
               Health Snapshot
             </h4>
             {latestReport ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-[#1A9966]/5 border border-[#1A9966]/20 rounded-xl">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-[#1A9966] bg-[#1A9966]/20">
+                <div className="flex items-center gap-3 p-3 rounded-xl border animate-fade-in" style={{ background: 'var(--status-normal-bg)', borderColor: 'color-mix(in srgb, var(--status-normal) 20%, transparent)' }}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold" style={{ color: 'var(--status-normal)', background: 'color-mix(in srgb, var(--status-normal) 15%, transparent)' }}>
                     {normalCount}
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#1A9966]">Balanced Markers</p>
+                    <p className="text-xs font-bold" style={{ color: 'var(--status-normal)' }}>Balanced Markers</p>
                     <p className="text-[10px] text-muted-foreground">Within normal reference range.</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 bg-[#F04E14]/5 border border-[#F04E14]/20 rounded-xl">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-[#F04E14] bg-[#F04E14]/20">
+                <div className="flex items-center gap-3 p-3 rounded-xl border animate-fade-in" style={{ background: 'var(--status-high-bg)', borderColor: 'color-mix(in srgb, var(--status-high) 20%, transparent)' }}>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold" style={{ color: 'var(--status-high)', background: 'color-mix(in srgb, var(--status-high) 15%, transparent)' }}>
                     {abnormalCount}
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-[#F04E14]">Flagged Markers</p>
+                    <p className="text-xs font-bold" style={{ color: 'var(--status-high)' }}>Flagged Markers</p>
                     <p className="text-[10px] text-muted-foreground">Outside normal range — review recommended.</p>
                   </div>
                 </div>
@@ -197,7 +197,7 @@ export function PatientHome({
 
           {/* Quick AI Insights from latest report */}
           {latestReport?.reports?.[0]?.insights?.summaryPoints?.length > 0 && (
-            <div id="tour-ai-summary" className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
+            <div id="tour-ai-summary" className="bg-card rounded-2xl p-6 border border-border">
               <h4 className="text-sm font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--muted-foreground)' }}>
                 <Sparkles className="w-3.5 h-3.5 inline mr-1.5" style={{ color: 'var(--primary-text)' }} />
                 AI Summary
@@ -216,7 +216,7 @@ export function PatientHome({
 
         {/* Right — Reports History */}
         <div className="lg:col-span-8">
-          <div id="tour-report-history" className="glass-card rounded-2xl p-6 border-border/40 shadow-sm">
+          <div id="tour-report-history" className="bg-card rounded-2xl p-6 border border-border">
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>
                 Lab Report History
@@ -270,23 +270,23 @@ export function PatientHome({
                   return (
                     <div
                       key={upload.id}
-                      className="p-4 rounded-xl border border-border/40 bg-card/65 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow transition-shadow"
+                      className="py-4 border-b border-border/60 last:border-b-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all"
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className="w-9 h-9 rounded-lg flex items-center justify-center"
+                          className="w-9 h-9 rounded-lg flex items-center justify-center animate-fade-in"
                           style={{
-                            background: upload.status === 'COMPLETED' ? 'rgba(26, 153, 102, 0.15)' :
-                                        upload.status === 'FAILED' ? 'rgba(212, 23, 23, 0.15)' :
-                                        'rgba(201, 125, 10, 0.15)'
+                            background: upload.status === 'COMPLETED' ? 'color-mix(in srgb, var(--status-normal) 15%, transparent)' :
+                                        upload.status === 'FAILED' ? 'color-mix(in srgb, var(--status-critical) 15%, transparent)' :
+                                        'color-mix(in srgb, var(--status-low) 15%, transparent)'
                           }}
                         >
                           <FileText
                             className="w-5 h-5"
                             style={{
-                              color: upload.status === 'COMPLETED' ? '#1A9966' :
-                                     upload.status === 'FAILED' ? '#D41717' :
-                                     '#C97D0A'
+                              color: upload.status === 'COMPLETED' ? 'var(--status-normal)' :
+                                     upload.status === 'FAILED' ? 'var(--status-critical)' :
+                                     'var(--status-low)'
                             }}
                           />
                         </div>
@@ -304,12 +304,12 @@ export function PatientHome({
                         <span
                           className="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full"
                           style={{
-                            background: upload.status === 'COMPLETED' ? 'rgba(26, 153, 102, 0.12)' :
-                                        upload.status === 'FAILED' ? 'rgba(212, 23, 23, 0.12)' :
-                                        'rgba(201, 125, 10, 0.12)',
-                            color: upload.status === 'COMPLETED' ? '#1A9966' :
-                                   upload.status === 'FAILED' ? '#D41717' :
-                                   '#C97D0A'
+                            background: upload.status === 'COMPLETED' ? 'color-mix(in srgb, var(--status-normal) 12%, transparent)' :
+                                        upload.status === 'FAILED' ? 'color-mix(in srgb, var(--status-critical) 12%, transparent)' :
+                                        'color-mix(in srgb, var(--status-low) 12%, transparent)',
+                            color: upload.status === 'COMPLETED' ? 'var(--status-normal)' :
+                                   upload.status === 'FAILED' ? 'var(--status-critical)' :
+                                   'var(--status-low)'
                           }}
                         >
                           {upload.status}

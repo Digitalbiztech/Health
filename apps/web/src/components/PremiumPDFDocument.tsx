@@ -637,9 +637,7 @@ const styles = StyleSheet.create({
   // ── SUMMARY + INSIGHTS ────────────────────────────────────────────────────
   summaryContainer: {
     borderWidth: 1,
-    borderColor: SLATE_100,
-    borderLeftWidth: 4,
-    borderLeftColor: TEAL_PRIMARY,
+    borderColor: TEAL_PRIMARY,
     borderRadius: 18,
     padding: 12,
     marginBottom: 14,
@@ -748,8 +746,6 @@ const styles = StyleSheet.create({
     backgroundColor: BG_CARD,
     borderWidth: 1,
     borderColor: SLATE_100,
-    borderLeftWidth: 4,
-    borderLeftColor: TEAL_PRIMARY,
     borderRadius: 18,
     paddingVertical: 10,
     paddingHorizontal: 14,
@@ -965,8 +961,6 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 12,
     backgroundColor: TEAL_TINT,
-    borderLeftWidth: 2.5,
-    borderLeftColor: TEAL_PRIMARY,
     borderWidth: 1,
     borderColor: TEAL_BORDER,
     flexDirection: 'row',
@@ -1876,9 +1870,7 @@ export function PremiumPDFDocument({
                     style={[
                       styles.biomarkerCard,
                       {
-                        borderColor: isAbnormal ? `${sc.fg}55` : SLATE_100,
-                        borderLeftWidth: isAbnormal ? 4 : 1,
-                        borderLeftColor: isAbnormal ? sc.fg : SLATE_100,
+                        borderColor: isAbnormal ? sc.fg : SLATE_100,
                         backgroundColor: isAbnormal ? sc.bg : BG_CARD,
                       }
                     ]}

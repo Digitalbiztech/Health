@@ -28,9 +28,6 @@ import {
   Line,
   // AreaChart,
   // Area,
-  BarChart,
-  Bar,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -58,19 +55,19 @@ const CustomYAxisTick = (props: any) => {
   
   if (v === 0.5) {
     text = 'Very Low';
-    color = '#f43f5e';
+    color = 'var(--status-critical)';
   } else if (v === 1.1) {
     text = 'Low';
-    color = '#fbbf24';
+    color = 'var(--status-low)';
   } else if (v === 2.2) {
     text = 'Optimal';
-    color = '#10b981';
+    color = 'var(--status-normal)';
   } else if (v === 3.1) {
     text = 'High';
-    color = '#fbbf24';
+    color = 'var(--status-high)';
   } else if (v === 3.6) {
     text = 'Elevated';
-    color = '#f43f5e';
+    color = 'var(--status-critical)';
   }
   
   return (
@@ -457,12 +454,7 @@ export function ReportDashboard({
       return { label: panel.label, score, color, filled, blocks };
     });
 
-    // Report Condition chart data (5 points as shown in mockup)
-    const conditionData = systemBars.map(bar => ({
-      name: bar.label.charAt(0) + bar.label.slice(1).toLowerCase(),
-      score: bar.score,
-      color: 'var(--primary-text)',
-    }));
+    // conditionData removed to consolidate redundant charts
 
     const avgPanelScore = systemBars.length
       ? Math.round(systemBars.reduce((acc, s) => acc + s.score, 0) / systemBars.length)
@@ -560,7 +552,7 @@ export function ReportDashboard({
           <div className="lg:col-span-8 flex flex-col gap-6">
 
             {/* Header Box */}
-            <div className="glass-card rounded-2xl p-5 border border-border/40 flex justify-between items-center shadow-sm">
+            <div className="bg-card rounded-2xl p-5 border border-border flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-extrabold text-foreground tracking-tight">Bloodwork Analysis</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">{collectionDateStr}</p>
@@ -573,7 +565,7 @@ export function ReportDashboard({
             {/* Summary Metrics Row */}
             <div className="grid grid-cols-3 gap-4">
               {/* Health Score */}
-              <div className="glass-card rounded-2xl p-5 border border-border/40 flex flex-col justify-between shadow-sm relative overflow-hidden h-36">
+              <div className="bg-card rounded-2xl p-5 border border-border flex flex-col justify-between relative overflow-hidden min-h-[9rem]">
                 <div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
@@ -596,7 +588,7 @@ export function ReportDashboard({
               </div>
 
               {/* Biomarkers */}
-              <div className="glass-card rounded-2xl p-5 border border-border/40 flex flex-col justify-between shadow-sm relative overflow-hidden h-36">
+              <div className="bg-card rounded-2xl p-5 border border-border flex flex-col justify-between relative overflow-hidden min-h-[9rem]">
                 <div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
@@ -619,7 +611,7 @@ export function ReportDashboard({
               </div>
 
               {/* Flagged */}
-              <div className="glass-card rounded-2xl p-5 border border-border/40 flex flex-col justify-between shadow-sm relative overflow-hidden h-36">
+              <div className="bg-card rounded-2xl p-5 border border-border flex flex-col justify-between relative overflow-hidden min-h-[9rem]">
                 <div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
@@ -642,60 +634,23 @@ export function ReportDashboard({
               </div>
             </div>
 
-            {/* Report Condition */}
-            <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col gap-4">
+            {/* Body System Status & Performance */}
+            <div className="bg-card rounded-2xl p-6 border border-border flex flex-col gap-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-bold text-foreground">Report Condition</h4>
-                  <p className="text-[10px] text-muted-foreground">Average Panel Score</p>
+                  <h4 className="text-sm font-bold text-foreground">Body System Status</h4>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Average Panel Score: <span className="font-extrabold text-foreground">{avgPanelScore}%</span> <span className="font-bold text-emerald-600 ml-1">▲ {conditionDelta}%</span></p>
                 </div>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-muted/30 text-muted-foreground">This Report</span>
-              </div>
-
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-foreground">{avgPanelScore}%</span>
-                <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">▲ {conditionDelta}%</span>
-              </div>
-
-              <div className="h-40 w-full mt-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={conditionData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.1} vertical={false} />
-                    <XAxis dataKey="name" tick={{ fill: 'var(--muted-foreground)', fontSize: 9 }} tickLine={false} axisLine={false} />
-                    <YAxis domain={[0, 100]} ticks={[0, 50, 100]} tick={{ fill: 'var(--muted-foreground)', fontSize: 9 }} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      content={({ active, payload }) =>
-                        active && payload?.length ? (
-                          <div className="glass-card rounded-xl p-2 border border-border/40 shadow text-[10px] bg-card">
-                            <p className="font-bold text-foreground">{payload[0]?.payload?.name}</p>
-                            <p className="text-emerald-400 font-extrabold mt-0.5">{payload[0]?.value}% Score</p>
-                          </div>
-                        ) : null
-                      }
-                    />
-                    <Bar dataKey="score" radius={[4, 4, 0, 0]}>
-                      {conditionData.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} opacity={0.85} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Body System Status */}
-            <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-foreground">Body System Status</h4>
                 <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">SCORE BY PANEL</span>
               </div>
+
               <div className="flex flex-col gap-4">
                 {systemBars.map(sys => {
                   const isNormal = sys.score === 100;
-                  const fillColor = isNormal ? '#11784B' : '#D41717';
+                  const fillColor = isNormal ? 'var(--status-normal)' : 'var(--status-critical)';
                   return (
                     <div key={sys.label} className="flex items-center gap-4">
-                      <span className="text-[10px] font-bold w-28 shrink-0 tracking-wider text-muted-foreground">{sys.label}</span>
+                      <span className="text-[10px] font-bold w-32 md:w-36 shrink-0 tracking-wider text-muted-foreground">{sys.label}</span>
                       <div className="flex gap-[4px] flex-1">
                         {Array.from({ length: sys.blocks }).map((_, idx) => {
                           const isFilled = idx < sys.filled;
@@ -721,7 +676,7 @@ export function ReportDashboard({
           <div className="lg:col-span-4 flex flex-col gap-6">
 
             {/* User Profile Card */}
-            <div className="glass-card rounded-2xl p-6 border border-border/40 flex flex-col items-center justify-center text-center shadow-sm">
+            <div className="bg-card rounded-2xl p-6 border border-border flex flex-col items-center justify-center text-center">
               <div className="w-16 h-16 rounded-full bg-muted/15 flex items-center justify-center border border-border/40 text-2xl font-black text-[var(--primary-text)] shadow-inner">
                 {pName.charAt(0).toUpperCase()}
               </div>
@@ -730,7 +685,7 @@ export function ReportDashboard({
             </div>
 
             {/* Categories Card */}
-            <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col gap-4">
+            <div className="bg-card rounded-2xl p-6 border border-border flex flex-col gap-4">
               <h4 className="text-sm font-bold text-foreground">Categories</h4>
 
               <div className="flex items-center gap-4">
@@ -761,8 +716,7 @@ export function ReportDashboard({
                 <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                   {categoryDonutData.map((d, i) => (
                     <div key={i} className="flex items-center justify-between text-[10px]">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: d.color }} />
+                      <div className="flex items-center justify-between text-[10px]">
                         <span className="text-muted-foreground truncate font-medium">{d.name}</span>
                       </div>
                       <span className="font-bold text-foreground ml-2">{d.count}</span>
@@ -792,7 +746,7 @@ export function ReportDashboard({
             </div>
 
             {/* Things to Watch */}
-            <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col gap-4">
+            <div className="bg-card rounded-2xl p-6 border border-border flex flex-col gap-4">
               <h4 className="text-sm font-bold text-foreground">Things to Watch</h4>
               {flaggedBiomarkers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-6">
@@ -807,7 +761,7 @@ export function ReportDashboard({
                     const desc = b.description || `${b.displayName} levels are flagged as ${b.status.toLowerCase()}, indicating a shift outside optimal boundaries.`;
 
                     return (
-                      <div key={b.id} className="p-3.5 rounded-xl border border-border/40 bg-card/40 flex flex-col gap-2.5">
+                      <div key={b.id} className="py-3 px-1 border-b border-border/60 last:border-b-0 flex flex-col gap-2">
                         <div className="flex justify-between items-baseline w-full">
                           <div className="flex items-center gap-1.5 min-w-0 flex-1">
                             <AlertTriangle className="w-3.5 h-3.5 text-orange-500 fill-orange-500/10 shrink-0" />
@@ -849,7 +803,7 @@ export function ReportDashboard({
         </div>
 
         {/* Systemic Biomarker Profile & Reference Zones */}
-        <div className="glass-card rounded-2xl p-6 border border-border/40 shadow-sm flex flex-col gap-4">
+        <div className="bg-card rounded-2xl p-6 border border-border flex flex-col gap-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
               <h4 className="text-sm font-bold text-foreground">Systemic Biomarker Profile & Reference Zones</h4>
@@ -875,7 +829,7 @@ export function ReportDashboard({
               style={{
                 top: '8px',
                 height: '162px',
-                background: 'linear-gradient(to top, #f43f5e 0%, #f43f5e 20%, #fbbf24 20%, #fbbf24 41.25%, #10b981 41.25%, #10b981 68.75%, #fbbf24 68.75%, #fbbf24 83.75%, #f43f5e 83.75%, #f43f5e 100%)'
+                background: 'linear-gradient(to top, var(--status-critical) 0%, var(--status-critical) 20%, var(--status-low) 20%, var(--status-low) 41.25%, var(--status-normal) 41.25%, var(--status-normal) 68.75%, var(--status-high) 68.75%, var(--status-critical) 83.75%, var(--status-critical) 100%)'
               }}
             />
             <div className="flex-1 h-full min-w-0">
@@ -895,7 +849,7 @@ export function ReportDashboard({
                   <Tooltip
                     content={({ active, payload }) =>
                       active && payload?.length ? (
-                        <div className="glass-card rounded-xl p-2.5 border border-border/40 shadow text-xs bg-card">
+                        <div className="rounded-xl p-2.5 border border-border text-xs bg-card">
                           <p className="font-bold text-foreground">{payload[0]?.payload?.name}</p>
                           <p className="text-muted-foreground mt-0.5">Value: <span className="font-extrabold text-foreground">{payload[0]?.payload?.value} {payload[0]?.payload?.unit}</span></p>
                           <p className="text-muted-foreground mt-0.5">Status: <span className="font-semibold text-foreground">{payload[0]?.payload?.status}</span></p>
@@ -905,13 +859,13 @@ export function ReportDashboard({
                   />
 
                   {/* Reference boundaries matching Y divisions */}
-                  <ReferenceLine y={0.8} stroke="#f43f5e" strokeDasharray="3 3" opacity={0.25} />
-                  <ReferenceLine y={1.65} stroke="#fbbf24" strokeDasharray="3 3" opacity={0.25} />
-                  <ReferenceLine y={2.75} stroke="#10b981" strokeDasharray="3 3" opacity={0.25} />
-                  <ReferenceLine y={3.35} stroke="#f43f5e" strokeDasharray="3 3" opacity={0.25} />
+                  <ReferenceLine y={0.8} stroke="var(--status-critical)" strokeDasharray="3 3" opacity={0.25} />
+                  <ReferenceLine y={1.65} stroke="var(--status-low)" strokeDasharray="3 3" opacity={0.25} />
+                  <ReferenceLine y={2.75} stroke="var(--status-normal)" strokeDasharray="3 3" opacity={0.25} />
+                  <ReferenceLine y={3.35} stroke="var(--status-critical)" strokeDasharray="3 3" opacity={0.25} />
 
                   {/* Shaded Optimal Reference Zone Band */}
-                  <ReferenceArea y1={1.65} y2={2.75} fill="#10b981" fillOpacity={0.035} />
+                  <ReferenceArea y1={1.65} y2={2.75} fill="var(--status-normal)" fillOpacity={0.035} />
 
                   {lineCategories.map(catLabel => {
                     const color = categoryColors[catLabel] || 'var(--primary-text)';
@@ -926,7 +880,7 @@ export function ReportDashboard({
                         dot={(props: any) => {
                           if (props.cx === undefined || props.cy === undefined) return null;
                           const isNormal = props.payload?.status === 'NORMAL';
-                          const dotColor = isNormal ? '#10b981' : '#F04E14';
+                          const dotColor = isNormal ? 'var(--status-normal)' : 'var(--status-high)';
                           return (
                             <circle
                               key={props.key}
@@ -1009,7 +963,7 @@ export function ReportDashboard({
 
           {/* Polling spinner */}
           {isPolling && (
-            <div className="glass-card rounded-xl p-4 border-border/40 flex items-center gap-3 border">
+            <div className="bg-card rounded-xl p-4 border border-border flex items-center gap-3 border">
               <Loader2 className="w-5 h-5 animate-spin text-[var(--primary-text)] shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-foreground">Analyzing Report {slot}…</p>
@@ -1263,7 +1217,7 @@ export function ReportDashboard({
       )}
 
       {/* ── Patient Banner ─────────────────────────────────── */}
-      <section className="glass-card rounded-2xl p-6 border-border/40 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-6 mb-8">
+      <section className="bg-card rounded-2xl p-6 border border-border flex flex-col lg:flex-row items-center justify-between gap-6 mb-8">
         <div className="flex items-center gap-4 w-full lg:w-auto">
           {branding.logoIconUrl ? (
             <img
@@ -1364,7 +1318,7 @@ export function ReportDashboard({
       </section>
 
       {/* ── Timeline Chart ─────────────────────────────────── */}
-      <section className="glass-card rounded-2xl p-6 border-border/40 shadow-sm relative overflow-hidden mb-8">
+      <section className="bg-card rounded-2xl p-6 border border-border relative overflow-hidden mb-8">
         <div className="flex items-center gap-2 mb-8">
           <Activity className="w-4 h-4 text-[var(--primary-text)]" />
           <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--primary-text)]">
@@ -1558,7 +1512,7 @@ function ApiLogsDialog({ reportData, onClose }: ApiLogsDialogProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="glass-card rounded-2xl border border-border/40 shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden bg-background">
+      <div className="rounded-2xl border border-border shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden bg-background">
         {/* Header */}
         <div className="p-6 border-b border-border/40 flex items-center justify-between">
           <div className="flex items-center gap-3">
