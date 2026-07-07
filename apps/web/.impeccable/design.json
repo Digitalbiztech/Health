@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-02T15:26:00.000Z",
+  "title": "Design System: Auriem Clinical Suite",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Warm Oakwood",
+        "canonical": "oklch(79.79% 0.046 66.86)",
+        "tonalRamp": [
+          "#3b2f27",
+          "#5b4c41",
+          "#7f6d61",
+          "#9d8b7e",
+          "#bead9f",
+          "#d4bdad",
+          "#e9ded5",
+          "#faf8f6"
+        ]
+      },
+      "primary-text": {
+        "role": "primary",
+        "displayName": "Warm Brown",
+        "canonical": "oklch(54.49% 0.038 67.57)",
+        "tonalRamp": [
+          "#29211a",
+          "#42372f",
+          "#5b4d44",
+          "#746459",
+          "#8a7a6a",
+          "#a39587",
+          "#beab9f",
+          "#ebdcd3"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Clinical Linen Background",
+        "canonical": "oklch(100% 0 0)",
+        "tonalRamp": [
+          "#111827",
+          "#1f2937",
+          "#4b5563",
+          "#9ca3af",
+          "#d1d5db",
+          "#e5e7eb",
+          "#f3f4f6",
+          "#ffffff"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Charcoal Foreground",
+        "canonical": "oklch(17.84% 0.015 252.7)",
+        "tonalRamp": [
+          "#030712",
+          "#0b0f19",
+          "#111827",
+          "#1f2937",
+          "#374151",
+          "#6b7280",
+          "#9ca3af",
+          "#e5e7eb"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Warm Muted Fill",
+        "canonical": "oklch(98.66% 0.003 66.82)",
+        "tonalRamp": [
+          "#f1ede9",
+          "#f5f1ed",
+          "#f7f4f1",
+          "#f9f7f4",
+          "#fbfaf8",
+          "#fbfaf9",
+          "#fdfdfd",
+          "#ffffff"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Clean Gray Border",
+        "canonical": "oklch(92.42% 0.005 240)",
+        "tonalRamp": [
+          "#374151",
+          "#4b5563",
+          "#9ca3af",
+          "#d1d5db",
+          "#e5e7eb",
+          "#f3f4f6",
+          "#f9fafb",
+          "#ffffff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Big page titles and health score numbers."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Primary section-level headers."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card headers and nested subdivisions."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Patient descriptions, chat text, and clinical insights (max line length 65-75ch)."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercased and letter-spaced metadata summaries."
+      }
+    },
+    "shadows": [
+      {
+        "name": "tactile-resting",
+        "value": "0 1px 3px rgba(0, 0, 0, 0.06)",
+        "purpose": "Default boundary elevation on resting cards."
+      },
+      {
+        "name": "interactive-focus",
+        "value": "0 10px 15px rgba(0, 0, 0, 0.08)",
+        "purpose": "Applied to active dropzones, focused elements, or hovered surfaces."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Standard deceleration curve for state transitions and dialog entries."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Standard call-to-action button for clinical portals.",
+      "html": "<button class=\"ds-btn-primary\">View Lab Report</button>",
+      "css": ".ds-btn-primary { background: #D4BDAD; color: #ffffff; border: none; border-radius: 12px; padding: 10px 24px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.1s; outline: none; } .ds-btn-primary:hover { background: #8A7A6A; } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { box-shadow: 0 0 0 2px #0891b2; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Used for lower priority actions or alternate paths.",
+      "html": "<button class=\"ds-btn-secondary\">Compare Trends</button>",
+      "css": ".ds-btn-secondary { background: #f3f4f6; color: #111827; border: none; border-radius: 12px; padding: 10px 24px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.1s; outline: none; } .ds-btn-secondary:hover { background: #e5e7eb; } .ds-btn-secondary:active { transform: scale(0.98); } .ds-btn-secondary:focus-visible { box-shadow: 0 0 0 2px #0891b2; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Standard form text input element.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search patients...\" />",
+      "css": ".ds-input { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 16px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; color: #111827; outline: none; transition: border-color 0.2s, box-shadow 0.2s; width: 100%; box-sizing: border-box; } .ds-input::placeholder { color: #9ca3af; } .ds-input:focus { border-color: #0891b2; box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.15); }"
+    },
+    {
+      "name": "Standard Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Clean white background container with a flat shadow boundary.",
+      "html": "<div class=\"ds-card\"><h4 class=\"ds-card-title\">Biomarker Health Score</h4><p class=\"ds-card-body\">Your health score represents a composite index calculated from normalized biomarkers.</p></div>",
+      "css": ".ds-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); font-family: system-ui, -apple-system, sans-serif; } .ds-card-title { font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0; } .ds-card-body { font-size: 14px; color: #4b5563; line-height: 1.5; margin: 0; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Compassionate Sanctuary",
+    "overview": "The Auriem Clinical Suite balances strict scientific precision with soft, supportive medical care. It is built to serve two core users in a medical context: clinicians who require high-density, legible data directories, and patients who require a calming, reassuring space to review their health summaries. By avoiding sterile clinical coldness and tech-heavy SaaS clutter, it instills trust and clarity when interpreting vital biomarker metrics.",
+    "keyCharacteristics": [
+      "Warm-neutral gold and sand tones anchoring a clean clinical white backing.",
+      "Structured, predictable hierarchy with clear section dividers.",
+      "High-contrast typography designed to be highly legible for elderly patients.",
+      "Minimalist, purpose-driven interactions that respond immediately without flashing or distracting."
+    ],
+    "rules": [
+      {
+        "name": "The Accented Rarity Rule",
+        "body": "Brand colors (Warm Oakwood and Warm Brown) must be used on ≤10% of any given screen. Visual noise is a failure; accents must call attention to key actions or status summaries, never serve as decorative backdrops.",
+        "section": "colors"
+      },
+      {
+        "name": "The High-Contrast Contrast Rule",
+        "body": "All body copy and status badges must maintain a minimum contrast ratio of 4.5:1 against their backgrounds. Light gray text is prohibited.",
+        "section": "colors"
+      },
+      {
+        "name": "The Anti-Eyebrow Rule",
+        "body": "Uppercase tracked eyebrows are permitted only on standalone dashboard labels and must never be placed above every single section header. Rhythm, spacing, and font weight must carry the section hierarchy.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Surfaces are flat at rest. Shadows appear only as a response to state (hover, elevation, focus).",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do maintain strict line length restrictions of 65-75ch on all patient insights blocks to prevent reading fatigue.",
+      "Do ensure status badges use high-contrast text overlaying light status fills.",
+      "Do use responsive flex layouts for visual sliders and charts rather than fixed pixel dimensions."
+    ],
+    "donts": [
+      "Don't use side-stripe borders (e.g. thick border-left) as callout indicators on patient cards. Use full borders or background fills instead.",
+      "Don't use gradient text under any circumstances; keep display elements solid and clean.",
+      "Don't animate image cards or charts on hover; hover animations must be limited to button text shifts, background colors, and outline focus states.",
+      "Don't stack card boundaries inside other card boundaries."
+    ]
+  }
+}
