@@ -10,11 +10,6 @@ import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 import Guide from '@/pages/Guide';
 import NotFound from '@/pages/NotFound';
-import Landing from '@/pages/Landing';
-import { setDashboardPath } from '@/lib/navigation';
-
-// Initialize the dashboard route path for the admin-dash / SaaS branch
-setDashboardPath('/dashboard');
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,11 +30,10 @@ export default function App() {
             <OnboardingProvider>
               <Routes>
                 {/* Public */}
-                <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
                 {/* Protected */}
                 <Route
-                  path="/dashboard"
+                  path="/"
                   element={
                     <ProtectedRoute>
                       <Dashboard />
