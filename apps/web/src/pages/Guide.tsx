@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDashboardPath } from '@/lib/navigation';
 import {
   ArrowLeft,
   Search,
@@ -197,7 +196,7 @@ export default function Guide() {
       <header className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-border/40">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(getDashboardPath())}
+            onClick={() => navigate('/')}
             className="p-2 rounded-xl border border-border hover:bg-border/20 text-foreground transition-all cursor-pointer bg-transparent"
           >
             <ArrowLeft className="w-4 h-4" />

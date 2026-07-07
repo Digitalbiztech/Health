@@ -10,10 +10,6 @@ import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 import Guide from '@/pages/Guide';
 import NotFound from '@/pages/NotFound';
-import { setDashboardPath } from '@/lib/navigation';
-
-// Initialize the dashboard route path for the master branch
-setDashboardPath('/');
 
 const queryClient = new QueryClient({
   defaultOptions: {

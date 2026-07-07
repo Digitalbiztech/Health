@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileQuestion } from 'lucide-react';
-import { getDashboardPath } from '@/lib/navigation';
 
 export default function NotFound() {
   const navigate = useNavigate();
@@ -29,7 +28,7 @@ export default function NotFound() {
         </p>
 
         <button
-          onClick={() => navigate(getDashboardPath(), { replace: true })}
+          onClick={() => navigate('/', { replace: true })}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer hover:opacity-90"
           style={{
             background: 'linear-gradient(135deg, var(--primary), var(--accent))',
