@@ -61,6 +61,43 @@ def _process_candidate(result: dict, method: str) -> dict:
     return result
 
 
+def _enrich_normalized_biomarkers(normalized: list[dict], pages: list[dict], method: str) -> list[dict]:
+    """Add page numbers, row indices, bounding box, and extractor method metadata to normalized biomarkers."""
+    enriched = []
+    for item in normalized:
+        biomarker = dict(item)
+        orig_name = biomarker.get("original_name") or biomarker.get("display_name", "")
+        value_str = biomarker.get("value")
+
+        detected_page = 1
+        row_index = None
+
+        # Search page text for page number and row index
+        for p in pages:
+            p_num = p["page"]
+            p_text = p["text"]
+
+            if orig_name.lower() in p_text.lower():
+                detected_page = p_num
+
+                # Try to find the line/row index
+                lines = p_text.split("\n")
+                for line_idx, line in enumerate(lines):
+                    if orig_name.lower() in line.lower():
+                        row_index = line_idx
+                        # If value is also on this line, we found the perfect row
+                        if value_str and value_str in line:
+                            break
+                break
+
+        biomarker["page"] = detected_page
+        biomarker["row_index"] = row_index
+        biomarker["bbox"] = None
+        biomarker["extractor"] = method
+        enriched.append(biomarker)
+    return enriched
+
+
 def _select_best(candidates: list[dict]) -> dict:
     """Pick the highest-quality candidate.
 
@@ -77,167 +114,152 @@ def _select_best(candidates: list[dict]) -> dict:
 
 
 async def extract_pdf(pdf_bytes: bytes) -> dict:
-    """Run the quality-driven cascading extraction pipeline against a PDF byte string.
+    """Run the merge-first extraction pipeline against a PDF byte string.
 
-    Uses both PyMuPDF and pdfplumber first. If they yield identical sets of biomarkers,
-    we proceed with PyMuPDF. If the difference is huge, we run Mistral OCR.
-    Otherwise, we select the one with the higher quality/confidence score.
+    Runs PyMuPDF + pdfplumber + OCR (conditionally/fallback) and merges their outputs.
     """
+    from app.merge import merge_biomarkers
+    from app.quality import score_merged_extraction
+
     # Classify PDF first
     pdf_type = classify_pdf(pdf_bytes)
 
+    candidates = []
+    ocr_candidate = None
+    pymupdf_candidate = None
+    pdfplumber_candidate = None
+
     if pdf_type == "image":
-        logger.info("PDF classified as IMAGE. Routing directly to Mistral OCR fallback.")
+        logger.info("PDF classified as IMAGE. Routing directly to Mistral OCR.")
         ocr_result = await extract_with_mistral_ocr(pdf_bytes)
         if not ocr_result:
             raise ValueError("Mistral OCR failed on image-based PDF")
         ocr_candidate = _process_candidate(ocr_result, "mistral_ocr")
-        ocr_candidate["metadata"]["api_logs"] = {
-            "mistral_ocr": {
-                "text": ocr_candidate.get("text", ""),
-                "biomarkers": ocr_candidate.get("normalized_biomarkers", []),
-            }
-        }
-        return ocr_candidate
+        candidates.append(ocr_candidate)
+    else:
+        # 1. Run both PyMuPDF and pdfplumber
+        pymupdf_result = extract_with_pymupdf(pdf_bytes)
+        pdfplumber_result = extract_with_pdfplumber(pdf_bytes)
 
-    # 1. Run both PyMuPDF and pdfplumber
-    pymupdf_result = extract_with_pymupdf(pdf_bytes)
-    pdfplumber_result = extract_with_pdfplumber(pdf_bytes)
+        if pymupdf_result:
+            pymupdf_candidate = _process_candidate(pymupdf_result, "pymupdf")
+            candidates.append(pymupdf_candidate)
+        if pdfplumber_result:
+            pdfplumber_candidate = _process_candidate(pdfplumber_result, "pdfplumber")
+            candidates.append(pdfplumber_candidate)
 
-    pymupdf_candidate = _process_candidate(pymupdf_result, "pymupdf") if pymupdf_result else None
-    pdfplumber_candidate = _process_candidate(pdfplumber_result, "pdfplumber") if pdfplumber_result else None
+        # Decide if we need OCR fallback for text PDF
+        # We run OCR if:
+        # - Both text extractors failed
+        # - Or there is a significant discrepancy between them
+        # - Or one of them succeeded but had low quality
+        run_ocr = False
+        if not candidates:
+            run_ocr = True
+        elif len(candidates) == 2:
+            set_py = {b["canonical_name"] for b in pymupdf_candidate["normalized_biomarkers"]}
+            set_pl = {b["canonical_name"] for b in pdfplumber_candidate["normalized_biomarkers"]}
 
-    # Gather API logs
-    api_logs = {}
-    if pymupdf_candidate:
-        api_logs["pymupdf"] = {
-            "text": pymupdf_candidate.get("text", ""),
-            "biomarkers": pymupdf_candidate.get("normalized_biomarkers", []),
-        }
-    if pdfplumber_candidate:
-        api_logs["pdfplumber"] = {
-            "text": pdfplumber_candidate.get("text", ""),
-            "biomarkers": pdfplumber_candidate.get("normalized_biomarkers", []),
-        }
+            if set_py != set_pl:
+                sym_diff = set_py.symmetric_difference(set_pl)
+                union_len = len(set_py.union(set_pl))
 
-    # Compare results if both succeeded
-    if pymupdf_candidate and pdfplumber_candidate:
-        set_py = {b["canonical_name"] for b in pymupdf_candidate["normalized_biomarkers"]}
-        set_pl = {b["canonical_name"] for b in pdfplumber_candidate["normalized_biomarkers"]}
+                # Significant discrepancy:
+                # - One is empty, other is not
+                # - More than 2 biomarkers differ
+                # - Discrepancy is > 20% of the union
+                if (len(set_py) == 0 or len(set_pl) == 0) or len(sym_diff) > 2 or (union_len > 0 and (len(sym_diff) / union_len) > 0.2):
+                    logger.info("Significant discrepancy detected. Running Mistral OCR for a third opinion.")
+                    run_ocr = True
+        elif len(candidates) == 1:
+            # Check if that single candidate has low quality
+            from app.parsers import should_fallback
+            single_cand = candidates[0]
+            if should_fallback(single_cand["quality"]):
+                logger.info("Single extractor succeeded but had low quality. Running Mistral OCR.")
+                run_ocr = True
 
-        if set_py == set_pl:
-            logger.info("PyMuPDF and pdfplumber extracted identical biomarker sets. Proceeding with PyMuPDF.")
-            pymupdf_candidate["metadata"]["api_logs"] = api_logs
-            return pymupdf_candidate
-
-        # Calculate symmetric difference
-        sym_diff = set_py.symmetric_difference(set_pl)
-        union_len = len(set_py.union(set_pl))
-
-        # Check if the difference is huge:
-        # - One is empty and the other is not, or
-        # - More than 2 biomarkers differ, or
-        # - Discrepancy is greater than 20% of the union of biomarkers.
-        huge_difference = False
-        if (len(set_py) == 0 and len(set_pl) > 0) or (len(set_pl) == 0 and len(set_py) > 0):
-            huge_difference = True
-        elif len(sym_diff) > 2:
-            huge_difference = True
-        elif union_len > 0 and (len(sym_diff) / union_len) > 0.2:
-            huge_difference = True
-
-        if huge_difference:
-            logger.info(
-                "Significant discrepancy detected between PyMuPDF (%d markers) and pdfplumber (%d markers). "
-                "Symmetric difference: %d. Routing to Mistral OCR for a third opinion.",
-                len(set_py),
-                len(set_pl),
-                len(sym_diff),
-            )
-            candidates = [pymupdf_candidate, pdfplumber_candidate]
+        if run_ocr:
             ocr_result = await extract_with_mistral_ocr(pdf_bytes)
             if ocr_result:
                 ocr_candidate = _process_candidate(ocr_result, "mistral_ocr")
-                api_logs["mistral_ocr"] = {
-                    "text": ocr_candidate.get("text", ""),
-                    "biomarkers": ocr_candidate.get("normalized_biomarkers", []),
-                }
                 candidates.append(ocr_candidate)
             else:
-                logger.warning("Mistral OCR failed. Selecting among text extractors only.")
+                logger.warning("Mistral OCR failed/skipped.")
 
-            # OCR is a third opinion, not an automatic winner — pick the best score.
-            best = _select_best(candidates)
-            logger.info(
-                "Selected '%s' candidate (confidence=%.4f, markers=%d) among %d candidates.",
-                best["quality"].extractor,
-                best["quality"].confidence_score,
-                len(best["normalized_biomarkers"]),
-                len(candidates),
-            )
-            best["metadata"]["api_logs"] = api_logs
-            return best
-        else:
-            logger.info(
-                "Slight difference between PyMuPDF and pdfplumber. Selecting highest quality score."
-            )
-            best_text = _select_best([pymupdf_candidate, pdfplumber_candidate])
-            best_text["metadata"]["api_logs"] = api_logs
-            return best_text
+    if not candidates:
+        raise ValueError("All extraction methods failed — file may be corrupt or empty")
 
-    # If only PyMuPDF succeeded
-    if pymupdf_candidate and not pdfplumber_candidate:
-        logger.info("Only PyMuPDF succeeded. Evaluating quality...")
-        from app.parsers import should_fallback
-        if not should_fallback(pymupdf_candidate["quality"]):
-            pymupdf_candidate["metadata"]["api_logs"] = api_logs
-            return pymupdf_candidate
-        logger.info("PyMuPDF quality low and pdfplumber failed. Routing to Mistral OCR.")
-        ocr_result = await extract_with_mistral_ocr(pdf_bytes)
-        if ocr_result:
-            ocr_candidate = _process_candidate(ocr_result, "mistral_ocr")
-            api_logs["mistral_ocr"] = {
-                "text": ocr_candidate.get("text", ""),
-                "biomarkers": ocr_candidate.get("normalized_biomarkers", []),
-            }
-            ocr_candidate["metadata"]["api_logs"] = api_logs
-            return ocr_candidate
-        pymupdf_candidate["metadata"]["api_logs"] = api_logs
-        return pymupdf_candidate
+    # 2. Enrich normalized biomarkers with metadata (page, row_index, bbox, extractor)
+    candidates_to_merge = []
+    api_logs = {}
 
-    # If only pdfplumber succeeded
-    if pdfplumber_candidate and not pymupdf_candidate:
-        logger.info("Only pdfplumber succeeded. Evaluating quality...")
-        from app.parsers import should_fallback
-        if not should_fallback(pdfplumber_candidate["quality"]):
-            pdfplumber_candidate["metadata"]["api_logs"] = api_logs
-            return pdfplumber_candidate
-        logger.info("pdfplumber quality low and PyMuPDF failed. Routing to Mistral OCR.")
-        ocr_result = await extract_with_mistral_ocr(pdf_bytes)
-        if ocr_result:
-            ocr_candidate = _process_candidate(ocr_result, "mistral_ocr")
-            api_logs["mistral_ocr"] = {
-                "text": ocr_candidate.get("text", ""),
-                "biomarkers": ocr_candidate.get("normalized_biomarkers", []),
-            }
-            ocr_candidate["metadata"]["api_logs"] = api_logs
-            return ocr_candidate
-        pdfplumber_candidate["metadata"]["api_logs"] = api_logs
-        return pdfplumber_candidate
+    for cand in candidates:
+        method = cand["method"]
+        enriched = _enrich_normalized_biomarkers(
+            cand["normalized_biomarkers"],
+            cand["pages"],
+            method
+        )
+        candidates_to_merge.append(enriched)
 
-    # If both failed, route to Mistral OCR
-    logger.info("Both PyMuPDF and pdfplumber failed. Routing to Mistral OCR.")
-    ocr_result = await extract_with_mistral_ocr(pdf_bytes)
-    if ocr_result:
-        ocr_candidate = _process_candidate(ocr_result, "mistral_ocr")
-        api_logs["mistral_ocr"] = {
-            "text": ocr_candidate.get("text", ""),
-            "biomarkers": ocr_candidate.get("normalized_biomarkers", []),
+        api_logs[method] = {
+            "text": cand.get("text", ""),
+            "biomarkers": cand.get("normalized_biomarkers", []),
         }
-        ocr_candidate["metadata"]["api_logs"] = api_logs
-        return ocr_candidate
 
-    raise ValueError("All extraction methods failed — file may be corrupt or empty")
+    # 3. Merge and deduplicate
+    merged_biomarkers = merge_biomarkers(candidates_to_merge)
+
+    # Group original biomarkers by canonical_name and page for agreement calculation
+    original_groups = []
+    group_map = {}
+    for lst in candidates_to_merge:
+        for b in lst:
+            key = (b["canonical_name"], b.get("page"))
+            if key not in group_map:
+                group_map[key] = []
+            group_map[key].append(b)
+    original_groups = list(group_map.values())
+
+    # 4. Determine primary candidate to inherit text, pages, phi
+    # Order of preference: PyMuPDF > pdfplumber > OCR
+    primary_candidate = None
+    for method in ["pymupdf", "pdfplumber", "mistral_ocr"]:
+        for cand in candidates:
+            if cand["method"] == method:
+                primary_candidate = cand
+                break
+        if primary_candidate:
+            break
+    if not primary_candidate:
+        primary_candidate = candidates[0]
+
+    # 5. Score Quality using Redesigned Quality Engine
+    quality = score_merged_extraction(
+        merged_biomarkers,
+        primary_candidate["text"],
+        original_groups
+    )
+
+    # 6. Build the final response dict
+    final_result = {
+        "text": primary_candidate["text"],
+        "masked_text": primary_candidate["masked_text"],
+        "method": "merged" if len(candidates) > 1 else primary_candidate["method"],
+        "page_count": primary_candidate["page_count"],
+        "pages": primary_candidate["pages"],
+        "masked_pages": primary_candidate["masked_pages"],
+        "phi_entities": primary_candidate["phi_entities"],
+        "phi_entities_count": primary_candidate["phi_entities_count"],
+        "parsed_biomarkers": primary_candidate["parsed_biomarkers"],
+        "normalized_biomarkers": merged_biomarkers,
+        "quality": quality,
+        "metadata": dict(primary_candidate.get("metadata", {})),
+    }
+    final_result["metadata"]["api_logs"] = api_logs
+
+    return final_result
 
 
 __all__ = [

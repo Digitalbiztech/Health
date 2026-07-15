@@ -37,7 +37,7 @@ class TestQualityEngine:
         # CBC has 8 expected markers
         markers = {"hemoglobin", "wbc", "rbc", "platelets"}
         coverage = compute_coverage(markers, ["CBC"])
-        assert coverage == 0.5  # 4 / 8
+        assert coverage == 0.7143  # 4.0 / 5.6 weighted
 
     def test_compute_structural_score(self):
         # 1 complete, 1 incomplete

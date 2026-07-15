@@ -280,6 +280,7 @@ def normalize_biomarker(
     return {
         "canonical_name": resolved.canonical_name,
         "display_name": resolved.display_name,
+        "original_name": raw_name,
         "value": val_str,
         "unit": final_unit,
         "reference_range": ref_range_str,
