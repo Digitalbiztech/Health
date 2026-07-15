@@ -20,6 +20,7 @@ import uuid
 from typing import Any
 
 from .openai_client import OPENAI_AVAILABLE, OPENAI_MODEL, get_openai_client
+from .mistral_client import MISTRAL_AVAILABLE, MISTRAL_MODEL, get_mistral_client
 
 logger = logging.getLogger(__name__)
 
@@ -92,11 +93,18 @@ def generate_insights(biomarkers: list[dict]) -> list[dict]:
     if not biomarkers:
         return []
 
-    if not OPENAI_AVAILABLE:
-        logger.warning("OPENAI_API_KEY not set — skipping LLM insight generation")
+    if MISTRAL_AVAILABLE:
+        client = get_mistral_client()
+        model = MISTRAL_MODEL
+        client_name = "Mistral"
+    elif OPENAI_AVAILABLE:
+        client = get_openai_client()
+        model = OPENAI_MODEL
+        client_name = "OpenAI"
+    else:
+        logger.warning("Neither MISTRAL_API_KEY nor OPENAI_API_KEY set — skipping LLM insight generation")
         return []
 
-    client = get_openai_client()
     if client is None:
         return []
 
@@ -104,7 +112,7 @@ def generate_insights(biomarkers: list[dict]) -> list[dict]:
 
     try:
         resp = client.chat.completions.create(
-            model=OPENAI_MODEL,
+            model=model,
             temperature=0.3,
             response_format={"type": "json_schema", "json_schema": _INSIGHT_SCHEMA},
             messages=[
@@ -116,7 +124,7 @@ def generate_insights(biomarkers: list[dict]) -> list[dict]:
             ],
         )
     except Exception as e:
-        logger.error("OpenAI insight generation failed: %s", e, exc_info=True)
+        logger.error("%s insight generation failed: %s", client_name, e, exc_info=True)
         return []
 
     raw = resp.choices[0].message.content or "{}"

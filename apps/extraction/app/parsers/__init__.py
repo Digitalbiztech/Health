@@ -31,6 +31,7 @@ from .normalizer import (
     resolve_names_batch,
 )
 from .openai_client import OPENAI_AVAILABLE, OPENAI_MODEL, get_openai_client
+from .mistral_client import MISTRAL_AVAILABLE, MISTRAL_MODEL, get_mistral_client
 
 __all__ = [
     "ABBREVIATION_INDEX",
@@ -40,6 +41,8 @@ __all__ = [
     "ExtractionQuality",
     "OPENAI_AVAILABLE",
     "OPENAI_MODEL",
+    "MISTRAL_AVAILABLE",
+    "MISTRAL_MODEL",
     "PANEL_DEFINITIONS",
     "ResolvedName",
     "best_fuzzy_match",
@@ -49,6 +52,7 @@ __all__ = [
     "extract_biomarkers_llm",
     "generate_insights",
     "get_openai_client",
+    "get_mistral_client",
     "levenshtein_distance",
     "levenshtein_ratio",
     "normalize_batch",

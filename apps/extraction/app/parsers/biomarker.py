@@ -12,6 +12,7 @@ import logging
 from typing import Any
 
 from .openai_client import OPENAI_AVAILABLE, OPENAI_MODEL, get_openai_client
+from .mistral_client import MISTRAL_AVAILABLE, MISTRAL_MODEL, get_mistral_client
 
 logger = logging.getLogger(__name__)
 
@@ -78,11 +79,18 @@ def extract_biomarkers_llm(
     Returns [] when OpenAI is unconfigured or the call fails — callers MUST
     treat that as 'no biomarkers found', not a hard error.
     """
-    if not OPENAI_AVAILABLE:
-        logger.warning("OPENAI_API_KEY not set — skipping LLM biomarker extraction")
+    if MISTRAL_AVAILABLE:
+        client = get_mistral_client()
+        model = MISTRAL_MODEL
+        client_name = "Mistral"
+    elif OPENAI_AVAILABLE:
+        client = get_openai_client()
+        model = OPENAI_MODEL
+        client_name = "OpenAI"
+    else:
+        logger.warning("Neither MISTRAL_API_KEY nor OPENAI_API_KEY set — skipping LLM biomarker extraction")
         return []
 
-    client = get_openai_client()
     if client is None:
         return []
 
@@ -101,7 +109,7 @@ def extract_biomarkers_llm(
 
     try:
         resp = client.chat.completions.create(
-            model=OPENAI_MODEL,
+            model=model,
             temperature=0,
             response_format={"type": "json_schema", "json_schema": _BIOMARKER_SCHEMA},
             messages=[
@@ -110,7 +118,7 @@ def extract_biomarkers_llm(
             ],
         )
     except Exception as e:
-        logger.error("OpenAI biomarker extraction failed: %s", e, exc_info=True)
+        logger.error("%s biomarker extraction failed: %s", client_name, e, exc_info=True)
         return []
 
     raw = resp.choices[0].message.content or "{}"

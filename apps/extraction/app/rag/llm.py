@@ -8,6 +8,8 @@ from app.rag.config import (
     LLM_MODEL,
     EMBEDDING_MODEL,
     SUPABASE_DB_URL,
+    MISTRAL_API_KEY,
+    MISTRAL_MODEL,
 )
 
 logger = logging.getLogger(__name__)
@@ -20,13 +22,22 @@ def get_chat_model() -> ChatOpenAI:
     """Lazy singleton for ChatOpenAI model."""
     global _chat_model
     if _chat_model is None:
-        if not OPENAI_API_KEY:
-            raise ValueError("OPENAI_API_KEY is not configured.")
-        _chat_model = ChatOpenAI(
-            model=LLM_MODEL,
-            api_key=OPENAI_API_KEY,
-            temperature=0.3,
-        )
+        if MISTRAL_API_KEY and not OPENAI_API_KEY:
+            logger.info("Initializing RAG ChatModel with Mistral AI — model=%s", MISTRAL_MODEL)
+            _chat_model = ChatOpenAI(
+                model=MISTRAL_MODEL,
+                api_key=MISTRAL_API_KEY,
+                base_url="https://api.mistral.ai/v1",
+                temperature=0.3,
+            )
+        else:
+            if not OPENAI_API_KEY:
+                raise ValueError("Neither OPENAI_API_KEY nor MISTRAL_API_KEY is configured.")
+            _chat_model = ChatOpenAI(
+                model=LLM_MODEL,
+                api_key=OPENAI_API_KEY,
+                temperature=0.3,
+            )
     return _chat_model
 
 def get_openai_embeddings() -> OpenAIEmbeddings:

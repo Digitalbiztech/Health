@@ -12,7 +12,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 
-from app.parsers import BIOMARKER_DICTIONARY, OPENAI_AVAILABLE, OPENAI_MODEL
+from app.parsers import (
+    BIOMARKER_DICTIONARY,
+    OPENAI_AVAILABLE,
+    OPENAI_MODEL,
+    MISTRAL_AVAILABLE,
+    MISTRAL_MODEL,
+)
 from app.phi import PRESIDIO_AVAILABLE
 from app.routers import extract_router, health_router, normalize_router
 from app.rag import rag_router
@@ -29,11 +35,13 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(
-        "Extraction service starting up — %d biomarkers loaded, Presidio=%s, OpenAI=%s (model=%s)",
+        "Extraction service starting up — %d biomarkers loaded, Presidio=%s, OpenAI=%s (model=%s), Mistral=%s (model=%s)",
         len(BIOMARKER_DICTIONARY),
         "enabled" if PRESIDIO_AVAILABLE else "disabled (regex fallback)",
-        "enabled" if OPENAI_AVAILABLE else "disabled (no OPENAI_API_KEY)",
+        "enabled" if OPENAI_AVAILABLE else "disabled",
         OPENAI_MODEL,
+        "enabled" if MISTRAL_AVAILABLE else "disabled",
+        MISTRAL_MODEL,
     )
     validate_embedding_dim()
     yield

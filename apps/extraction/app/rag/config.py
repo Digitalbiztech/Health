@@ -12,6 +12,9 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai").strip().lower()
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini").strip()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "").strip()
+MISTRAL_MODEL = os.getenv("MISTRAL_MODEL", "mistral-large-latest").strip()
+
 EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "openai").strip().lower()
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small").strip()
 EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "1536"))
@@ -30,8 +33,8 @@ ENABLE_PUBMED = os.getenv("ENABLE_PUBMED", "true").strip().lower() in ("1", "tru
 NCBI_API_KEY = os.getenv("NCBI_API_KEY", "").strip()
 RAG_DEBUG = os.getenv("RAG_DEBUG", "false").strip().lower() in ("1", "true", "yes")
 
-if not OPENAI_API_KEY:
-    logger.warning("OPENAI_API_KEY is not set. RAG features will fail or run in degraded mode.")
+if not OPENAI_API_KEY and not MISTRAL_API_KEY:
+    logger.warning("Neither OPENAI_API_KEY nor MISTRAL_API_KEY is set. RAG features will fail or run in degraded mode.")
 
 if not SUPABASE_DB_URL:
     logger.warning("SUPABASE_DB_URL is not set. RAG vector store will be unavailable.")

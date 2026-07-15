@@ -42,6 +42,8 @@ class HealthResponse(BaseModel):
     presidio_available: bool
     openai_available: bool
     openai_model: str
+    mistral_available: bool | None = None
+    mistral_model: str | None = None
 
 
 # ── Normalization responses ───────────────────────────────────
