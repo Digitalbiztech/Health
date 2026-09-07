@@ -107,42 +107,13 @@ def generate_insights(biomarkers: list[dict]) -> list[dict]:
     if not biomarkers:
         return []
 
-    if MISTRAL_AVAILABLE:
-        client = get_mistral_client()
-        model = MISTRAL_MODEL
-        client_name = "Mistral"
-    elif OPENAI_AVAILABLE:
-        client = get_openai_client()
-        model = OPENAI_MODEL
-        client_name = "OpenAI"
-    else:
-        logger.warning("Neither MISTRAL_API_KEY nor OPENAI_API_KEY set — skipping LLM insight generation")
     candidates = _insight_candidates()
     if not candidates:
         logger.warning("Neither OpenAI nor Mistral configured/initialized — skipping LLM insight generation")
         return []
 
-    if client is None:
-        return []
-
     biomarker_block = _format_biomarkers(biomarkers)
 
-    try:
-        resp = client.chat.completions.create(
-            model=model,
-            temperature=0.3,
-            response_format={"type": "json_schema", "json_schema": _INSIGHT_SCHEMA},
-            messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": f"Normalized biomarker panel:\n\n{biomarker_block}",
-                },
-            ],
-        )
-    except Exception as e:
-        logger.error("%s insight generation failed: %s", client_name, e, exc_info=True)
-        return []
     for client, model, client_name in candidates:
         try:
             resp = client.chat.completions.create(
@@ -164,19 +135,10 @@ def generate_insights(biomarkers: list[dict]) -> list[dict]:
                 logger.error("%s insight LLM returned invalid JSON: %s — raw=%r", client_name, e, raw[:200])
                 continue
 
-    raw = resp.choices[0].message.content or "{}"
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        logger.error("Insight LLM returned invalid JSON: %s — raw=%r", e, raw[:200])
-        return []
             items = parsed.get("insights", [])
             if not isinstance(items, list):
                 continue
 
-    items = parsed.get("insights", [])
-    if not isinstance(items, list):
-        return []
             result: list[dict] = []
             for item in items:
                 if not isinstance(item, dict):
@@ -195,28 +157,9 @@ def generate_insights(biomarkers: list[dict]) -> list[dict]:
                     "tone": tone,
                 })
 
-    result: list[dict] = []
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        title = str(item.get("title", "")).strip()
-        body = str(item.get("body", "")).strip()
-        tone = str(item.get("tone", "neutral")).strip().lower()
-        if tone not in ("positive", "watch", "neutral"):
-            tone = "neutral"
-        if not title or not body:
-            continue
-        result.append({
-            "id": f"i-{uuid.uuid4().hex[:8]}",
-            "title": title,
-            "body": body,
-            "tone": tone,
-        })
             logger.info("%s generated %d insights", client_name, len(result))
             return result
 
-    logger.info("LLM generated %d insights", len(result))
-    return result
         except Exception as e:
             logger.warning(
                 "%s insight generation failed, attempting fallback if available: %s",

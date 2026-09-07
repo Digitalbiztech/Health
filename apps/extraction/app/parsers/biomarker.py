@@ -88,30 +88,14 @@ def extract_biomarkers_llm(
     text: str,
     canonical_hints: list[str] | None = None,
 ) -> list[dict]:
-    """Extract {name, value, unit, reference_min, reference_max} records from report text via the LLM.
     """Extract {name, value, unit, reference_min, reference_max} records from report text via LLM.
 
-    Returns [] when OpenAI is unconfigured or the call fails — callers MUST
-    treat that as 'no biomarkers found', not a hard error.
     Tries OpenAI primary -> Mistral fallback. Returns [] when neither is configured
     or all calls fail — callers MUST treat that as 'no biomarkers found', not a hard error.
     """
-    if MISTRAL_AVAILABLE:
-        client = get_mistral_client()
-        model = MISTRAL_MODEL
-        client_name = "Mistral"
-    elif OPENAI_AVAILABLE:
-        client = get_openai_client()
-        model = OPENAI_MODEL
-        client_name = "OpenAI"
-    else:
-        logger.warning("Neither MISTRAL_API_KEY nor OPENAI_API_KEY set — skipping LLM biomarker extraction")
     candidates = _llm_candidates()
     if not candidates:
         logger.warning("Neither OpenAI nor Mistral configured/initialized — skipping LLM biomarker extraction")
-        return []
-
-    if client is None:
         return []
 
     if not text or not text.strip():
@@ -127,19 +111,6 @@ def extract_biomarkers_llm(
 
     hints = canonical_hints or []
 
-    try:
-        resp = client.chat.completions.create(
-            model=model,
-            temperature=0,
-            response_format={"type": "json_schema", "json_schema": _BIOMARKER_SCHEMA},
-            messages=[
-                {"role": "system", "content": _build_system_prompt(hints)},
-                {"role": "user", "content": payload},
-            ],
-        )
-    except Exception as e:
-        logger.error("%s biomarker extraction failed: %s", client_name, e, exc_info=True)
-        return []
     for client, model, client_name in candidates:
         try:
             resp = client.chat.completions.create(
@@ -158,21 +129,11 @@ def extract_biomarkers_llm(
                 logger.error("%s returned invalid JSON: %s — raw=%r", client_name, e, raw[:200])
                 continue
 
-    raw = resp.choices[0].message.content or "{}"
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as e:
-        logger.error("LLM returned invalid JSON: %s — raw=%r", e, raw[:200])
-        return []
             biomarkers = parsed.get("biomarkers", [])
             if not isinstance(biomarkers, list):
                 logger.warning("%s returned non-list biomarkers field: %r", client_name, type(biomarkers))
                 continue
 
-    biomarkers = parsed.get("biomarkers", [])
-    if not isinstance(biomarkers, list):
-        logger.warning("LLM returned non-list biomarkers field: %r", type(biomarkers))
-        return []
             cleaned: list[dict] = []
             for b in biomarkers:
                 if not isinstance(b, dict):
@@ -192,29 +153,9 @@ def extract_biomarkers_llm(
                     "reference_max": float(ref_max) if ref_max is not None else None,
                 })
 
-    cleaned: list[dict] = []
-    for b in biomarkers:
-        if not isinstance(b, dict):
-            continue
-        name = str(b.get("name", "")).strip()
-        value = str(b.get("value", "")).strip()
-        unit = str(b.get("unit", "")).strip()
-        ref_min = b.get("reference_min")
-        ref_max = b.get("reference_max")
-        if not name or not value:
-            continue
-        cleaned.append({
-            "name": name,
-            "value": value,
-            "unit": unit,
-            "reference_min": float(ref_min) if ref_min is not None else None,
-            "reference_max": float(ref_max) if ref_max is not None else None,
-        })
             logger.info("%s extracted %d biomarker candidates", client_name, len(cleaned))
             return cleaned
 
-    logger.info("LLM extracted %d biomarker candidates", len(cleaned))
-    return cleaned
         except Exception as e:
             logger.warning(
                 "%s biomarker extraction failed, attempting fallback if available: %s",

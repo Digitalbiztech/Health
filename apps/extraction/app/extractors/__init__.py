@@ -25,7 +25,6 @@ async def download_file(file_url: str) -> bytes:
 
 
 def _process_candidate(result: dict, method: str) -> dict:
-    """Mask PHI, parse biomarkers, normalize and score quality for a candidate."""
     """Mask PHI, normalize OCR text, parse biomarkers, normalize and score quality for a candidate."""
     from app.phi import mask_text, mask_pages
     from app.normalization import get_text_normalizer, AllProvidersFailedError
@@ -41,7 +40,6 @@ def _process_candidate(result: dict, method: str) -> dict:
     masked_pages, _vault, _page_entities = mask_pages(result["pages"])
     total_phi = len(full_entities)
 
-    # 2. LLM Parse biomarkers from masked text
     # 1.5. Normalize text using LLM (OpenAI primary -> Mistral fallback)
     # Operates on masked text to avoid PHI exposure
     normalizer = get_text_normalizer()
