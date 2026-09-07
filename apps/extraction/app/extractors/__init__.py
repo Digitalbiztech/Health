@@ -26,7 +26,9 @@ async def download_file(file_url: str) -> bytes:
 
 def _process_candidate(result: dict, method: str) -> dict:
     """Mask PHI, parse biomarkers, normalize and score quality for a candidate."""
+    """Mask PHI, normalize OCR text, parse biomarkers, normalize and score quality for a candidate."""
     from app.phi import mask_text, mask_pages
+    from app.normalization import get_text_normalizer, AllProvidersFailedError
     from app.parsers import (
         BIOMARKER_DICTIONARY,
         extract_biomarkers_llm,
@@ -40,6 +42,39 @@ def _process_candidate(result: dict, method: str) -> dict:
     total_phi = len(full_entities)
 
     # 2. LLM Parse biomarkers from masked text
+    # 1.5. Normalize text using LLM (OpenAI primary -> Mistral fallback)
+    # Operates on masked text to avoid PHI exposure
+    normalizer = get_text_normalizer()
+    norm_meta = {"status": "skipped", "provider": None}
+
+    if normalizer and masked_text.strip():
+        doc_id = result.get("upload_id") or method
+        try:
+            normalized_text, provider_used = normalizer.normalize(
+                masked_text,
+                doc_id=str(doc_id),
+            )
+            masked_text = normalized_text
+            norm_meta = {"status": "ok", "provider": provider_used}
+        except AllProvidersFailedError as e:
+            logger.error(
+                "[doc=%s] OCR text normalization failed for %s (gracefully proceeding un-normalized): %s",
+                doc_id,
+                method,
+                e,
+            )
+            norm_meta = {"status": "failed", "provider": None}
+        except Exception as e:
+            logger.error(
+                "[doc=%s] Unexpected error in text normalization for %s (gracefully proceeding un-normalized): %s",
+                doc_id,
+                method,
+                e,
+                exc_info=True,
+            )
+            norm_meta = {"status": "failed", "provider": None}
+
+    # 2. LLM Parse biomarkers from normalized masked text
     hints = list(BIOMARKER_DICTIONARY.keys())
     parsed = extract_biomarkers_llm(masked_text, hints)
 
@@ -50,6 +85,7 @@ def _process_candidate(result: dict, method: str) -> dict:
     quality = score_extraction(method, normalized)
 
     # Assemble complete extraction bundle
+    result.setdefault("metadata", {})["text_normalization"] = norm_meta
     result["masked_text"] = masked_text
     result["masked_pages"] = masked_pages
     result["phi_entities"] = full_entities
