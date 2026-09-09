@@ -24,6 +24,7 @@ Font.register({
   family: 'Inter',
   fonts: [
     { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff', fontWeight: 400 },
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-italic.woff', fontWeight: 400, fontStyle: 'italic' },
     { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-500-normal.woff', fontWeight: 500 },
     { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.woff', fontWeight: 700 },
   ],
@@ -271,7 +272,7 @@ const styles = StyleSheet.create({
     color: '#CBD5E1',
     fontSize: 6.5,
     marginTop: 2,
-    fontWeight: 'medium',
+    fontWeight: 500,
   },
 
   // ── PATIENT BANNER ────────────────────────────────────────────────────────
@@ -327,7 +328,7 @@ const styles = StyleSheet.create({
     fontSize: 6.5,
     color: SLATE_500,
     marginTop: 1.5,
-    fontWeight: 'medium',
+    fontWeight: 500,
   },
   bannerBadge: {
     backgroundColor: '#f8fafc',
@@ -366,7 +367,7 @@ const styles = StyleSheet.create({
   sectionHeadingSubtitle: {
     fontSize: 6.5,
     color: SLATE_500,
-    fontWeight: 'medium',
+    fontWeight: 500,
     marginTop: 1.5,
   },
   sectionDatePill: {
@@ -523,7 +524,7 @@ const styles = StyleSheet.create({
   actionableSubtitle: {
     fontSize: 6.5,
     color: '#7f1d1d',
-    fontWeight: 'medium',
+    fontWeight: 500,
   },
   actionableFindingsList: {
     gap: 3.5,
@@ -565,7 +566,7 @@ const styles = StyleSheet.create({
   actionableCtaNote: {
     fontSize: 6,
     color: '#7f1d1d',
-    fontWeight: 'medium',
+    fontWeight: 500,
     flex: 1,
     marginRight: 6,
   },
@@ -639,8 +640,7 @@ const styles = StyleSheet.create({
   },
   summaryDisclaimerText: {
     fontSize: 5.5,
-    color: SLATE_400,
-    fontStyle: 'italic',
+    color: SLATE_500,
   },
 
   // ── CONTINUOUS DETAILED PANELS ────────────────────────────────────────────
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
     fontSize: 6,
     color: SLATE_400,
     marginTop: 1,
-    fontWeight: 'medium',
+    fontWeight: 500,
   },
   panelScoreBadge: {
     flexDirection: 'row',
@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
   flaggedUnit: {
     fontSize: 6.5,
     color: SLATE_400,
-    fontWeight: 'medium',
+    fontWeight: 500,
   },
   flaggedBadge: {
     borderRadius: 3,
@@ -813,7 +813,7 @@ const styles = StyleSheet.create({
     width: '38%',
     fontSize: 7,
     color: SLATE_900,
-    fontWeight: 'medium',
+    fontWeight: 500,
   },
   compactColRange: {
     width: '26%',
@@ -855,7 +855,7 @@ const styles = StyleSheet.create({
   footerText: {
     color: SLATE_400,
     fontSize: 5.5,
-    fontWeight: 'medium',
+    fontWeight: 500,
   },
   pageNumber: {
     color: SLATE_400,
@@ -1478,7 +1478,7 @@ export function PremiumPDFDocument({
                           {resolved.optimalText} <Text style={{ fontSize: 5.5, color: SLATE_400 }}>{m.unit}</Text>
                         </Text>
                         <Text style={styles.compactColValue}>
-                          {m.value} <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'medium' }}>{m.unit}</Text>
+                          {m.value} <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 500 }}>{m.unit}</Text>
                         </Text>
                         <View style={styles.compactColStatus}>
                           <View style={{
