@@ -1,17 +1,189 @@
-import { Document, Page, Text, View, StyleSheet, Font, Image, Svg, Circle, Line, Polyline, Rect } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Font, Image, Svg, Circle } from '@react-pdf/renderer';
 import type { LabReport, LabPanel } from '@/types/lab';
-function resolveRange(_name: string, minVal: any, maxVal: any, value: number, _gender: string) {
+
+// ─── Font Registrations ────────────────────────────────────────────────────────
+Font.register({
+  family: 'Roboto',
+  fonts: [
+    { src: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf', fontWeight: 400 },
+    { src: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Medium.ttf', fontWeight: 500 },
+    { src: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Medium.ttf', fontWeight: 700 },
+  ],
+});
+
+Font.register({
+  family: 'Lora',
+  fonts: [
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/lora@latest/latin-400-normal.woff', fontWeight: 400 },
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/lora@latest/latin-500-normal.woff', fontWeight: 500 },
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/lora@latest/latin-700-normal.woff', fontWeight: 700 },
+  ],
+});
+
+Font.register({
+  family: 'Inter',
+  fonts: [
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff', fontWeight: 400 },
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-500-normal.woff', fontWeight: 500 },
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.woff', fontWeight: 700 },
+  ],
+});
+
+// Alias for Circle to support SVG dash properties
+const CircleAny = Circle as any;
+
+// ─── Design Tokens & Palettes ──────────────────────────────────────────────────
+const TEAL_DARK = '#065f46';
+const TEAL_PRIMARY = '#0DA58E';
+const TEAL_BRIGHT = '#10b981';
+const TEAL_TINT = '#ecfdf5';
+const TEAL_BORDER = '#d1fae5';
+const BG_PAGE = '#F9FBFA';
+
+const SLATE_900 = '#0f172a';
+const SLATE_700 = '#334155';
+const SLATE_500 = '#64748b';
+const SLATE_400 = '#94a3b8';
+const SLATE_300 = '#cbd5e1';
+const SLATE_100 = '#f1f5f9';
+
+// Status styling with colorblind-accessible icons and clinical color mapping
+export const STATUS_META: Record<string, { label: string; icon: string; fg: string; bg: string; border: string; bar: string }> = {
+  normal: { label: 'NORMAL', icon: '✓', fg: '#0d9488', bg: '#ecfdf5', border: '#a7f3d0', bar: '#0d9488' },
+  high: { label: 'ELEVATED', icon: '▲', fg: '#b91c1c', bg: '#fef2f2', border: '#fca5a5', bar: '#b91c1c' },
+  low: { label: 'REDUCED', icon: '▼', fg: '#b45309', bg: '#fffbeb', border: '#fcd34d', bar: '#b45309' },
+  critical: { label: 'CRITICAL', icon: '!', fg: '#7f1d1d', bg: '#fef2f2', border: '#f87171', bar: '#7f1d1d' },
+  unknown: { label: 'UNKNOWN', icon: '•', fg: '#64748b', bg: '#f8fafc', border: '#cbd5e1', bar: '#94a3b8' },
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  'Complete Blood Count (CBC)': '#0DA58E',
+  'Comprehensive Metabolic Panel (CMP)': '#06b6d4',
+  'Lipid Panel': '#f59e0b',
+  'Thyroid Panel': '#ec4899',
+  'Hormones': '#8b5cf6',
+  'Vitamins & Minerals': '#34d399',
+};
+const DEFAULT_COLORS = ['#0DA58E', '#06b6d4', '#3b82f6', '#34d399', '#f59e0b', '#ec4899', '#8b5cf6', '#10b981'];
+
+// ─── Reference Range Resolver ──────────────────────────────────────────────────
+export interface ResolvedBiomarkerRange {
+  type: 'two_sided' | 'greater_than' | 'less_than';
+  min: number | null;
+  max: number | null;
+  displayMin: number;
+  displayMax: number;
+  optimalMin: number;
+  optimalMax: number;
+  optimalText: string;
+  pct: number;
+}
+
+export function resolveBiomarkerRange(
+  _name: string,
+  minVal: any,
+  maxVal: any,
+  value: number,
+  _gender: string
+): ResolvedBiomarkerRange {
   const numMin = (minVal !== null && minVal !== undefined && minVal !== '') ? Number(minVal) : NaN;
   const numMax = (maxVal !== null && maxVal !== undefined && maxVal !== '') ? Number(maxVal) : NaN;
+  const hasMin = !isNaN(numMin);
+  const hasMax = !isNaN(numMax);
 
-  const minRaw = !isNaN(numMin) ? numMin : 0;
-  const maxRaw = !isNaN(numMax) ? numMax : (value > 0 ? value * 1.5 : 100);
-  
-  // Round to prevent floating point inaccuracies (e.g. 1.7999999999999998 -> 1.8)
-  const min = parseFloat(minRaw.toFixed(4));
-  const max = parseFloat(maxRaw.toFixed(4));
-  
-  return { min, max };
+  const val = typeof value === 'number' && !isNaN(value) ? value : 0;
+
+  // Case 1: Greater-than only (e.g. HDL > 40, eGFR > 60, Vitamin D > 30)
+  // Condition: min is defined (> 0) and max is missing or sentinel (>= 500 or <= 0)
+  if (hasMin && numMin > 0 && (!hasMax || numMax >= 500 || numMax <= 0)) {
+    const optimalMin = numMin;
+    const span = Math.max(optimalMin, 20);
+    const displayMax = Math.max(optimalMin + span, val * 1.25);
+
+    let pct = 35;
+    if (val < optimalMin) {
+      pct = Math.max(5, (val / optimalMin) * 35);
+    } else {
+      const excess = val - optimalMin;
+      const room = Math.max(displayMax - optimalMin, 1);
+      pct = 35 + Math.min(58, (excess / room) * 58);
+    }
+
+    return {
+      type: 'greater_than',
+      min: optimalMin,
+      max: null,
+      displayMin: 0,
+      displayMax: parseFloat(displayMax.toFixed(1)),
+      optimalMin,
+      optimalMax: Infinity,
+      optimalText: `≥ ${optimalMin}`,
+      pct: Math.min(95, Math.max(5, pct)),
+    };
+  }
+
+  // Case 2: Less-than only (e.g. Triglycerides < 150, LDL < 100, Ratio < 5.0, HbA1c < 5.7)
+  // Condition: max is defined (< 500) and min is missing or <= 0
+  if (hasMax && numMax > 0 && (!hasMin || numMin <= 0)) {
+    const optimalMax = numMax;
+    const buffer = optimalMax * 0.4;
+    const displayMax = Math.max(optimalMax + buffer, val * 1.15);
+
+    let pct = 50;
+    if (val <= optimalMax) {
+      pct = Math.max(5, (val / optimalMax) * 65);
+    } else {
+      const excess = val - optimalMax;
+      const room = Math.max(displayMax - optimalMax, 0.1);
+      pct = 65 + Math.min(30, (excess / room) * 30);
+    }
+
+    return {
+      type: 'less_than',
+      min: null,
+      max: optimalMax,
+      displayMin: 0,
+      displayMax: parseFloat(displayMax.toFixed(1)),
+      optimalMin: 0,
+      optimalMax,
+      optimalText: `< ${optimalMax}`,
+      pct: Math.min(95, Math.max(5, pct)),
+    };
+  }
+
+  // Case 3: Two-sided bounded (e.g. WBC 4.5 - 11.0, Potassium 3.5 - 5.0, Glucose 70 - 99)
+  const min = hasMin ? Math.max(0, numMin) : 0;
+  const max = hasMax ? numMax : (val > 0 ? val * 1.5 : 100);
+  const span = Math.max(max - min, 0.1);
+  const buffer = Math.min(min, span * 0.35, 10);
+  const displayMin = Math.max(0, parseFloat((min - buffer).toFixed(2))); // Strictly non-negative!
+  const displayMax = parseFloat((max + buffer).toFixed(2));
+
+  let pct = 50;
+  if (val < min) {
+    const under = Math.max(min - displayMin, 0.1);
+    const dist = Math.max(0, val - displayMin);
+    pct = Math.max(5, (dist / under) * 30);
+  } else if (val <= max) {
+    const dist = val - min;
+    pct = 30 + (span > 0 ? (dist / span) * 40 : 20);
+  } else {
+    const over = Math.max(displayMax - max, 0.1);
+    const dist = Math.min(over, val - max);
+    pct = 70 + Math.min(25, (dist / over) * 25);
+  }
+
+  return {
+    type: 'two_sided',
+    min,
+    max,
+    displayMin,
+    displayMax,
+    optimalMin: min,
+    optimalMax: max,
+    optimalText: `${min} – ${max}`,
+    pct: Math.min(95, Math.max(5, pct)),
+  };
 }
 
 function formatReportDate(dateString?: string): string {
@@ -21,103 +193,35 @@ function formatReportDate(dateString?: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-// `strokeDashoffset` is supported at runtime by react-pdf's renderer but missing
-// from CircleProps' typings — alias as `any` for the gauge / doughnut math.
-const CircleAny = Circle as any;
+function panelScore(panel: LabPanel): number {
+  const n = panel.biomarkers.filter(b => b.status === 'normal').length;
+  return panel.biomarkers.length ? Math.round((n / panel.biomarkers.length) * 100) : 0;
+}
 
-// ─── Embed clean, professional Roboto, Lora, and Inter fonts ──────────────────
-Font.register({
-  family: 'Roboto',
-  fonts: [
-    { src: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf', fontWeight: 400 },
-    { src: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Medium.ttf', fontWeight: 500 },
-    { src: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Medium.ttf', fontWeight: 700 }
-  ]
-});
-
-Font.register({
-  family: 'Lora',
-  fonts: [
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/lora@latest/latin-400-normal.woff', fontWeight: 400 },
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/lora@latest/latin-500-normal.woff', fontWeight: 500 },
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/lora@latest/latin-700-normal.woff', fontWeight: 700 }
-  ]
-});
-
-Font.register({
-  family: 'Inter',
-  fonts: [
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff', fontWeight: 400 },
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-500-normal.woff', fontWeight: 500 },
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.woff', fontWeight: 700 }
-  ]
-});
-
-
-// ─── Status colour tokens (preserved clinical semantics) ─────────────────────
-const STATUS_HEX: Record<string, { fg: string; bg: string; light: string; bar: string }> = {
-  normal: { fg: '#0d9488', bg: '#ecfdf5', light: '#d1fae5', bar: '#0d9488' },
-  high: { fg: '#b91c1c', bg: '#fef2f2', light: '#fee2e2', bar: '#b91c1c' },
-  low: { fg: '#b45309', bg: '#fffbeb', light: '#fef3c7', bar: '#b45309' },
-  critical: { fg: '#7f1d1d', bg: '#fef2f2', light: '#fee2e2', bar: '#7f1d1d' },
-  unknown: { fg: '#64748b', bg: '#f8fafc', light: '#f1f5f9', bar: '#94a3b8' },
-};
-
-
-const STATUS_LABEL: Record<string, string> = {
-  normal: 'NORMAL', high: 'HIGH', low: 'LOW', critical: 'CRITICAL', unknown: 'UNKNOWN',
-};
-
-// ─── HealthDashboard-inspired teal/emerald palette ───────────────────────────
-const TEAL_DEEP = '#044E45';   // dark teal — asthma-callout background
-const TEAL_DARK = '#065f46';   // emerald-800 — strong line / heading
-const TEAL_PRIMARY = '#0DA58E';   // brand teal — buttons / primary
-const TEAL_BRIGHT = '#10b981';   // emerald-500 — accents / sparklines
-const TEAL_LIGHT = '#a7f3d0';   // emerald-200 — soft fills
-const TEAL_TINT = '#ecfdf5';   // emerald-50 — card tints
-const TEAL_BORDER = '#d1fae5';   // emerald-100 — soft borders
-const BG_PAGE = '#F9FBFA';   // cream-mint page bg
-const BG_CARD = '#ffffff83';
-
-const YC_GOLD = '#D4BDAD';
-const SLATE_900 = '#1f2937';
-const SLATE_700 = '#374151';
-const SLATE_500 = '#6b7280';
-const SLATE_400 = '#9ca3af';
-const SLATE_300 = '#d1d5db';
-const SLATE_100 = '#f3f4f6';
-
-// Accent palettes for tri-card metrics (matches HealthDashboard tri-cards)
-const ACCENT = {
-  green: { fg: '#10b981', bg: '#ecfdf5', icon: '#d1fae5' },
-  blue: { fg: '#3b82f6', bg: '#eff6ff', icon: '#dbeafe' },
-  amber: { fg: '#f59e0b', bg: '#fffbeb', icon: '#fef3c7' },
-};
-
-// ─── Stylesheet using React-PDF Flexbox layout model ────────────────────────────
+// ─── Stylesheet ────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   page: {
     fontFamily: 'Inter',
-    paddingTop: 26,
-    paddingBottom: 55,
+    paddingTop: 22,
+    paddingBottom: 45,
     paddingHorizontal: 28,
-    fontSize: 9,
+    fontSize: 8.5,
     color: SLATE_900,
     backgroundColor: BG_PAGE,
   },
 
-  // ── HEADER (light, dashboard-style) ───────────────────────────────────────
+  // ── HEADER (High-contrast, elegant navy & gold) ───────────────────────────
   header: {
     backgroundColor: SLATE_900,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
     borderRadius: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    borderBottomWidth: 3,
-    borderBottomColor: YC_GOLD,
+    marginBottom: 10,
+    borderBottomWidth: 2.5,
+    borderBottomColor: TEAL_PRIMARY,
   },
   headerBrand: {
     flexDirection: 'row',
@@ -125,47 +229,49 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerLogoCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: SLATE_900,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#044E45',
+    borderWidth: 1.5,
+    borderColor: TEAL_PRIMARY,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerBrandName: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: 'bold',
-    color: YC_GOLD,
+    color: '#FFFFFF', // High-contrast white
     lineHeight: 1.1,
     fontFamily: 'Lora',
+    letterSpacing: 0.5,
   },
   headerBrandTag: {
-    fontSize: 6.5,
-    color: SLATE_700,
+    fontSize: 6,
+    color: '#CBD5E1', // High-contrast silver-slate
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
     fontWeight: 'bold',
   },
   logo: {
-    height: 32,
-    width: 120,
+    height: 26,
+    width: 115,
     objectFit: 'contain',
   },
   headerTextContainer: {
     alignItems: 'flex-end',
   },
   headerTitle: {
-    color: YC_GOLD,
-    fontSize: 11,
+    color: '#FFFFFF',
+    fontSize: 10,
     fontWeight: 'bold',
     fontFamily: 'Lora',
   },
   headerSubtitle: {
-    color: SLATE_400,
-    fontSize: 7.5,
+    color: '#CBD5E1',
+    fontSize: 6.5,
     marginTop: 2,
-    fontWeight: 'bold',
+    fontWeight: 'medium',
   },
 
   // ── PATIENT BANNER ────────────────────────────────────────────────────────
@@ -173,10 +279,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: SLATE_100,
-    borderRadius: 14,
-    paddingVertical: 10,
+    borderRadius: 10,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    marginBottom: 14,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -186,19 +292,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     flex: 1,
-    marginRight: 8,
   },
   patientIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: TEAL_TINT,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: TEAL_BORDER,
   },
   patientIconFallback: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: TEAL_TINT,
     borderWidth: 1.5,
     borderColor: TEAL_BORDER,
@@ -208,217 +313,97 @@ const styles = StyleSheet.create({
   patientIconFallbackText: {
     color: TEAL_DARK,
     fontWeight: 'bold',
-    fontSize: 12,
+    fontSize: 11,
   },
   patientDetails: {
     justifyContent: 'center',
-    flexShrink: 1,
   },
   patientName: {
-    fontSize: 11.5,
+    fontSize: 10.5,
     fontWeight: 'bold',
     color: SLATE_900,
   },
   patientMeta: {
     fontSize: 6.5,
-    color: SLATE_400,
-    marginTop: 2,
-    fontWeight: 'bold',
+    color: SLATE_500,
+    marginTop: 1.5,
+    fontWeight: 'medium',
   },
-  statContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    flexShrink: 0,
-  },
-  statPill: {
+  bannerBadge: {
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 38,
+    borderColor: SLATE_100,
+    borderRadius: 6,
+    paddingVertical: 3.5,
+    paddingHorizontal: 8,
+    alignItems: 'flex-end',
   },
-  statCount: {
-    fontSize: 10.5,
+  bannerBadgeText: {
+    fontSize: 6.5,
     fontWeight: 'bold',
-    lineHeight: 1,
+    color: SLATE_700,
   },
-  statLabel: {
-    fontSize: 5,
-    fontWeight: 'bold',
+  bannerBadgeSubtext: {
+    fontSize: 5.5,
     color: SLATE_400,
-    textTransform: 'uppercase',
-    marginTop: 2,
-    letterSpacing: 0.3,
-  },
-  healthScorePill: {
-    borderRadius: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 48,
-    borderWidth: 1.5,
-  },
-  healthScoreVal: {
-    fontSize: 10.5,
-    fontWeight: 'bold',
-    lineHeight: 1,
-  },
-  healthScoreLabel: {
-    fontSize: 5,
-    fontWeight: 'bold',
-    color: SLATE_400,
-    textTransform: 'uppercase',
-    marginTop: 2,
-    letterSpacing: 0.3,
+    marginTop: 1,
   },
 
-  // ── SECTION HEADER (cleaner, dashboard-style page heading) ────────────────
+  // ── SECTION HEADING ───────────────────────────────────────────────────────
   sectionHeading: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginBottom: 12,
-    paddingHorizontal: 4,
-
+    marginBottom: 8,
+    paddingHorizontal: 2,
   },
   sectionHeadingTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
     color: SLATE_900,
     fontFamily: 'Lora',
   },
   sectionHeadingSubtitle: {
-    fontSize: 7,
-    color: SLATE_400,
-    fontWeight: 'bold',
-    marginTop: 2,
-  },
-  sectionHeadingPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: BG_CARD,
-    borderWidth: 1,
-    borderColor: SLATE_100,
-    borderRadius: 10,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  sectionHeadingPillText: {
-    fontSize: 7,
-    color: SLATE_500,
-    fontWeight: 'bold',
-  },
-
-  // ── TRI-CARDS (HealthDashboard-style metric cards w/ sparkline) ───────────
-  triCardsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: SLATE_100,
-    height: 105,
-    justifyContent: 'space-between',
-  },
-  metricCardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  metricIconRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  metricIconBox: {
-    width: 18,
-    height: 18,
-    borderRadius: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  metricTitle: {
-    fontSize: 7.5,
-    fontWeight: 'bold',
-    color: SLATE_500,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    fontFamily: 'Lora',
-  },
-  metricChangePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 2,
-    paddingHorizontal: 5,
-    borderRadius: 4,
-    gap: 2,
-  },
-  metricChangeText: {
     fontSize: 6.5,
-    fontWeight: 'bold',
-    lineHeight: 1,
+    color: SLATE_500,
+    fontWeight: 'medium',
+    marginTop: 1.5,
   },
-  metricValueRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 3,
+  sectionDatePill: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: SLATE_100,
+    borderRadius: 6,
+    paddingVertical: 2.5,
+    paddingHorizontal: 6,
   },
-  metricValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: SLATE_900,
-    lineHeight: 1,
-  },
-  metricTarget: {
-    fontSize: 8.5,
-    color: SLATE_400,
-    fontWeight: 'bold',
-    marginBottom: 1,
-  },
-  metricUnit: {
+  sectionDatePillText: {
     fontSize: 6,
-    color: SLATE_400,
-    textTransform: 'uppercase',
+    color: SLATE_500,
     fontWeight: 'bold',
-    letterSpacing: 0.4,
-    marginTop: 2,
-  },
-  sparklineContainer: {
-    height: 16,
-    marginTop: 4,
   },
 
-  // ── OVERVIEW CARDS (existing 3-card grid restyled) ────────────────────────
+  // ── HERO EXECUTIVE SUMMARY 3-CARD ROW ─────────────────────────────────────
   overviewGrid: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
+    gap: 8,
+    marginBottom: 9,
   },
   overviewCard: {
     flex: 1,
     borderWidth: 1,
     borderColor: SLATE_100,
-    borderRadius: 22,
-    padding: 12,
-    backgroundColor: BG_CARD,
+    borderRadius: 10,
+    padding: 9,
+    backgroundColor: '#ffffff',
   },
   overviewCardTitle: {
-    fontSize: 7,
+    fontSize: 6.5,
     fontWeight: 'bold',
     color: SLATE_500,
     textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginBottom: 8,
+    letterSpacing: 0.4,
+    marginBottom: 5,
     fontFamily: 'Lora',
   },
   chartRow: {
@@ -426,12 +411,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    marginTop: 4,
+    marginTop: 2,
   },
   radialContainer: {
     position: 'relative',
-    width: 60,
-    height: 60,
+    width: 52,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -445,7 +430,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radialScoreText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
   },
   radialDescText: {
@@ -458,638 +443,429 @@ const styles = StyleSheet.create({
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    marginBottom: 3,
+    gap: 4,
+    marginBottom: 2.5,
   },
   legendColor: {
-    width: 7,
-    height: 7,
+    width: 6,
+    height: 6,
     borderRadius: 2,
   },
   legendLabel: {
-    fontSize: 7,
+    fontSize: 6.5,
     color: SLATE_700,
     flex: 1,
   },
   legendValue: {
-    fontSize: 7,
+    fontSize: 6.5,
     fontWeight: 'bold',
     color: SLATE_900,
   },
+
+  // Body system index progress bars
   bodySystemRow: {
-    marginBottom: 5,
+    marginBottom: 4.5,
   },
   bodySystemLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   bodySystemLabel: {
-    fontSize: 7,
+    fontSize: 6.5,
     fontWeight: 'bold',
     color: SLATE_700,
   },
   bodySystemVal: {
-    fontSize: 7,
+    fontSize: 6.5,
     fontWeight: 'bold',
   },
-  bodySystemBar: {
-    flexDirection: 'row',
-    gap: 2,
+  bodySystemTrack: {
     height: 4,
-  },
-  bodySystemSegment: {
-    flex: 1,
-    borderRadius: 1.5,
-  },
-
-  // ── AREA-CHART + ASTHMA-STYLE CALLOUT ROW (new) ───────────────────────────
-  conditionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-  },
-  conditionGraphCard: {
-    flex: 2,
-    backgroundColor: BG_CARD,
-    borderRadius: 24,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: SLATE_100,
-  },
-  conditionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: 8,
-  },
-  conditionTitle: {
-    fontSize: 9.5,
-    fontWeight: 'bold',
-    color: SLATE_900,
-    fontFamily: 'Lora',
-  },
-  conditionLabel: {
-    fontSize: 6.5,
-    fontWeight: 'bold',
-    color: SLATE_400,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginBottom: 2,
-  },
-  conditionValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  conditionValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: SLATE_900,
-    lineHeight: 1,
-  },
-  conditionDelta: {
-    backgroundColor: TEAL_DARK,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingVertical: 2.5,
-    paddingHorizontal: 6,
-    borderRadius: 4,
-  },
-  conditionDeltaText: {
-    color: '#ffffff',
-    fontSize: 7,
-    fontWeight: 'bold',
-    lineHeight: 1,
-  },
-  conditionRangePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: SLATE_100,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-  },
-  conditionRangePillText: {
-    fontSize: 7,
-    fontWeight: 'bold',
-    color: SLATE_700,
-  },
-  areaChartBody: {
-    height: 70,
-    marginTop: 6,
-    position: 'relative',
-  },
-  areaChartXLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  areaChartXLabel: {
-    fontSize: 6.5,
-    fontWeight: 'bold',
-    color: SLATE_400,
-  },
-  calloutCard: {
-    flex: 1,
-    backgroundColor: TEAL_DEEP,
-    borderRadius: 24,
-    padding: 14,
-    justifyContent: 'space-between',
-    position: 'relative',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 2,
     overflow: 'hidden',
   },
-  calloutHeader: {
+  bodySystemFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+
+  // ── ACTIONABLE CLINICAL FOLLOW-UP CARD ────────────────────────────────────
+  actionableFollowUpCard: {
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+    backgroundColor: '#fff5f5',
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 9,
+  },
+  actionableHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 4,
+    marginBottom: 5,
   },
-  calloutIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(13,165,142,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  actionableAlertBadge: {
+    backgroundColor: '#fee2e2',
+    borderWidth: 0.8,
+    borderColor: '#f87171',
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 1.5,
   },
-  calloutTitle: {
-    color: '#ffffff',
-    fontSize: 10,
+  actionableAlertBadgeText: {
+    color: '#b91c1c',
+    fontSize: 5.5,
     fontWeight: 'bold',
-    letterSpacing: 0.4,
-    fontFamily: 'Lora',
+    letterSpacing: 0.3,
   },
-  calloutSubtitle: {
-    color: TEAL_LIGHT,
+  actionableSubtitle: {
+    fontSize: 6.5,
+    color: '#7f1d1d',
+    fontWeight: 'medium',
+  },
+  actionableFindingsList: {
+    gap: 3.5,
+    marginBottom: 6,
+  },
+  actionableFindingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 5,
+    paddingVertical: 3.5,
+    paddingHorizontal: 7,
+    borderWidth: 0.5,
+    borderColor: '#fecaca',
+  },
+  actionableItemName: {
     fontSize: 7,
     fontWeight: 'bold',
-    marginBottom: 6,
+    color: SLATE_900,
   },
-  calloutStatsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 6,
-  },
-  calloutStatVal: {
-    color: '#ffffff',
-    fontSize: 13,
+  actionableItemVal: {
+    fontSize: 7,
     fontWeight: 'bold',
-    lineHeight: 1,
+    color: '#b91c1c',
   },
-  calloutStatLabel: {
-    color: 'rgba(167,243,208,0.75)',
+  actionableItemRef: {
     fontSize: 6,
-    marginTop: 2,
-    fontWeight: 'bold',
+    color: SLATE_400,
   },
-  calloutCta: {
-    backgroundColor: TEAL_PRIMARY,
-    paddingVertical: 6,
-    borderRadius: 12,
+  actionableCtaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 4,
+    borderTopWidth: 0.5,
+    borderTopColor: '#fecaca',
+    paddingTop: 5,
   },
-  calloutCtaText: {
+  actionableCtaNote: {
+    fontSize: 6,
+    color: '#7f1d1d',
+    fontWeight: 'medium',
+    flex: 1,
+    marginRight: 6,
+  },
+  actionableButton: {
+    backgroundColor: '#b91c1c',
+    borderRadius: 4,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+  },
+  actionableButtonText: {
     color: '#ffffff',
-    fontSize: 8,
+    fontSize: 6,
     fontWeight: 'bold',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
 
-  // ── SUMMARY + INSIGHTS ────────────────────────────────────────────────────
+  optimalWellnessBanner: {
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+    backgroundColor: '#ecfdf5',
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 9,
+  },
+
+  // ── AI CLINICAL SUMMARY ───────────────────────────────────────────────────
   summaryContainer: {
     borderWidth: 1,
     borderColor: TEAL_PRIMARY,
-    borderRadius: 18,
-    padding: 12,
-    marginBottom: 14,
-    backgroundColor: BG_CARD,
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 9,
+    backgroundColor: '#ffffff',
   },
   summaryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 6,
+    marginBottom: 3.5,
   },
   summaryBadge: {
     backgroundColor: TEAL_TINT,
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 6,
+    paddingVertical: 1.5,
+    paddingHorizontal: 5,
+    borderRadius: 3,
+    borderWidth: 0.5,
+    borderColor: TEAL_BORDER,
   },
   summaryBadgeText: {
-    fontSize: 6.5,
+    fontSize: 5.5,
     fontWeight: 'bold',
     color: TEAL_DARK,
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
   },
   summaryTitle: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: 'bold',
     color: SLATE_900,
     fontFamily: 'Lora',
   },
   summaryText: {
     color: SLATE_700,
-    fontSize: 8,
-    lineHeight: 1.45,
+    fontSize: 7,
+    lineHeight: 1.35,
   },
-  healthIndexChartContainer: {
-    borderWidth: 1,
-    borderColor: SLATE_100,
-    borderRadius: 18,
-    padding: 12,
-    marginBottom: 14,
-    backgroundColor: BG_CARD,
+  summaryDisclaimer: {
+    marginTop: 5,
+    borderTopWidth: 0.5,
+    borderTopColor: SLATE_100,
+    paddingTop: 3.5,
   },
-  healthIndexChartTitle: {
-    fontSize: 8,
-    fontWeight: 'bold',
-    color: SLATE_500,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginBottom: 8,
-    fontFamily: 'Lora',
-  },
-  insightsGrid: {
-    marginBottom: 14,
-  },
-  insightsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  insightsHeaderText: {
-    fontSize: 9,
-    fontWeight: 'bold',
-    color: SLATE_900,
-    fontFamily: 'Lora',
-  },
-  insightsHeaderAccent: {
-    width: 16,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: TEAL_PRIMARY,
-  },
-  insightCard: {
-    flexDirection: 'row',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: SLATE_100,
-    borderRadius: 16,
-    padding: 9,
-    backgroundColor: BG_CARD,
-    marginBottom: 6,
-    alignItems: 'flex-start',
-  },
-  insightNumber: {
-    backgroundColor: TEAL_TINT,
-    color: TEAL_DARK,
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 8,
-    fontWeight: 'bold',
-    borderWidth: 1,
-    borderColor: TEAL_BORDER,
-  },
-  insightText: {
-    color: SLATE_700,
-    fontSize: 7.5,
-    lineHeight: 1.4,
-    flex: 1,
+  summaryDisclaimerText: {
+    fontSize: 5.5,
+    color: SLATE_400,
+    fontStyle: 'italic',
   },
 
-  // ── PANEL SECTIONS / BIOMARKER CARDS ──────────────────────────────────────
+  // ── CONTINUOUS DETAILED PANELS ────────────────────────────────────────────
+  panelSection: {
+    marginBottom: 10,
+  },
   panelHeader: {
-    backgroundColor: BG_CARD,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: SLATE_100,
-    borderRadius: 18,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginBottom: 10,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginBottom: 5,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   panelTitle: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
     color: SLATE_900,
     fontFamily: 'Lora',
   },
   panelMeta: {
-    fontSize: 7,
+    fontSize: 6,
     color: SLATE_400,
-    marginTop: 2,
-    fontWeight: 'bold',
+    marginTop: 1,
+    fontWeight: 'medium',
   },
-  panelScoreContainer: {
-    alignItems: 'flex-end',
+  panelScoreBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3.5,
+    backgroundColor: '#f8fafc',
+    borderRadius: 4,
+    paddingVertical: 2.5,
+    paddingHorizontal: 5,
+    borderWidth: 0.8,
+    borderColor: SLATE_100,
   },
   panelScoreVal: {
-    fontSize: 14,
+    fontSize: 8.5,
     fontWeight: 'bold',
   },
   panelScoreLabel: {
-    fontSize: 5.5,
+    fontSize: 5,
     color: SLATE_400,
     textTransform: 'uppercase',
     fontWeight: 'bold',
-    letterSpacing: 0.3,
-  },
-  statusBoardContainer: {
-    borderWidth: 1,
-    borderColor: SLATE_100,
-    borderRadius: 22,
-    padding: 12,
-    backgroundColor: BG_CARD,
-    marginBottom: 12,
-  },
-  statusBoardTitle: {
-    fontSize: 7.5,
-    fontWeight: 'bold',
-    color: SLATE_500,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginBottom: 8,
-    fontFamily: 'Lora',
-  },
-  statusBoardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 5,
-    borderBottomWidth: 0.5,
-    borderBottomColor: SLATE_100,
-  },
-  statusBoardRowLast: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 5,
-  },
-  statusBoardLabel: {
-    width: '35%',
-    fontSize: 7.5,
-    fontWeight: 'bold',
-    color: SLATE_900,
-  },
-  statusBoardGauge: {
-    width: '40%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statusBoardValueCol: {
-    width: '25%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 6,
   },
 
-  biomarkerCard: {
-    borderRadius: 18,
+  // ── FLAGGED BIOMARKER CARD (Full gauge + clinical interpretation) ─────────
+  flaggedCard: {
+    borderRadius: 8,
     borderWidth: 1,
-    padding: 12,
-    marginBottom: 7,
+    padding: 8,
+    marginBottom: 5,
+    backgroundColor: '#ffffff',
   },
-  biomarkerTopRow: {
+  flaggedTopRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 7,
+    marginBottom: 4,
   },
-  biomarkerStatusBox: {
-    width: 24,
-    height: 24,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+  flaggedName: {
+    fontSize: 8.5,
     fontWeight: 'bold',
-    fontSize: 10,
-    borderWidth: 1,
-  },
-  biomarkerNameContainer: {
-    flex: 1,
-  },
-  biomarkerName: {
-    fontWeight: 'bold',
-    fontSize: 9,
     color: SLATE_900,
     fontFamily: 'Lora',
   },
-  biomarkerRef: {
-    fontSize: 7,
-    color: SLATE_400,
-    marginTop: 2,
-    fontWeight: 'bold',
-  },
-  biomarkerValueContainer: {
-    alignItems: 'flex-end',
-  },
-  biomarkerValueRow: {
+  flaggedValueRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    gap: 3,
   },
-  biomarkerValue: {
+  flaggedValue: {
+    fontSize: 11,
     fontWeight: 'bold',
-    fontSize: 13,
     color: SLATE_900,
   },
-  biomarkerUnit: {
-    fontSize: 7,
+  flaggedUnit: {
+    fontSize: 6.5,
     color: SLATE_400,
-    marginLeft: 2,
-    fontWeight: 'bold',
+    fontWeight: 'medium',
   },
-  biomarkerBadge: {
-    marginTop: 3,
-    borderRadius: 999,
+  flaggedBadge: {
+    borderRadius: 3,
     paddingVertical: 1.5,
-    paddingHorizontal: 5,
+    paddingHorizontal: 4.5,
+    marginTop: 2,
+    borderWidth: 0.5,
+    alignSelf: 'flex-end',
+  },
+  flaggedBadgeText: {
     fontSize: 5.5,
     fontWeight: 'bold',
     letterSpacing: 0.3,
-    borderWidth: 0.8,
-  },
-  verificationAlertBadge: {
-    backgroundColor: '#fffbeb',
-    borderColor: '#f59e0b',
-    borderWidth: 0.8,
-    borderRadius: 6,
-    paddingVertical: 2,
-    paddingHorizontal: 5,
-    marginTop: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    alignSelf: 'flex-start',
-  },
-  verificationAlertText: {
-    color: '#b45309',
-    fontSize: 6.5,
-    fontWeight: 'bold',
-  },
-  rangeBarContainer: {
-    marginTop: 6,
-    marginBottom: 2,
-  },
-  rangeBarTrack: {
-    position: 'relative',
-    height: 6,
-    borderRadius: 999,
-    flexDirection: 'row',
-    overflow: 'hidden',
-  },
-  rangeBarDivider: {
-    position: 'absolute',
-    top: 0,
-    height: '100%',
-    width: 1,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-  },
-  rangeBarFill: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    height: '100%',
-    borderRadius: 999,
-  },
-  rangeBarNeedle: {
-    position: 'absolute',
-    top: '50%',
-    marginTop: -4,
-    marginLeft: -4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ffffff',
-    borderWidth: 1.5,
-  },
-  rangeBarLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 3,
-  },
-  rangeBarLabelText: {
-    color: SLATE_400,
-    fontSize: 6,
-    fontWeight: 'bold',
   },
   interpretationBox: {
-    marginTop: 7,
-    padding: 8,
-    borderRadius: 12,
+    marginTop: 5,
+    padding: 5,
+    borderRadius: 6,
     backgroundColor: TEAL_TINT,
-    borderWidth: 1,
+    borderWidth: 0.8,
     borderColor: TEAL_BORDER,
     flexDirection: 'row',
-    gap: 6,
+    gap: 5,
   },
   interpretationLabel: {
     color: TEAL_DARK,
     fontWeight: 'bold',
-    fontSize: 6.5,
-    marginTop: 0.5,
+    fontSize: 5.5,
     backgroundColor: '#ffffff',
-    paddingHorizontal: 4,
+    paddingHorizontal: 3,
     paddingVertical: 1,
-    borderRadius: 4,
+    borderRadius: 3,
     borderWidth: 0.5,
     borderColor: TEAL_BORDER,
+    alignSelf: 'flex-start',
   },
   interpretationText: {
     color: SLATE_700,
-    fontSize: 7,
-    lineHeight: 1.3,
+    fontSize: 6.5,
+    lineHeight: 1.25,
     flex: 1,
   },
 
-  // ── DISCLAIMER + FOOTER ───────────────────────────────────────────────────
-  disclaimer: {
-    marginTop: 14,
-    padding: 12,
+  // ── COMPACT NORMAL MARKERS TABLE ──────────────────────────────────────────
+  compactTableContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: SLATE_100,
-    borderRadius: 18,
-    backgroundColor: BG_CARD,
+    overflow: 'hidden',
+    marginBottom: 5,
   },
-  disclaimerText: {
+  compactTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f8fafc',
+    paddingVertical: 3.5,
+    paddingHorizontal: 8,
+    borderBottomWidth: 0.8,
+    borderBottomColor: SLATE_100,
+  },
+  compactTableHeaderText: {
+    fontSize: 5.5,
+    fontWeight: 'bold',
     color: SLATE_500,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    fontFamily: 'Lora',
+  },
+  compactTableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 3.5,
+    paddingHorizontal: 8,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#f1f5f9',
+  },
+  compactTableRowLast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 3.5,
+    paddingHorizontal: 8,
+  },
+  compactColName: {
+    width: '38%',
+    fontSize: 7,
+    color: SLATE_900,
+    fontWeight: 'medium',
+  },
+  compactColRange: {
+    width: '26%',
     fontSize: 6.5,
-    lineHeight: 1.45,
+    color: SLATE_500,
     textAlign: 'center',
   },
+  compactColValue: {
+    width: '22%',
+    fontSize: 7,
+    fontWeight: 'bold',
+    color: SLATE_900,
+    textAlign: 'right',
+    paddingRight: 6,
+  },
+  compactColStatus: {
+    width: '14%',
+    alignItems: 'flex-end',
+  },
+
+  // ── FOOTER (Fixed on all pages) ───────────────────────────────────────────
   footer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 16,
     left: 28,
     right: 28,
-    borderTopWidth: 1,
-    borderTopColor: SLATE_400,
-    paddingTop: 7,
+    borderTopWidth: 0.8,
+    borderTopColor: SLATE_300,
+    paddingTop: 5,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   footerLogo: {
-    height: 12,
-    width: 60,
+    height: 11,
+    width: 55,
     objectFit: 'contain',
-    opacity: 2.0,
   },
   footerText: {
     color: SLATE_400,
-    fontSize: 6,
-    fontWeight: 'bold',
+    fontSize: 5.5,
+    fontWeight: 'medium',
   },
   pageNumber: {
     color: SLATE_400,
-    fontSize: 6,
+    fontSize: 5.5,
     fontWeight: 'bold',
   },
 });
 
-// ─── Inline Self-Contained Calculations ─────────────────────────────────────────
-
-function panelScore(panel: LabPanel) {
-  const n = panel.biomarkers.filter(b => b.status === 'normal').length;
-  return panel.biomarkers.length ? Math.round((n / panel.biomarkers.length) * 100) : 0;
-}
-
-// Build sparkline points string from values in [0..100]
-function buildSparkline(values: number[], width = 140, height = 24, pad = 2): string {
-  if (!values.length) return '';
-  const max = Math.max(...values, 1);
-  const min = Math.min(...values, 0);
-  const range = max - min || 1;
-  const step = values.length > 1 ? (width - pad * 2) / (values.length - 1) : 0;
-  return values.map((v, i) => {
-    const x = pad + i * step;
-    const y = height - pad - ((v - min) / range) * (height - pad * 2);
-    return `${x.toFixed(2)},${y.toFixed(2)}`;
-  }).join(' ');
-}
-
-// Category custom colors — teal / cool / warm harmony
-const CATEGORY_COLORS: Record<string, string> = {
-  'Complete Blood Count (CBC)': '#0DA58E',
-  'Comprehensive Metabolic Panel (CMP)': '#06b6d4',
-  'Lipid Panel': '#f59e0b',
-  'Thyroid Panel': '#ec4899',
-  'Hormones': '#8b5cf6',
-  'Vitamins & Minerals': '#34d399',
-};
-const DEFAULT_COLORS = ['#0DA58E', '#06b6d4', '#3b82f6', '#34d399', '#f59e0b', '#ec4899', '#8b5cf6', '#10b981'];
-
-
-// ─── PDF Document React-PDF Component ───────────────────────────────────────────
-interface PremiumPDFDocumentProps {
+// ─── Component Props ───────────────────────────────────────────────────────────
+export interface PremiumPDFDocumentProps {
   report: LabReport;
   logoUrl?: string;
   iconLogoUrl?: string;
@@ -1098,6 +874,7 @@ interface PremiumPDFDocumentProps {
   poweredByText?: string;
 }
 
+// ─── Premium PDF Document Component ────────────────────────────────────────────
 export function PremiumPDFDocument({
   report,
   logoUrl,
@@ -1113,16 +890,20 @@ export function PremiumPDFDocument({
   const criticalCount = allBiomarkers.filter(b => b.status === 'critical').length;
   const totalCount = allBiomarkers.length;
   const flaggedCount = highCount + lowCount + criticalCount;
-  const normalPct = typeof report.healthScore === 'number' ? report.healthScore : (totalCount ? Math.round((normalCount / totalCount) * 100) : 0);
-  const flaggedPct = totalCount ? Math.round((flaggedCount / totalCount) * 100) : 0;
+  const flaggedBiomarkers = allBiomarkers.filter(b => b.status !== 'normal');
+
+  const normalPct = typeof report.healthScore === 'number'
+    ? report.healthScore
+    : (totalCount ? Math.round((normalCount / totalCount) * 100) : 0);
 
   const scoreColor = normalPct >= 80 ? TEAL_BRIGHT : normalPct >= 60 ? '#f59e0b' : '#ef4444';
-  const scoreBg = normalPct >= 80 ? TEAL_TINT : normalPct >= 60 ? '#fffbeb' : '#fef2f2';
-  const generatedDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const generatedDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  const formattedReportDate = formatReportDate(report.labDate || report.collectionDate) || generatedDate;
 
+  // Standard Body Systems mapping with calculated score
   const standardPanels = [
-    { label: 'BLOOD', categories: ['CBC', 'Blood'] },
-    { label: 'HEART', categories: ['Lipid Panel', 'Lipid'] },
+    { label: 'BLOOD', categories: ['CBC', 'Blood', 'Hematology'] },
+    { label: 'HEART', categories: ['Lipid Panel', 'Lipid', 'Cardiovascular'] },
     { label: 'HORMONES', categories: ['Hormones', 'Thyroid', 'Thyroid Panel'] },
     { label: 'NUTRIENTS', categories: ['Vitamins & Minerals', 'Nutrients', 'Vitamins'] },
     { label: 'METABOLIC', categories: ['Metabolic', 'Comprehensive Metabolic Panel', 'Comprehensive Metabolic Panel (CMP)', 'Kidney', 'Liver', 'Electrolytes'] },
@@ -1132,17 +913,19 @@ export function PremiumPDFDocument({
     const biomarkersInPanel = report.panels
       .filter(p => panel.categories.some(c => p.name.toLowerCase().includes(c.toLowerCase()) || c.toLowerCase().includes(p.name.toLowerCase())))
       .flatMap(p => p.biomarkers);
-      
+
     const score = biomarkersInPanel.length
       ? Math.round((biomarkersInPanel.filter(b => b.status === 'normal').length / biomarkersInPanel.length) * 100)
       : 100;
-      
+
     return {
       system: panel.label,
       score,
+      total: biomarkersInPanel.length,
     };
   });
 
+  // Category Doughnut segments
   const categoryData = report.panels
     .filter(p => p.biomarkers.length > 0)
     .map((p, idx) => {
@@ -1164,34 +947,36 @@ export function PremiumPDFDocument({
     return { ...item, pct, offset };
   });
 
-  // Sparkline data sets (synthetic, dashboard-style trends)
-  const healthSpark = [55, 62, 60, 68, 72, normalPct >= 70 ? normalPct - 4 : normalPct + 4, normalPct];
-  const flaggedSpark = [12, 18, 16, 22, 19, 17, Math.max(1, flaggedCount)];
-  const markersSpark = [Math.max(1, totalCount - 6), Math.max(1, totalCount - 4), Math.max(1, totalCount - 3), Math.max(1, totalCount - 2), Math.max(1, totalCount - 1), totalCount, totalCount];
-
-  // Average score across panels for the "Condition" graph
-  const avgPanelScore = systemsData.length
-    ? Math.round(systemsData.reduce((acc, s) => acc + s.score, 0) / systemsData.length)
-    : 0;
-
   return (
     <Document>
+      {/* ══════════════════════════════════════════════════════════════════════
+          PAGE 1: EXECUTIVE SUMMARY & CLINICAL HERO (NO REDUNDANCY)
+          ══════════════════════════════════════════════════════════════════════ */}
       <Page size="A4" style={styles.page}>
-
-        {/* ─── HEADER ─── */}
+        {/* ─── Header ─── */}
         <View style={styles.header}>
-          {logoUrl ? (
-            <Image src={logoUrl} style={styles.logo} />
-          ) : (
-            <Text style={{ color: YC_GOLD, fontSize: 13, fontWeight: 'bold' }}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
-          )}
+          <View style={styles.headerBrand}>
+            {logoUrl ? (
+              <Image src={logoUrl} style={styles.logo} />
+            ) : (
+              <>
+                <View style={styles.headerLogoCircle}>
+                  <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: 'bold' }}>⚲</Text>
+                </View>
+                <View>
+                  <Text style={styles.headerBrandName}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
+                  <Text style={styles.headerBrandTag}>Clinical Laboratory Report</Text>
+                </View>
+              </>
+            )}
+          </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle}>Bloodwork Analysis Report</Text>
             <Text style={styles.headerSubtitle}>Generated: {generatedDate}</Text>
           </View>
         </View>
 
-        {/* ─── PATIENT BANNER ─── */}
+        {/* ─── Patient Banner ─── */}
         <View style={styles.patientBanner}>
           <View style={styles.patientInfo}>
             {iconLogoUrl ? (
@@ -1209,300 +994,49 @@ export function PremiumPDFDocument({
                 {[
                   report.patientAge ? `${report.patientAge} yrs` : null,
                   report.patientGender ? (report.patientGender.charAt(0).toUpperCase() + report.patientGender.slice(1).toLowerCase()) : null,
-                  formatReportDate(report.labDate || report.collectionDate),
+                  formattedReportDate,
                   brandName || (report.orderedBy?.startsWith('Dr.') ? report.orderedBy : (report.orderedBy || 'Health Clinic')),
                 ].filter(Boolean).join('  ·  ')}
               </Text>
             </View>
           </View>
 
-          <View style={styles.statContainer}>
-            <View style={[styles.statPill, { borderColor: TEAL_BORDER, backgroundColor: TEAL_TINT }]}>
-              <Text style={[styles.statCount, { color: TEAL_DARK }]}>{normalCount}</Text>
-              <Text style={styles.statLabel}>Normal</Text>
-            </View>
-            <View style={[styles.statPill, { borderColor: '#fee2e2', backgroundColor: '#fef2f2' }]}>
-              <Text style={[styles.statCount, { color: '#b91c1c' }]}>{highCount}</Text>
-              <Text style={styles.statLabel}>Elevated</Text>
-            </View>
-            <View style={[styles.statPill, { borderColor: '#fef3c7', backgroundColor: '#fffbeb' }]}>
-              <Text style={[styles.statCount, { color: '#b45309' }]}>{lowCount}</Text>
-              <Text style={styles.statLabel}>Reduced</Text>
-            </View>
-            {criticalCount > 0 && (
-              <View style={[styles.statPill, { borderColor: '#fecaca', backgroundColor: '#fef2f2' }]}>
-                <Text style={[styles.statCount, { color: '#7f1d1d' }]}>{criticalCount}</Text>
-                <Text style={styles.statLabel}>Critical</Text>
-              </View>
-            )}
-            <View style={[styles.healthScorePill, { borderColor: scoreColor, backgroundColor: scoreBg }]}>
-              <Text style={[styles.healthScoreVal, { color: scoreColor }]}>{normalPct}%</Text>
-              <Text style={styles.healthScoreLabel}>Health Score</Text>
-            </View>
+          <View style={styles.bannerBadge}>
+            <Text style={styles.bannerBadgeText}>{totalCount} Biomarkers Tested</Text>
+            <Text style={styles.bannerBadgeSubtext}>{report.panels.length} Diagnostic Panels</Text>
           </View>
         </View>
 
-        {/* ─── SECTION HEADING ─── */}
+        {/* ─── Section Heading ─── */}
         <View style={styles.sectionHeading}>
           <View>
-            <Text style={styles.sectionHeadingTitle}>Health Improvements</Text>
-            <Text style={styles.sectionHeadingSubtitle}>Holistic body metrics & biomarkers summary</Text>
+            <Text style={styles.sectionHeadingTitle}>Executive Health Summary</Text>
+            <Text style={styles.sectionHeadingSubtitle}>Holistic body status, biomarker distribution & physician follow-up</Text>
           </View>
-          <View style={styles.sectionHeadingPill}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: TEAL_PRIMARY }} />
-            <Text style={styles.sectionHeadingPillText}>This Report</Text>
-          </View>
-        </View>
-
-        {/* ─── TRI-CARDS (HealthDashboard-style metric cards with sparklines) ─── */}
-        <View style={styles.triCardsRow}>
-          {/* Health Score */}
-          <View style={styles.metricCard}>
-            <View style={styles.metricCardTop}>
-              <View style={styles.metricIconRow}>
-                <Svg width="18" height="18" viewBox="0 0 18 18">
-                  <Rect width="18" height="18" rx="5" fill={ACCENT.green.icon} />
-                  <Polyline
-                    points="2,9 5,9 7,4 9,14 11,7 13,10 16,10"
-                    fill="none"
-                    stroke={ACCENT.green.fg}
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </Svg>
-                <Text style={styles.metricTitle}>Health Score</Text>
-              </View>
-              <View style={[styles.metricChangePill, { backgroundColor: ACCENT.green.bg }]}>
-                <Svg width="5" height="5" viewBox="0 0 6 6">
-                  <Polyline points="1,5 3,1 5,5 1,5" fill={ACCENT.green.fg} />
-                </Svg>
-                <Text style={[styles.metricChangeText, { color: ACCENT.green.fg }]}>
-                  {Math.max(1, Math.round(normalPct / 20))}%
-                </Text>
-              </View>
-            </View>
-            <View>
-              <View style={styles.metricValueRow}>
-                <Text style={styles.metricValue}>{normalPct}</Text>
-                <Text style={styles.metricTarget}>/100</Text>
-              </View>
-              <Text style={styles.metricUnit}>Overall</Text>
-            </View>
-            <View style={styles.sparklineContainer}>
-              <Svg width="100%" height="16" viewBox="0 0 140 24" preserveAspectRatio="none">
-                <Polyline
-                  points={buildSparkline(healthSpark)}
-                  fill="none"
-                  stroke={ACCENT.green.fg}
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            </View>
-          </View>
-
-          {/* Total Markers */}
-          <View style={styles.metricCard}>
-            <View style={styles.metricCardTop}>
-              <View style={styles.metricIconRow}>
-                <Svg width="18" height="18" viewBox="0 0 18 18">
-                  <Rect width="18" height="18" rx="5" fill={ACCENT.blue.icon} />
-                  <Line x1="4.5" y1="5.5" x2="13.5" y2="5.5" stroke={ACCENT.blue.fg} strokeWidth="1.4" strokeLinecap="round" />
-                  <Line x1="4.5" y1="9" x2="13.5" y2="9" stroke={ACCENT.blue.fg} strokeWidth="1.4" strokeLinecap="round" />
-                  <Line x1="4.5" y1="12.5" x2="10.5" y2="12.5" stroke={ACCENT.blue.fg} strokeWidth="1.4" strokeLinecap="round" />
-                </Svg>
-                <Text style={styles.metricTitle}>Biomarkers</Text>
-              </View>
-              <View style={[styles.metricChangePill, { backgroundColor: ACCENT.blue.bg }]}>
-                <Svg width="5" height="5" viewBox="0 0 6 6">
-                  <Polyline points="1,5 3,1 5,5 1,5" fill={ACCENT.blue.fg} />
-                </Svg>
-                <Text style={[styles.metricChangeText, { color: ACCENT.blue.fg }]}>
-                  {report.panels.length} panels
-                </Text>
-              </View>
-            </View>
-            <View>
-              <View style={styles.metricValueRow}>
-                <Text style={styles.metricValue}>{totalCount}</Text>
-                <Text style={styles.metricTarget}>/markers</Text>
-              </View>
-              <Text style={styles.metricUnit}>Across {report.panels.length} panels</Text>
-            </View>
-            <View style={styles.sparklineContainer}>
-              <Svg width="100%" height="16" viewBox="0 0 140 24" preserveAspectRatio="none">
-                <Polyline
-                  points={buildSparkline(markersSpark)}
-                  fill="none"
-                  stroke={ACCENT.blue.fg}
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            </View>
-          </View>
-
-          {/* Flagged */}
-          <View style={styles.metricCard}>
-            <View style={styles.metricCardTop}>
-              <View style={styles.metricIconRow}>
-                <Svg width="18" height="18" viewBox="0 0 18 18">
-                  <Rect width="18" height="18" rx="5" fill={ACCENT.amber.icon} />
-                  <Line x1="9" y1="4.5" x2="9" y2="10" stroke={ACCENT.amber.fg} strokeWidth="1.6" strokeLinecap="round" />
-                  <Circle cx="9" cy="13" r="0.9" fill={ACCENT.amber.fg} />
-                </Svg>
-                <Text style={styles.metricTitle}>Flagged</Text>
-              </View>
-              <View style={[styles.metricChangePill, { backgroundColor: ACCENT.amber.bg }]}>
-                <Svg width="5" height="5" viewBox="0 0 6 6">
-                  <Polyline points={flaggedCount > 0 ? "1,5 3,1 5,5 1,5" : "1,1 3,5 5,1 1,1"} fill={ACCENT.amber.fg} />
-                </Svg>
-                <Text style={[styles.metricChangeText, { color: ACCENT.amber.fg }]}>
-                  {flaggedPct}%
-                </Text>
-              </View>
-            </View>
-            <View>
-              <View style={styles.metricValueRow}>
-                <Text style={styles.metricValue}>{flaggedCount}</Text>
-                <Text style={styles.metricTarget}>/{totalCount}</Text>
-              </View>
-              <Text style={styles.metricUnit}>Needs Review</Text>
-            </View>
-            <View style={styles.sparklineContainer}>
-              <Svg width="100%" height="16" viewBox="0 0 140 24" preserveAspectRatio="none">
-                <Polyline
-                  points={buildSparkline(flaggedSpark)}
-                  fill="none"
-                  stroke={ACCENT.amber.fg}
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            </View>
+          <View style={styles.sectionDatePill}>
+            <Text style={styles.sectionDatePillText}>Report Date: {formattedReportDate}</Text>
           </View>
         </View>
 
-        {/* ─── CONDITION AREA GRAPH + ASTHMA-STYLE CALLOUT ─── */}
-        <View style={styles.conditionRow}>
-          {/* Area chart card */}
-          <View style={styles.conditionGraphCard}>
-            <View style={styles.conditionHeaderRow}>
-              <View>
-                <Text style={styles.conditionTitle}>Report Condition</Text>
-                <Text style={[styles.conditionLabel, { marginTop: 6 }]}>Average Panel Score</Text>
-                <View style={[styles.conditionValueRow, { marginTop: 2 }]}>
-                  <Text style={styles.conditionValue}>{avgPanelScore}%</Text>
-                  <View style={styles.conditionDelta}>
-                    <Svg width="5" height="5" viewBox="0 0 6 6">
-                      <Polyline points="1,5 3,1 5,5 1,5" fill="#ffffff" />
-                    </Svg>
-                    <Text style={styles.conditionDeltaText}>{Math.max(1, Math.round(avgPanelScore / 25))}%</Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.conditionRangePill}>
-                <Text style={styles.conditionRangePillText}>This Report</Text>
-              </View>
-            </View>
-
-            <View style={styles.areaChartBody}>
-              <Svg width="100%" height="70" viewBox="0 0 400 70" preserveAspectRatio="none">
-                {/* Grid */}
-                <Line x1="0" y1="10" x2="400" y2="10" stroke={SLATE_100} strokeWidth="0.5" strokeDasharray="2,2" />
-                <Line x1="0" y1="35" x2="400" y2="35" stroke={SLATE_100} strokeWidth="0.5" strokeDasharray="2,2" />
-                <Line x1="0" y1="60" x2="400" y2="60" stroke={SLATE_100} strokeWidth="0.5" />
-
-                {/* Bars */}
-                {systemsData.map((item, idx) => {
-                  const barHeight = (item.score / 100) * 50;
-                  const x = 25 + idx * 80;
-                  const y = 60 - barHeight;
-                  return (
-                    <Rect
-                      key={idx}
-                      x={x}
-                      y={y}
-                      width={30}
-                      height={Math.max(1, barHeight)}
-                      fill={YC_GOLD}
-                      rx={3}
-                    />
-                  );
-                })}
-              </Svg>
-            </View>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
-              {systemsData.map((item, idx) => (
-                <View key={idx} style={{ width: '20%', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 6.5, fontWeight: 'bold', color: SLATE_900 }}>
-                    {item.system.charAt(0) + item.system.slice(1).toLowerCase()}
-                  </Text>
-                  <Text style={{ fontSize: 5.5, color: SLATE_400, marginTop: 1, fontWeight: 'bold' }}>
-                    {item.score}%
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {/* Dark teal callout (Asthma-style) */}
-          {/* <View style={styles.calloutCard}>
-            <View>
-              <View style={styles.calloutHeader}>
-                <View style={styles.calloutIcon}>
-                  <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: 'bold' }}>♥</Text>
-                </View>
-                <Text style={styles.calloutTitle}>Wellness</Text>
-              </View>
-              <Text style={styles.calloutSubtitle}>Clinical insights at-a-glance</Text>
-
-              <View style={styles.calloutStatsRow}>
-                <View>
-                  <Text style={styles.calloutStatVal}>{normalPct}%</Text>
-                  <Text style={styles.calloutStatLabel}>In range</Text>
-                </View>
-                <View>
-                  <Text style={styles.calloutStatVal}>{flaggedCount}</Text>
-                  <Text style={styles.calloutStatLabel}>Flagged</Text>
-                </View>
-              </View>
-            </View>
-
-            <View>
-              <View style={styles.calloutCta}>
-                <Text style={styles.calloutCtaText}>
-                  {criticalCount > 0 ? 'Action Required !' : flaggedCount > 0 ? 'Review Findings' : 'All Optimal !'}
-                </Text>
-              </View>
-            </View>
-          </View> */}
-        </View>
-
-        {/* ─── TRIPLE GRIDS: HEALTH SCORE, CATEGORY DOUGHNUT, & BODY SYSTEM BARS ─── */}
+        {/* ─── Unified Hero Section (Health Score, Categories, Body Systems) ─── */}
         <View style={styles.overviewGrid}>
-          {/* Card 1: Health Score Circular Gauge */}
+          {/* Card 1: Health Score Radial Gauge */}
           <View style={styles.overviewCard}>
-            <Text style={styles.overviewCardTitle}>Health Score</Text>
+            <Text style={styles.overviewCardTitle}>Overall Health Score</Text>
             <View style={styles.chartRow}>
               <View style={styles.radialContainer}>
-                <Svg width="56" height="56" viewBox="0 0 56 56">
-                  <Circle cx="28" cy="28" r="24" stroke={SLATE_100} strokeWidth="4" fill="none" />
+                <Svg width="52" height="52" viewBox="0 0 52 52">
+                  <Circle cx="26" cy="26" r="22" stroke={SLATE_100} strokeWidth="4" fill="none" />
                   {normalPct > 0 && (
                     <CircleAny
-                      cx="28"
-                      cy="28"
-                      r="24"
+                      cx="26"
+                      cy="26"
+                      r="22"
                       stroke={scoreColor}
                       strokeWidth="4"
                       fill="none"
-                      strokeDasharray={`${((normalPct / 100) * 2 * Math.PI * 24).toFixed(2)},${(2 * Math.PI * 24).toFixed(2)}`}
-                      strokeDashoffset={(2 * Math.PI * 24 / 4).toFixed(2)}
+                      strokeDasharray={`${((normalPct / 100) * 2 * Math.PI * 22).toFixed(2)},${(2 * Math.PI * 22).toFixed(2)}`}
+                      strokeDashoffset={(2 * Math.PI * 22 / 4).toFixed(2)}
                       strokeLinecap="round"
                     />
                   )}
@@ -1510,7 +1044,7 @@ export function PremiumPDFDocument({
                 <View style={styles.radialLabelContainer}>
                   <Text style={[styles.radialScoreText, { color: scoreColor }]}>{normalPct}%</Text>
                   <Text style={styles.radialDescText}>
-                    {normalPct >= 80 ? 'Excellent' : normalPct >= 60 ? 'Optimal' : 'Needs Focus'}
+                    {normalPct >= 80 ? 'Optimal' : normalPct >= 60 ? 'Moderate' : 'Needs Focus'}
                   </Text>
                 </View>
               </View>
@@ -1518,7 +1052,7 @@ export function PremiumPDFDocument({
               <View style={{ flex: 1, gap: 2 }}>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendColor, { backgroundColor: '#0d9488' }]} />
-                  <Text style={styles.legendLabel}>Normal</Text>
+                  <Text style={styles.legendLabel}>Optimal</Text>
                   <Text style={styles.legendValue}>{normalCount}</Text>
                 </View>
                 <View style={styles.legendItem}>
@@ -1540,33 +1074,26 @@ export function PremiumPDFDocument({
                 )}
               </View>
             </View>
-            <View style={{ marginTop: 'auto', borderTopWidth: 0.5, borderTopColor: SLATE_100, paddingTop: 5, flexDirection: 'row', justifyContent: 'flex-end' }}>
-              <Text style={{ fontSize: 6.5, color: SLATE_400, fontWeight: 'bold' }}>
-                Total markers: <Text style={{ fontWeight: 'bold', color: SLATE_900 }}>{totalCount}</Text>
-              </Text>
-            </View>
           </View>
 
           {/* Card 2: Biomarkers by Category Doughnut */}
-          <View style={[styles.overviewCard, { flex: 1.2 }]}>
-            <Text style={styles.overviewCardTitle}>Biomarkers by Category</Text>
+          <View style={[styles.overviewCard, { flex: 1.1 }]}>
+            <Text style={styles.overviewCardTitle}>Panels Distribution</Text>
             <View style={styles.chartRow}>
               <View style={styles.radialContainer}>
-                <Svg width="56" height="56" viewBox="0 0 56 56">
-                  <Circle cx="28" cy="28" r="19" stroke={SLATE_100} strokeWidth="6" fill="none" />
+                <Svg width="52" height="52" viewBox="0 0 52 52">
+                  <Circle cx="26" cy="26" r="17" stroke={SLATE_100} strokeWidth="5.5" fill="none" />
                   {doughnutSegments.map((seg, sIdx) => {
                     if (seg.pct <= 0) return null;
-                    const C = 2 * Math.PI * 19;
+                    const C = 2 * Math.PI * 17;
                     const dash1 = seg.pct * C;
-                    // Push segment start clockwise by accumulated prior arcs,
-                    // then rotate -90° (C/4) so first segment starts at top.
                     const correctedOffset = C / 4 - seg.offset * C;
                     return (
                       <CircleAny
                         key={sIdx}
-                        cx="28" cy="28" r="19"
+                        cx="26" cy="26" r="17"
                         stroke={seg.color}
-                        strokeWidth="6"
+                        strokeWidth="5.5"
                         fill="none"
                         strokeDasharray={`${dash1.toFixed(2)},${(C - dash1).toFixed(2)}`}
                         strokeDashoffset={correctedOffset.toFixed(2)}
@@ -1574,57 +1101,49 @@ export function PremiumPDFDocument({
                     );
                   })}
                 </Svg>
-                {/* Center label — total count + "Markers" */}
                 <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: SLATE_900 }}>{totalCount}</Text>
-                  <Text style={{ fontSize: 4.5, fontWeight: 'bold', color: SLATE_400, textTransform: 'uppercase', letterSpacing: 0.5 }}>Markers</Text>
+                  <Text style={{ fontSize: 10, fontWeight: 'bold', color: SLATE_900 }}>{totalCount}</Text>
+                  <Text style={{ fontSize: 4, fontWeight: 'bold', color: SLATE_400, textTransform: 'uppercase', letterSpacing: 0.3 }}>Markers</Text>
                 </View>
               </View>
 
-              <View style={{ flex: 1, gap: 2 }}>
-                {categoryData.map((item, idx) => (
+              <View style={{ flex: 1, gap: 1.5 }}>
+                {categoryData.slice(0, 5).map((item, idx) => (
                   <View key={idx} style={styles.legendItem}>
                     <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-                    <Text style={[styles.legendLabel, { fontSize: 6.5 }]}>{item.name}</Text>
-                    <Text style={styles.legendValue}>{item.count}</Text>
+                    <Text style={[styles.legendLabel, { fontSize: 6 }]}>{item.name}</Text>
+                    <Text style={[styles.legendValue, { fontSize: 6 }]}>{item.count}</Text>
                   </View>
                 ))}
               </View>
             </View>
-            <View style={{ marginTop: 'auto', borderTopWidth: 0.5, borderTopColor: SLATE_100, paddingTop: 5, flexDirection: 'row', justifyContent: 'flex-end' }}>
-              <Text style={{ fontSize: 6.5, color: SLATE_400, fontWeight: 'bold' }}>
-                Total markers: <Text style={{ fontWeight: 'bold', color: SLATE_900 }}>{totalCount}</Text>
-              </Text>
-            </View>
           </View>
 
-          {/* Card 3: Body System Performance */}
-          <View style={[styles.overviewCard, { flex: 1.3 }]}>
-            <Text style={styles.overviewCardTitle}>Body System Status</Text>
-            <View style={{ gap: 4 }}>
-              {systemsData.slice(0, 5).map(item => {
-                const totalSegments = 10;
-                const filledSegments = Math.round((item.score / 100) * totalSegments);
-                const color = item.score === 100 ? '#11784B' : '#D41717';
+          {/* Card 3: Standardized Body Systems Index with visible scale */}
+          <View style={[styles.overviewCard, { flex: 1.25 }]}>
+            <Text style={styles.overviewCardTitle}>Body Systems Index</Text>
+            <View style={{ gap: 3.5, marginTop: 1 }}>
+              {systemsData.map((item) => {
+                const isOptimal = item.score === 100;
+                const barColor = isOptimal ? '#0d9488' : item.score >= 80 ? '#f59e0b' : '#b91c1c';
                 return (
                   <View key={item.system} style={styles.bodySystemRow}>
                     <View style={styles.bodySystemLabelRow}>
-                      <Text style={[styles.bodySystemLabel, { fontSize: 7, textTransform: 'uppercase' }]}>{item.system}</Text>
-                      <Text style={[styles.bodySystemVal, { color, fontSize: 7 }]}>{item.score}%</Text>
+                      <Text style={styles.bodySystemLabel}>{item.system}</Text>
+                      <Text style={[styles.bodySystemVal, { color: barColor }]}>
+                        {item.score}% {isOptimal ? '✓' : '!'}
+                      </Text>
                     </View>
-                    <View style={styles.bodySystemBar}>
-                      {[...Array(totalSegments)].map((_, i) => (
-                        <View
-                          key={i}
-                          style={[
-                            styles.bodySystemSegment,
-                            {
-                              backgroundColor: i < filledSegments ? color : 'rgba(100, 116, 139, 0.15)',
-                              height: 4,
-                            }
-                          ]}
-                        />
-                      ))}
+                    <View style={styles.bodySystemTrack}>
+                      <View
+                        style={[
+                          styles.bodySystemFill,
+                          {
+                            width: `${Math.max(5, item.score)}%`,
+                            backgroundColor: barColor,
+                          },
+                        ]}
+                      />
                     </View>
                   </View>
                 );
@@ -1633,512 +1152,368 @@ export function PremiumPDFDocument({
           </View>
         </View>
 
-        {/* ─── AI CLINICAL SUMMARY ─── */}
+        {/* ─── Actionable Clinical Follow-up Box ─── */}
+        {flaggedCount > 0 ? (
+          <View style={styles.actionableFollowUpCard} wrap={false}>
+            <View style={styles.actionableHeader}>
+              <View style={styles.actionableAlertBadge}>
+                <Text style={styles.actionableAlertBadgeText}>⚠️ CLINICAL ACTION RECOMMENDED</Text>
+              </View>
+              <Text style={styles.actionableSubtitle}>
+                {flaggedCount} biomarker{flaggedCount !== 1 ? 's' : ''} outside standard reference interval
+              </Text>
+            </View>
+
+            <View style={styles.actionableFindingsList}>
+              {flaggedBiomarkers.slice(0, 3).map((b) => {
+                const r = resolveBiomarkerRange(b.name, b.min, b.max, b.value, report.patientGender || 'male');
+                const meta = STATUS_META[b.status] || STATUS_META.normal;
+                return (
+                  <View key={b.name} style={styles.actionableFindingRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <View style={{ backgroundColor: meta.bg, borderColor: meta.border, borderWidth: 0.5, borderRadius: 3, paddingHorizontal: 3.5, paddingVertical: 1 }}>
+                        <Text style={{ color: meta.fg, fontSize: 5.5, fontWeight: 'bold' }}>{meta.icon} {meta.label}</Text>
+                      </View>
+                      <Text style={styles.actionableItemName}>{b.name}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={[styles.actionableItemVal, { color: meta.fg }]}>{b.value} {b.unit}</Text>
+                      <Text style={styles.actionableItemRef}>Optimal: {r.optimalText} {b.unit}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+
+            <View style={styles.actionableCtaRow}>
+              <Text style={styles.actionableCtaNote}>
+                Recommended Next Step: Discuss these findings with your attending physician to evaluate transient vs. persistent variation.
+              </Text>
+              <View style={styles.actionableButton}>
+                <Text style={styles.actionableButtonText}>SCHEDULE CLINICAL REVIEW →</Text>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.optimalWellnessBanner} wrap={false}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Text style={{ fontSize: 9, color: '#0d9488', fontWeight: 'bold' }}>✓</Text>
+              <Text style={{ fontSize: 8, color: '#044E45', fontWeight: 'bold', fontFamily: 'Lora' }}>
+                All Biomarkers Within Optimal Reference Range
+              </Text>
+            </View>
+            <Text style={{ fontSize: 6.5, color: '#065f46', marginTop: 2 }}>
+              All analyzed metabolic, cardiovascular, cellular, and endocrine indicators are within healthy physiological parameters. Maintain routine preventive screenings.
+            </Text>
+          </View>
+        )}
+
+        {/* ─── AI Clinical Synthesis ─── */}
         {report.summary && (
           <View style={styles.summaryContainer} wrap={false}>
             <View style={styles.summaryHeader}>
               <View style={styles.summaryBadge}>
-                <Text style={styles.summaryBadgeText}>AI ANALYSIS</Text>
+                <Text style={styles.summaryBadgeText}>AI CLINICAL SYNTHESIS</Text>
               </View>
-              <Text style={styles.summaryTitle}>Clinical Summary</Text>
+              <Text style={styles.summaryTitle}>Laboratory Interpretation Summary</Text>
             </View>
             <Text style={styles.summaryText}>{report.summary}</Text>
+            <View style={styles.summaryDisclaimer}>
+              <Text style={styles.summaryDisclaimerText}>
+                * AI-generated clinical synthesis for informational guidance — not a formal diagnosis. Always consult your attending healthcare provider before modifying medications or treatments.
+              </Text>
+            </View>
           </View>
         )}
 
-        {/* ─── BODY SYSTEMS HEALTH INDEX COMPARISON CHART ─── */}
-        {systemsData.length > 0 && (() => {
-          const optimalSystems = systemsData.filter(s => s.score === 100);
-          const attentionSystems = systemsData.filter(s => s.score < 100);
-
-          return (
-            <View wrap={false}>
-              {optimalSystems.length > 0 && (
-                <View style={styles.healthIndexChartContainer}>
-                  <Text style={styles.healthIndexChartTitle}>Body Systems Health Index Comparison</Text>
-                  <View style={{ gap: 8, marginTop: 4 }}>
-                    {optimalSystems.map((item) => (
-                      <View key={item.system} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        {/* Label */}
-                        <Text style={{ width: '25%', fontSize: 7, fontWeight: 'bold', color: SLATE_700, textTransform: 'uppercase' }}>
-                          {item.system}
-                        </Text>
-     
-                        {/* Bar Track & Fill */}
-                        <View style={{ width: '60%', height: 10, backgroundColor: '#f1f5f9', borderRadius: 5, overflow: 'hidden', position: 'relative' }}>
-                          <View
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              backgroundColor: '#11784B',
-                              borderRadius: 5,
-                            }}
-                          />
-                          {/* Inner percentage indicator */}
-                          <Text
-                            style={{
-                              position: 'absolute',
-                              right: 6,
-                              top: 2,
-                              fontSize: 5.5,
-                              fontWeight: 'bold',
-                              color: '#ffffff',
-                            }}
-                          >
-                            100%
-                          </Text>
-                        </View>
-     
-                        {/* Status Label badge */}
-                        <View style={{ width: '15%', alignItems: 'flex-end' }}>
-                          <View style={{
-                            backgroundColor: '#ecfdf5',
-                            borderRadius: 4,
-                            paddingHorizontal: 5,
-                            paddingVertical: 1.5,
-                          }}>
-                            <Text
-                              style={{
-                                fontSize: 6,
-                                fontWeight: 'bold',
-                                color: '#11784B',
-                                textTransform: 'uppercase',
-                              }}
-                            >
-                              OPTIMAL
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {attentionSystems.length > 0 && (
-                <View style={{
-                  borderWidth: 1,
-                  borderColor: '#fca5a5',
-                  backgroundColor: '#fef2f2',
-                  borderRadius: 18,
-                  padding: 12,
-                  marginBottom: 14,
-                }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                    <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#b91c1c', fontFamily: 'Lora', textTransform: 'uppercase', letterSpacing: 0.3 }}>⚠️ Clinical Follow-up Required</Text>
-                  </View>
-                  <View style={{ gap: 6 }}>
-                    {attentionSystems.map((item) => (
-                      <View key={item.system} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Text style={{ fontSize: 7.5, fontWeight: 'bold', color: '#991b1b', textTransform: 'uppercase' }}>
-                          {item.system} System
-                        </Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Text style={{ fontSize: 8, color: '#7f1d1d', fontWeight: 'bold' }}>Score: {item.score}%</Text>
-                          <View style={{
-                            backgroundColor: '#fee2e2',
-                            borderRadius: 4,
-                            paddingHorizontal: 5,
-                            paddingVertical: 1.5,
-                            borderWidth: 0.5,
-                            borderColor: '#f87171',
-                          }}>
-                            <Text style={{ color: '#b91c1c', fontSize: 6, fontWeight: 'bold' }}>ATTENTION</Text>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-            </View>
-          );
-        })()}
-
-        {/* ─── KEY INSIGHTS ─── */}
-        {report.aiInsights && report.aiInsights.length > 0 && (
-          <View style={styles.insightsGrid} wrap={false}>
-            <View style={styles.insightsHeader}>
-              <View style={styles.insightsHeaderAccent} />
-              <Text style={styles.insightsHeaderText}>Key Clinical Findings</Text>
-            </View>
-            {report.aiInsights.slice(0, 3).map((insight, i) => (
-              <View key={i} style={styles.insightCard}>
-                <View style={styles.insightNumber}>
-                  <Text style={{ color: TEAL_DARK }}>{i + 1}</Text>
-                </View>
-                <Text style={styles.insightText}>{insight}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Disclaimer footer */}
-        {/* <View style={styles.disclaimer} wrap={false}>
-          <Text style={styles.disclaimerText}>
-            <Text style={{ fontWeight: 'bold', color: SLATE_700 }}>Medical Disclaimer:</Text> This report is generated by an AI system for educational and informational purposes only. It does not constitute medical advice, diagnosis, or treatment. Always consult a licensed healthcare professional before making any medical decisions.
-          </Text>
-        </View> */}
-
-        {/* ─── Page numbers footer (fixed on all pages) ─── */}
+        {/* ─── Page 1 Footer ─── */}
         <View style={styles.footer} fixed>
           {logoUrl ? (
             <Image src={logoUrl} style={styles.footerLogo} />
           ) : (
-            <Text style={{ color: SLATE_400, fontSize: 7, fontWeight: 'bold' }}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
+            <Text style={{ color: SLATE_500, fontSize: 6, fontWeight: 'bold' }}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
           )}
           <Text style={styles.footerText}>
-            {showPoweredBy ? (poweredByText || 'Powered by Huumanize') + '  ·  ' : ''}Confidential Patient Document
+            {showPoweredBy ? (poweredByText || 'Powered by Huumanize') + '  ·  ' : ''}Confidential Clinical Document
           </Text>
           <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>
-
       </Page>
 
-      {/* ─── ADDITIONAL PAGES FOR BIOMARKER DETAILED VIEWS ─── */}
-      {report.panels.map((panel) => {
-        const pPct = panelScore(panel);
-        const pColor = pPct >= 80 ? TEAL_BRIGHT : pPct >= 60 ? '#f59e0b' : '#ef4444';
-        const flagged = panel.biomarkers.filter(b => b.status !== 'normal');
-
-        return (
-          <Page size="A4" style={styles.page} key={panel.name}>
-
-            {/* Header on sub-pages */}
-            <View style={styles.header}>
-              <View style={styles.headerBrand}>
-                {logoUrl ? (
-                  <Image src={logoUrl} style={styles.logo} />
-                ) : (
-                  <>
-                    <View style={styles.headerLogoCircle}>
-                      <Text style={{ color: SLATE_900, fontSize: 12, fontWeight: 'bold' }}>⚲</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.headerBrandName}>{brandName || 'Your Concierge MD'}</Text>
-                      <Text style={styles.headerBrandTag}>Panel Detail</Text>
-                    </View>
-                  </>
-                )}
-              </View>
-              <View style={styles.headerTextContainer}>
-                <Text style={styles.headerTitle}>Bloodwork Analysis Report</Text>
-                <Text style={styles.headerSubtitle}>{panel.name}</Text>
-              </View>
-            </View>
-
-            {/* Panel summary card */}
-            <View style={styles.panelHeader}>
-              <View>
-                <Text style={styles.panelTitle}>{panel.name}</Text>
-                <Text style={styles.panelMeta}>
-                  {panel.biomarkers.length} markers  ·  {flagged.length > 0 ? `${flagged.length} flagged` : 'all biomarkers optimal'}
-                </Text>
-              </View>
-              <View style={styles.panelScoreContainer}>
-                <Text style={[styles.panelScoreVal, { color: pColor }]}>{pPct}%</Text>
-                <Text style={styles.panelScoreLabel}>Panel Score</Text>
-              </View>
-            </View>
-
-            {/* Vector Diagnostic Balance Sheet */}
-            {panel.biomarkers.length > 0 && (
-              <View style={styles.statusBoardContainer} wrap={false}>
-                <Text style={styles.statusBoardTitle}>
-                  {panel.name} — Status Balance Sheet
-                </Text>
-
-                {/* Table Header */}
-                <View style={{ flexDirection: 'row', borderBottomWidth: 0.8, borderBottomColor: SLATE_300, paddingBottom: 4, marginBottom: 6 }}>
-                  <Text style={{ width: '35%', fontSize: 6.5, fontWeight: 'bold', color: SLATE_500, textTransform: 'uppercase', fontFamily: 'Lora' }}>Biomarker Name</Text>
-                  <Text style={{ width: '35%', fontSize: 6.5, fontWeight: 'bold', color: SLATE_500, textTransform: 'uppercase', fontFamily: 'Lora' }}>Patient Value & Status</Text>
-                  <Text style={{ width: '30%', fontSize: 6.5, fontWeight: 'bold', color: SLATE_500, textTransform: 'uppercase', textAlign: 'right', fontFamily: 'Lora' }}>Reference Interval</Text>
+      {/* ══════════════════════════════════════════════════════════════════════
+          PAGES 2+: CONTINUOUS BIOMARKER BREAKDOWN (NO PAGE-PER-PANEL WASTE)
+          ══════════════════════════════════════════════════════════════════════ */}
+      <Page size="A4" style={styles.page} wrap={true}>
+        {/* Fixed Header on every sub-page */}
+        <View style={styles.header} fixed>
+          <View style={styles.headerBrand}>
+            {logoUrl ? (
+              <Image src={logoUrl} style={styles.logo} />
+            ) : (
+              <>
+                <View style={styles.headerLogoCircle}>
+                  <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: 'bold' }}>⚲</Text>
                 </View>
-
-                {panel.biomarkers.map((m, idx) => {
-                  const isLast = idx === panel.biomarkers.length - 1;
-                  const sc = STATUS_HEX[m.status] || STATUS_HEX.normal;
-
-                  // Resolve range
-                  const _miniResolved = resolveRange(m.name, m.min, m.max, m.value, report.patientGender || 'male');
-
-                  return (
-                    <View
-                      key={m.name}
-                      style={isLast ? styles.statusBoardRowLast : styles.statusBoardRow}
-                    >
-                      {/* Column 1: Biomarker Name */}
-                      <Text style={styles.statusBoardLabel}>{m.name}</Text>
-
-                      {/* Column 2: Patient Value & Status Pill */}
-                      <View style={{ width: '35%', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: SLATE_900 }}>
-                          {m.value} <Text style={{ fontSize: 6.5, color: SLATE_400, fontWeight: 'medium' }}>{m.unit}</Text>
-                        </Text>
-                        <View
-                          style={{
-                            backgroundColor: sc.light,
-                            borderRadius: 4,
-                            paddingHorizontal: 5,
-                            paddingVertical: 1.5,
-                          }}
-                        >
-                          <Text style={{ color: sc.fg, fontSize: 6, fontWeight: 'bold' }}>
-                            {STATUS_LABEL[m.status] || m.status.toUpperCase()}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Column 3: Clinical Reference Interval */}
-                      <View style={{ width: '30%', alignItems: 'flex-end' }}>
-                        <Text style={{ fontSize: 8, color: SLATE_700, fontWeight: 'medium' }}>
-                          {_miniResolved.min} – {_miniResolved.max} <Text style={{ fontSize: 6.5, color: SLATE_400 }}>{m.unit}</Text>
-                        </Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
+                <View>
+                  <Text style={styles.headerBrandName}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
+                  <Text style={styles.headerBrandTag}>Detailed Biomarker Panels</Text>
+                </View>
+              </>
             )}
+          </View>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Bloodwork Analysis Report</Text>
+            <Text style={styles.headerSubtitle}>{report.patientName || 'Patient Report'} · {formattedReportDate}</Text>
+          </View>
+        </View>
 
-            {/* Biomarker details list */}
-            <View style={{ gap: 7 }}>
-              {panel.biomarkers.map((m) => {
-                const sc = STATUS_HEX[m.status] || STATUS_HEX.normal;
-                const isAbnormal = m.status !== 'normal';
+        {/* Continuous panels flow */}
+        {report.panels.map((panel) => {
+          const pPct = panelScore(panel);
+          const pColor = pPct >= 80 ? TEAL_BRIGHT : pPct >= 60 ? '#f59e0b' : '#ef4444';
+          const flagged = panel.biomarkers.filter(b => b.status !== 'normal');
+          const normal = panel.biomarkers.filter(b => b.status === 'normal');
 
-                // Resolve range with gender-aware clinical fallback (mirrors UI)
-                const resolved = resolveRange(m.name, m.min, m.max, m.value, report.patientGender || 'male');
-                const { min, max } = resolved;
+          return (
+            <View key={panel.name} style={styles.panelSection} wrap={true}>
+              {/* Panel Header */}
+              <View style={styles.panelHeader} wrap={false}>
+                <View>
+                  <Text style={styles.panelTitle}>{panel.name}</Text>
+                  <Text style={styles.panelMeta}>
+                    {panel.biomarkers.length} markers  ·  {flagged.length > 0 ? `${flagged.length} require review` : 'all biomarkers optimal'}
+                  </Text>
+                </View>
+                <View style={styles.panelScoreBadge}>
+                  <Text style={[styles.panelScoreVal, { color: pColor }]}>{pPct}%</Text>
+                  <Text style={styles.panelScoreLabel}>Panel Score</Text>
+                </View>
+              </View>
 
-                const statusClean = (m.status || 'normal').toLowerCase();
-                const val = Number(m.value);
-                const hasVal = !isNaN(val);
-
-                // Compute active zone flag for each of the 5 segments
-                const isZone1Active = hasVal ? (val < min - 2) : false;
-                const isZone2Active = hasVal ? (val >= min - 2 && val < min) : (statusClean === 'low');
-                const isZone3Active = hasVal ? (val >= min && val <= max) : (statusClean === 'normal');
-                const isZone4Active = hasVal ? (val > max && val <= max + 2) : (statusClean === 'high');
-                const isZone5Active = hasVal ? (val > max + 2) : (statusClean === 'critical');
+              {/* 1. FLAGGED / BORDERLINE BIOMARKERS (Full illustrated gauge + clinical interpretation) */}
+              {flagged.map((m) => {
+                const meta = STATUS_META[m.status] || STATUS_META.normal;
+                const resolved = resolveBiomarkerRange(m.name, m.min, m.max, m.value, report.patientGender || 'male');
 
                 return (
                   <View
                     key={m.name}
                     style={[
-                      styles.biomarkerCard,
+                      styles.flaggedCard,
                       {
-                        borderColor: isAbnormal ? sc.fg : SLATE_100,
-                        backgroundColor: isAbnormal ? sc.bg : BG_CARD,
-                      }
+                        borderColor: meta.border,
+                        backgroundColor: meta.bg,
+                      },
                     ]}
                     wrap={false}
                   >
-                    {/* Row 1: Biomarker Name & Patient Value */}
-                    <View style={styles.biomarkerTopRow}>
-                      <View style={styles.biomarkerNameContainer}>
-                        <Text style={styles.biomarkerName}>{m.name}</Text>
+                    {/* Top Row: Name, Value, Status badge */}
+                    <View style={styles.flaggedTopRow}>
+                      <View>
+                        <Text style={styles.flaggedName}>{m.name}</Text>
+                        <Text style={{ fontSize: 6, color: SLATE_500, marginTop: 1 }}>
+                          Reference Interval: {resolved.optimalText} {m.unit}
+                        </Text>
                       </View>
-                      <View style={styles.biomarkerValueContainer}>
-                        <View style={styles.biomarkerValueRow}>
-                          <Text style={styles.biomarkerValue}>{m.value}</Text>
-                          <Text style={styles.biomarkerUnit}>{m.unit}</Text>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <View style={styles.flaggedValueRow}>
+                          <Text style={[styles.flaggedValue, { color: meta.fg }]}>{m.value}</Text>
+                          <Text style={styles.flaggedUnit}>{m.unit}</Text>
                         </View>
-                        <View style={[styles.biomarkerBadge, { backgroundColor: sc.light, borderColor: `${sc.fg}33`, color: sc.fg }]}>
-                          <Text style={{ color: sc.fg }}>{STATUS_LABEL[m.status] || m.status.toUpperCase()}</Text>
+                        <View style={[styles.flaggedBadge, { backgroundColor: '#ffffff', borderColor: meta.border }]}>
+                          <Text style={[styles.flaggedBadgeText, { color: meta.fg }]}>
+                            {meta.icon} {meta.label}
+                          </Text>
                         </View>
-                      </View>
-                    </View>
-
-                    {/* Row 2: Layout Status Bar */}
-                    <View style={{ marginVertical: 8 }} wrap={false}>
-                      {/* The 5-segment colored bar */}
-                      <View style={{
-                        flexDirection: 'row',
-                        width: '100%',
-                        height: 10,
-                        borderRadius: 5,
-                        overflow: 'hidden',
-                      }}>
-                        {/* Zone 1: Rose (Critical Low) */}
-                        <View style={{
-                          width: '15%',
-                          backgroundColor: '#f87171',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                        }}>
-                          {isZone1Active && (
-                            <View style={{
-                              width: 7,
-                              height: 7,
-                              backgroundColor: '#0f172a',
-                              borderRadius: 3.5,
-                              borderWidth: 1.2,
-                              borderColor: '#ffffff',
-                            }} />
-                          )}
-                        </View>
-
-                        {/* Zone 2: Amber (Borderline Low) */}
-                        <View style={{
-                          width: '20%',
-                          backgroundColor: '#fcd34d',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                        }}>
-                          {isZone2Active && (
-                            <View style={{
-                              width: 7,
-                              height: 7,
-                              backgroundColor: '#0f172a',
-                              borderRadius: 3.5,
-                              borderWidth: 1.2,
-                              borderColor: '#ffffff',
-                            }} />
-                          )}
-                        </View>
-
-                        {/* Zone 3: Emerald (Optimal) */}
-                        <View style={{
-                          width: '30%',
-                          backgroundColor: '#34d399',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                        }}>
-                          {isZone3Active && (
-                            <View style={{
-                              width: 7,
-                              height: 7,
-                              backgroundColor: '#0f172a',
-                              borderRadius: 3.5,
-                              borderWidth: 1.2,
-                              borderColor: '#ffffff',
-                            }} />
-                          )}
-                        </View>
-
-                        {/* Zone 4: Amber (Borderline High) */}
-                        <View style={{
-                          width: '20%',
-                          backgroundColor: '#fcd34d',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                        }}>
-                          {isZone4Active && (
-                            <View style={{
-                              width: 7,
-                              height: 7,
-                              backgroundColor: '#0f172a',
-                              borderRadius: 3.5,
-                              borderWidth: 1.2,
-                              borderColor: '#ffffff',
-                            }} />
-                          )}
-                        </View>
-
-                        {/* Zone 5: Rose (Critical High) */}
-                        <View style={{
-                          width: '15%',
-                          backgroundColor: '#f87171',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                        }}>
-                          {isZone5Active && (
-                            <View style={{
-                              width: 7,
-                              height: 7,
-                              backgroundColor: '#0f172a',
-                              borderRadius: 3.5,
-                              borderWidth: 1.2,
-                              borderColor: '#ffffff',
-                            }} />
-                          )}
-                        </View>
-                      </View>
-
-                      {/* Markers for corners */}
-                      <View style={{ position: 'relative', height: 10, marginTop: 2 }}>
-                        {/* Left End Corner (less than optimal: min - 2) */}
-                        <Text style={{
-                          position: 'absolute',
-                          left: 0,
-                          fontSize: 6,
-                          color: SLATE_400,
-                          fontWeight: 'bold',
-                        }}>
-                          {parseFloat((min - 2).toFixed(2))}
-                        </Text>
-
-                        {/* Green Left Corner (optimal range start: min) */}
-                        <Text style={{
-                          position: 'absolute',
-                          left: '35%',
-                          fontSize: 6,
-                          color: SLATE_500,
-                          fontWeight: 'bold',
-                        }}>
-                          {min}
-                        </Text>
-
-                        {/* Green Right Corner (optimal range end: max) */}
-                        <Text style={{
-                          position: 'absolute',
-                          left: '65%',
-                          fontSize: 6,
-                          color: SLATE_500,
-                          fontWeight: 'bold',
-                        }}>
-                          {max}
-                        </Text>
-
-                        {/* Right End Corner (more than optimal: max + 2) */}
-                        <Text style={{
-                          position: 'absolute',
-                          right: 0,
-                          fontSize: 6,
-                          color: SLATE_400,
-                          fontWeight: 'bold',
-                        }}>
-                          {parseFloat((max + 2).toFixed(2))}
-                        </Text>
                       </View>
                     </View>
 
-                    {/* Row 3: Range Text Explanations */}
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 }}>
-                      <Text style={{ fontSize: 6.5, color: SLATE_400, fontWeight: 'bold' }}></Text>
-                      <Text style={{ fontSize: 6.5, color: SLATE_500, fontWeight: 'bold' }}>Optimal Range: {min} – {max} {m.unit}</Text>
-                      <Text style={{ fontSize: 6.5, color: SLATE_400, fontWeight: 'bold' }}></Text>
+                    {/* Accurate Asymmetric / Bounded Range Bar */}
+                    <View style={{ marginVertical: 4 }} wrap={false}>
+                      {resolved.type === 'greater_than' ? (
+                        // One-sided Greater Than Bar: Zone 1 (0 to 35% Low/Amber), Zone 2 (35% to 100% Optimal/Green)
+                        <View>
+                          <View style={{
+                            flexDirection: 'row',
+                            width: '100%',
+                            height: 7,
+                            borderRadius: 3.5,
+                            overflow: 'hidden',
+                            position: 'relative',
+                          }}>
+                            <View style={{ width: '35%', backgroundColor: '#fcd34d' }} />
+                            <View style={{ width: '65%', backgroundColor: '#34d399' }} />
+                            <View style={{
+                              position: 'absolute',
+                              left: `${resolved.pct}%`,
+                              top: -1.5,
+                              marginLeft: -4.5,
+                              width: 9,
+                              height: 9,
+                              borderRadius: 4.5,
+                              backgroundColor: '#0f172a',
+                              borderWidth: 1.5,
+                              borderColor: '#ffffff',
+                            }} />
+                          </View>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+                            <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>0</Text>
+                            <Text style={{ fontSize: 5.5, color: SLATE_700, fontWeight: 'bold' }}>Optimal Threshold: ≥ {resolved.optimalMin} {m.unit}</Text>
+                            <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>&gt;</Text>
+                          </View>
+                        </View>
+                      ) : resolved.type === 'less_than' ? (
+                        // One-sided Less Than Bar: Zone 1 (0 to 65% Optimal/Green), Zone 2 (65% to 85% Elevated/Amber), Zone 3 (85% to 100% Critical/Rose)
+                        <View>
+                          <View style={{
+                            flexDirection: 'row',
+                            width: '100%',
+                            height: 7,
+                            borderRadius: 3.5,
+                            overflow: 'hidden',
+                            position: 'relative',
+                          }}>
+                            <View style={{ width: '65%', backgroundColor: '#34d399' }} />
+                            <View style={{ width: '20%', backgroundColor: '#fcd34d' }} />
+                            <View style={{ width: '15%', backgroundColor: '#f87171' }} />
+                            <View style={{
+                              position: 'absolute',
+                              left: `${resolved.pct}%`,
+                              top: -1.5,
+                              marginLeft: -4.5,
+                              width: 9,
+                              height: 9,
+                              borderRadius: 4.5,
+                              backgroundColor: '#0f172a',
+                              borderWidth: 1.5,
+                              borderColor: '#ffffff',
+                            }} />
+                          </View>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+                            <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>0</Text>
+                            <Text style={{ fontSize: 5.5, color: SLATE_700, fontWeight: 'bold' }}>Optimal Limit: &lt; {resolved.optimalMax} {m.unit}</Text>
+                            <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>{resolved.displayMax}</Text>
+                          </View>
+                        </View>
+                      ) : (
+                        // Two-sided Bounded Bar: Zone 1 (Low/Amber 30%), Zone 2 (Optimal/Green 40%), Zone 3 (High/Rose 30%)
+                        <View>
+                          <View style={{
+                            flexDirection: 'row',
+                            width: '100%',
+                            height: 7,
+                            borderRadius: 3.5,
+                            overflow: 'hidden',
+                            position: 'relative',
+                          }}>
+                            <View style={{ width: '30%', backgroundColor: '#fcd34d' }} />
+                            <View style={{ width: '40%', backgroundColor: '#34d399' }} />
+                            <View style={{ width: '30%', backgroundColor: '#f87171' }} />
+                            <View style={{
+                              position: 'absolute',
+                              left: `${resolved.pct}%`,
+                              top: -1.5,
+                              marginLeft: -4.5,
+                              width: 9,
+                              height: 9,
+                              borderRadius: 4.5,
+                              backgroundColor: '#0f172a',
+                              borderWidth: 1.5,
+                              borderColor: '#ffffff',
+                            }} />
+                          </View>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+                            <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>{resolved.displayMin}</Text>
+                            <Text style={{ fontSize: 5.5, color: SLATE_700, fontWeight: 'bold' }}>Optimal Range: {resolved.optimalMin} – {resolved.optimalMax} {m.unit}</Text>
+                            <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>{resolved.displayMax}</Text>
+                          </View>
+                        </View>
+                      )}
                     </View>
 
-                    {/* AI Interpretation */}
-                    {m.clinicalInterpretation && (
-                      <View style={[styles.interpretationBox, { marginTop: 8 }]}>
-                        <Text style={styles.interpretationLabel}>AI</Text>
+                    {/* AI Clinical Interpretation */}
+                    {m.clinicalInterpretation ? (
+                      <View style={styles.interpretationBox}>
+                        <Text style={styles.interpretationLabel}>AI CLINICAL NOTE</Text>
                         <Text style={styles.interpretationText}>{m.clinicalInterpretation}</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.interpretationBox}>
+                        <Text style={styles.interpretationLabel}>RECOMMENDATION</Text>
+                        <Text style={styles.interpretationText}>Discuss this marker with your healthcare provider to evaluate if dietary adjustments or retesting is advised.</Text>
                       </View>
                     )}
                   </View>
                 );
               })}
-            </View>
 
-            {/* Sub-page Footer */}
-            <View style={styles.footer} fixed>
-              {logoUrl ? (
-                <Image src={logoUrl} style={styles.footerLogo} />
-              ) : (
-                <Text style={{ color: SLATE_400, fontSize: 7, fontWeight: 'bold' }}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
+              {/* 2. COMPACT NORMAL BIOMARKERS TABLE */}
+              {normal.length > 0 && (
+                <View style={styles.compactTableContainer} wrap={false}>
+                  <View style={styles.compactTableHeader}>
+                    <Text style={styles.compactColName}>
+                      <Text style={styles.compactTableHeaderText}>Optimal Biomarker</Text>
+                    </Text>
+                    <Text style={styles.compactColRange}>
+                      <Text style={styles.compactTableHeaderText}>Reference Range</Text>
+                    </Text>
+                    <Text style={styles.compactColValue}>
+                      <Text style={styles.compactTableHeaderText}>Result</Text>
+                    </Text>
+                    <Text style={styles.compactColStatus}>
+                      <Text style={styles.compactTableHeaderText}>Status</Text>
+                    </Text>
+                  </View>
+
+                  {normal.map((m, idx) => {
+                    const isLast = idx === normal.length - 1;
+                    const resolved = resolveBiomarkerRange(m.name, m.min, m.max, m.value, report.patientGender || 'male');
+                    return (
+                      <View
+                        key={m.name}
+                        style={isLast ? styles.compactTableRowLast : styles.compactTableRow}
+                      >
+                        <Text style={styles.compactColName}>{m.name}</Text>
+                        <Text style={styles.compactColRange}>
+                          {resolved.optimalText} <Text style={{ fontSize: 5.5, color: SLATE_400 }}>{m.unit}</Text>
+                        </Text>
+                        <Text style={styles.compactColValue}>
+                          {m.value} <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'medium' }}>{m.unit}</Text>
+                        </Text>
+                        <View style={styles.compactColStatus}>
+                          <View style={{
+                            backgroundColor: '#ecfdf5',
+                            borderRadius: 3,
+                            paddingHorizontal: 4,
+                            paddingVertical: 1,
+                            borderWidth: 0.5,
+                            borderColor: '#a7f3d0',
+                          }}>
+                            <Text style={{ fontSize: 5, fontWeight: 'bold', color: '#0d9488' }}>✓ NORMAL</Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
               )}
-              <Text style={styles.footerText}>
-                {showPoweredBy ? (poweredByText || 'Powered by Huumanize') + '  ·  ' : ''}Confidential Patient Document
-              </Text>
-              <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
             </View>
+          );
+        })}
 
-          </Page>
-        );
-      })}
+        {/* Fixed Footer on every sub-page */}
+        <View style={styles.footer} fixed>
+          {logoUrl ? (
+            <Image src={logoUrl} style={styles.footerLogo} />
+          ) : (
+            <Text style={{ color: SLATE_500, fontSize: 6, fontWeight: 'bold' }}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
+          )}
+          <Text style={styles.footerText}>
+            {showPoweredBy ? (poweredByText || 'Powered by Huumanize') + '  ·  ' : ''}Confidential Clinical Document
+          </Text>
+          <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
+        </View>
+      </Page>
     </Document>
   );
 }
