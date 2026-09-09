@@ -14,6 +14,13 @@ function resolveRange(_name: string, minVal: any, maxVal: any, value: number, _g
   return { min, max };
 }
 
+function formatReportDate(dateString?: string): string {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return dateString;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 // `strokeDashoffset` is supported at runtime by react-pdf's renderer but missing
 // from CircleProps' typings — alias as `any` for the gauge / doughnut math.
 const CircleAny = Circle as any;
@@ -163,11 +170,12 @@ const styles = StyleSheet.create({
 
   // ── PATIENT BANNER ────────────────────────────────────────────────────────
   patientBanner: {
-    backgroundColor: BG_CARD,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: SLATE_100,
-    borderRadius: 24,
-    padding: 14,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     marginBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -176,21 +184,23 @@ const styles = StyleSheet.create({
   patientInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
+    flex: 1,
+    marginRight: 8,
   },
   patientIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 3,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
     borderColor: TEAL_TINT,
   },
   patientIconFallback: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: TEAL_TINT,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: TEAL_BORDER,
     alignItems: 'center',
     justifyContent: 'center',
@@ -198,42 +208,45 @@ const styles = StyleSheet.create({
   patientIconFallbackText: {
     color: TEAL_DARK,
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 12,
   },
   patientDetails: {
     justifyContent: 'center',
+    flexShrink: 1,
   },
   patientName: {
-    fontSize: 13,
+    fontSize: 11.5,
     fontWeight: 'bold',
     color: SLATE_900,
   },
   patientMeta: {
-    fontSize: 7.5,
+    fontSize: 6.5,
     color: SLATE_400,
     marginTop: 2,
     fontWeight: 'bold',
   },
   statContainer: {
     flexDirection: 'row',
-    gap: 5,
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 0,
   },
   statPill: {
-    backgroundColor: BG_CARD,
     borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 5,
-    paddingHorizontal: 8,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
     alignItems: 'center',
-    minWidth: 46,
+    justifyContent: 'center',
+    minWidth: 38,
   },
   statCount: {
-    fontSize: 13,
+    fontSize: 10.5,
     fontWeight: 'bold',
     lineHeight: 1,
   },
   statLabel: {
-    fontSize: 5.5,
+    fontSize: 5,
     fontWeight: 'bold',
     color: SLATE_400,
     textTransform: 'uppercase',
@@ -241,20 +254,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   healthScorePill: {
-    borderRadius: 14,
-    paddingVertical: 5,
-    paddingHorizontal: 8,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 7,
     alignItems: 'center',
-    minWidth: 52,
+    justifyContent: 'center',
+    minWidth: 48,
     borderWidth: 1.5,
   },
   healthScoreVal: {
-    fontSize: 13,
+    fontSize: 10.5,
     fontWeight: 'bold',
     lineHeight: 1,
   },
   healthScoreLabel: {
-    fontSize: 5.5,
+    fontSize: 5,
     fontWeight: 'bold',
     color: SLATE_400,
     textTransform: 'uppercase',
@@ -308,12 +322,12 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: BG_CARD,
-    borderRadius: 22,
-    padding: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    padding: 10,
     borderWidth: 1,
     borderColor: SLATE_100,
-    height: 110,
+    height: 105,
     justifyContent: 'space-between',
   },
   metricCardTop: {
@@ -324,17 +338,17 @@ const styles = StyleSheet.create({
   metricIconRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   metricIconBox: {
     width: 18,
     height: 18,
-    borderRadius: 7,
+    borderRadius: 5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   metricTitle: {
-    fontSize: 7,
+    fontSize: 7.5,
     fontWeight: 'bold',
     color: SLATE_500,
     textTransform: 'uppercase',
@@ -344,35 +358,40 @@ const styles = StyleSheet.create({
   metricChangePill: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 2,
+    paddingHorizontal: 5,
+    borderRadius: 4,
     gap: 2,
   },
   metricChangeText: {
-    fontSize: 7,
+    fontSize: 6.5,
     fontWeight: 'bold',
+    lineHeight: 1,
   },
   metricValueRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'flex-end',
     gap: 3,
   },
   metricValue: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
     color: SLATE_900,
     lineHeight: 1,
   },
   metricTarget: {
-    fontSize: 8,
-    color: SLATE_300,
+    fontSize: 8.5,
+    color: SLATE_400,
     fontWeight: 'bold',
+    marginBottom: 1,
   },
   metricUnit: {
-    fontSize: 6.5,
+    fontSize: 6,
     color: SLATE_400,
     textTransform: 'uppercase',
     fontWeight: 'bold',
-    letterSpacing: 0.5,
-    marginTop: 1,
+    letterSpacing: 0.4,
+    marginTop: 2,
   },
   sparklineContainer: {
     height: 16,
@@ -524,19 +543,25 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   conditionValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: SLATE_900,
     lineHeight: 1,
   },
   conditionDelta: {
     backgroundColor: TEAL_DARK,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingVertical: 2.5,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+  },
+  conditionDeltaText: {
     color: '#ffffff',
     fontSize: 7,
     fontWeight: 'bold',
-    paddingVertical: 2,
-    paddingHorizontal: 5,
-    borderRadius: 4,
+    lineHeight: 1,
   },
   conditionRangePill: {
     flexDirection: 'row',
@@ -1182,10 +1207,10 @@ export function PremiumPDFDocument({
               <Text style={styles.patientName}>{report.patientName || 'Patient Report'}</Text>
               <Text style={styles.patientMeta}>
                 {[
-                  report.patientAge && `${report.patientAge} yrs`,
-                  report.patientGender,
-                  report.labDate || report.collectionDate,
-                  report.orderedBy && `Dr. ${report.orderedBy}`,
+                  report.patientAge ? `${report.patientAge} yrs` : null,
+                  report.patientGender ? (report.patientGender.charAt(0).toUpperCase() + report.patientGender.slice(1).toLowerCase()) : null,
+                  formatReportDate(report.labDate || report.collectionDate),
+                  brandName || (report.orderedBy?.startsWith('Dr.') ? report.orderedBy : (report.orderedBy || 'Health Clinic')),
                 ].filter(Boolean).join('  ·  ')}
               </Text>
             </View>
@@ -1235,13 +1260,26 @@ export function PremiumPDFDocument({
           <View style={styles.metricCard}>
             <View style={styles.metricCardTop}>
               <View style={styles.metricIconRow}>
-                <View style={[styles.metricIconBox, { backgroundColor: ACCENT.green.icon }]}>
-                  <Text style={{ color: ACCENT.green.fg, fontSize: 9, fontWeight: 'bold' }}>♥</Text>
-                </View>
+                <Svg width="18" height="18" viewBox="0 0 18 18">
+                  <Rect width="18" height="18" rx="5" fill={ACCENT.green.icon} />
+                  <Polyline
+                    points="2,9 5,9 7,4 9,14 11,7 13,10 16,10"
+                    fill="none"
+                    stroke={ACCENT.green.fg}
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
                 <Text style={styles.metricTitle}>Health Score</Text>
               </View>
-              <View style={styles.metricChangePill}>
-                <Text style={[styles.metricChangeText, { color: ACCENT.green.fg }]}>▲ {Math.max(1, Math.round(normalPct / 20))}%</Text>
+              <View style={[styles.metricChangePill, { backgroundColor: ACCENT.green.bg }]}>
+                <Svg width="5" height="5" viewBox="0 0 6 6">
+                  <Polyline points="1,5 3,1 5,5 1,5" fill={ACCENT.green.fg} />
+                </Svg>
+                <Text style={[styles.metricChangeText, { color: ACCENT.green.fg }]}>
+                  {Math.max(1, Math.round(normalPct / 20))}%
+                </Text>
               </View>
             </View>
             <View>
@@ -1269,13 +1307,21 @@ export function PremiumPDFDocument({
           <View style={styles.metricCard}>
             <View style={styles.metricCardTop}>
               <View style={styles.metricIconRow}>
-                <View style={[styles.metricIconBox, { backgroundColor: ACCENT.blue.icon }]}>
-                  <Text style={{ color: ACCENT.blue.fg, fontSize: 9, fontWeight: 'bold' }}>≡</Text>
-                </View>
+                <Svg width="18" height="18" viewBox="0 0 18 18">
+                  <Rect width="18" height="18" rx="5" fill={ACCENT.blue.icon} />
+                  <Line x1="4.5" y1="5.5" x2="13.5" y2="5.5" stroke={ACCENT.blue.fg} strokeWidth="1.4" strokeLinecap="round" />
+                  <Line x1="4.5" y1="9" x2="13.5" y2="9" stroke={ACCENT.blue.fg} strokeWidth="1.4" strokeLinecap="round" />
+                  <Line x1="4.5" y1="12.5" x2="10.5" y2="12.5" stroke={ACCENT.blue.fg} strokeWidth="1.4" strokeLinecap="round" />
+                </Svg>
                 <Text style={styles.metricTitle}>Biomarkers</Text>
               </View>
-              <View style={styles.metricChangePill}>
-                <Text style={[styles.metricChangeText, { color: ACCENT.blue.fg }]}>▲ {report.panels.length}</Text>
+              <View style={[styles.metricChangePill, { backgroundColor: ACCENT.blue.bg }]}>
+                <Svg width="5" height="5" viewBox="0 0 6 6">
+                  <Polyline points="1,5 3,1 5,5 1,5" fill={ACCENT.blue.fg} />
+                </Svg>
+                <Text style={[styles.metricChangeText, { color: ACCENT.blue.fg }]}>
+                  {report.panels.length} panels
+                </Text>
               </View>
             </View>
             <View>
@@ -1303,13 +1349,20 @@ export function PremiumPDFDocument({
           <View style={styles.metricCard}>
             <View style={styles.metricCardTop}>
               <View style={styles.metricIconRow}>
-                <View style={[styles.metricIconBox, { backgroundColor: ACCENT.amber.icon }]}>
-                  <Text style={{ color: ACCENT.amber.fg, fontSize: 9, fontWeight: 'bold' }}>!</Text>
-                </View>
+                <Svg width="18" height="18" viewBox="0 0 18 18">
+                  <Rect width="18" height="18" rx="5" fill={ACCENT.amber.icon} />
+                  <Line x1="9" y1="4.5" x2="9" y2="10" stroke={ACCENT.amber.fg} strokeWidth="1.6" strokeLinecap="round" />
+                  <Circle cx="9" cy="13" r="0.9" fill={ACCENT.amber.fg} />
+                </Svg>
                 <Text style={styles.metricTitle}>Flagged</Text>
               </View>
-              <View style={styles.metricChangePill}>
-                <Text style={[styles.metricChangeText, { color: ACCENT.amber.fg }]}>{flaggedCount > 0 ? '▲' : '▼'} {flaggedPct}%</Text>
+              <View style={[styles.metricChangePill, { backgroundColor: ACCENT.amber.bg }]}>
+                <Svg width="5" height="5" viewBox="0 0 6 6">
+                  <Polyline points={flaggedCount > 0 ? "1,5 3,1 5,5 1,5" : "1,1 3,5 5,1 1,1"} fill={ACCENT.amber.fg} />
+                </Svg>
+                <Text style={[styles.metricChangeText, { color: ACCENT.amber.fg }]}>
+                  {flaggedPct}%
+                </Text>
               </View>
             </View>
             <View>
@@ -1344,7 +1397,12 @@ export function PremiumPDFDocument({
                 <Text style={[styles.conditionLabel, { marginTop: 6 }]}>Average Panel Score</Text>
                 <View style={[styles.conditionValueRow, { marginTop: 2 }]}>
                   <Text style={styles.conditionValue}>{avgPanelScore}%</Text>
-                  <Text style={styles.conditionDelta}>▲ {Math.max(1, Math.round(avgPanelScore / 25))}%</Text>
+                  <View style={styles.conditionDelta}>
+                    <Svg width="5" height="5" viewBox="0 0 6 6">
+                      <Polyline points="1,5 3,1 5,5 1,5" fill="#ffffff" />
+                    </Svg>
+                    <Text style={styles.conditionDeltaText}>{Math.max(1, Math.round(avgPanelScore / 25))}%</Text>
+                  </View>
                 </View>
               </View>
               <View style={styles.conditionRangePill}>
@@ -1898,91 +1956,101 @@ export function PremiumPDFDocument({
                       <View style={{
                         flexDirection: 'row',
                         width: '100%',
-                        height: 12,
-                        borderRadius: 6,
+                        height: 10,
+                        borderRadius: 5,
                         overflow: 'hidden',
                       }}>
-                        {/* Zone 1: Red (Critical Low) */}
+                        {/* Zone 1: Rose (Critical Low) */}
                         <View style={{
                           width: '15%',
-                          backgroundColor: '#d32626ff',
+                          backgroundColor: '#f87171',
                           justifyContent: 'center',
                           alignItems: 'center',
                         }}>
                           {isZone1Active && (
                             <View style={{
-                              width: 8,
-                              height: 8,
-                              backgroundColor: '#111827',
-                              borderRadius: 4,
+                              width: 7,
+                              height: 7,
+                              backgroundColor: '#0f172a',
+                              borderRadius: 3.5,
+                              borderWidth: 1.2,
+                              borderColor: '#ffffff',
                             }} />
                           )}
                         </View>
 
-                        {/* Zone 2: Yellow (Borderline Low) */}
+                        {/* Zone 2: Amber (Borderline Low) */}
                         <View style={{
                           width: '20%',
-                          backgroundColor: '#f3de42ff',
+                          backgroundColor: '#fcd34d',
                           justifyContent: 'center',
                           alignItems: 'center',
                         }}>
                           {isZone2Active && (
                             <View style={{
-                              width: 8,
-                              height: 8,
-                              backgroundColor: '#111827',
-                              borderRadius: 4,
+                              width: 7,
+                              height: 7,
+                              backgroundColor: '#0f172a',
+                              borderRadius: 3.5,
+                              borderWidth: 1.2,
+                              borderColor: '#ffffff',
                             }} />
                           )}
                         </View>
 
-                        {/* Zone 3: Green (Optimal) */}
+                        {/* Zone 3: Emerald (Optimal) */}
                         <View style={{
                           width: '30%',
-                          backgroundColor: '#17c87bff',
+                          backgroundColor: '#34d399',
                           justifyContent: 'center',
                           alignItems: 'center',
                         }}>
                           {isZone3Active && (
                             <View style={{
-                              width: 8,
-                              height: 8,
-                              backgroundColor: '#111827',
-                              borderRadius: 4,
+                              width: 7,
+                              height: 7,
+                              backgroundColor: '#0f172a',
+                              borderRadius: 3.5,
+                              borderWidth: 1.2,
+                              borderColor: '#ffffff',
                             }} />
                           )}
                         </View>
 
-                        {/* Zone 4: Yellow (Borderline High) */}
+                        {/* Zone 4: Amber (Borderline High) */}
                         <View style={{
                           width: '20%',
-                          backgroundColor: '#f3de42ff',
+                          backgroundColor: '#fcd34d',
                           justifyContent: 'center',
                           alignItems: 'center',
                         }}>
                           {isZone4Active && (
                             <View style={{
-                              width: 8,
-                              height: 8,
-                              backgroundColor: '#111827',
-                              borderRadius: 4,
+                              width: 7,
+                              height: 7,
+                              backgroundColor: '#0f172a',
+                              borderRadius: 3.5,
+                              borderWidth: 1.2,
+                              borderColor: '#ffffff',
                             }} />
                           )}
                         </View>
 
-                        {/* Zone 5: Red (Critical High) */}
+                        {/* Zone 5: Rose (Critical High) */}
                         <View style={{
                           width: '15%',
-                          backgroundColor: '#d32626ff',
+                          backgroundColor: '#f87171',
                           justifyContent: 'center',
                           alignItems: 'center',
                         }}>
                           {isZone5Active && (
                             <View style={{
-                              width: 8,
-                              height: 8,
-                              backgroundColor: '#111827',
-                              borderRadius: 4,
+                              width: 7,
+                              height: 7,
+                              backgroundColor: '#0f172a',
+                              borderRadius: 3.5,
+                              borderWidth: 1.2,
+                              borderColor: '#ffffff',
                             }} />
                           )}
                         </View>
