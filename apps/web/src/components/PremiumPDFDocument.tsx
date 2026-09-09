@@ -57,6 +57,14 @@ export const STATUS_META: Record<string, { label: string; icon: string; fg: stri
   unknown: { label: 'UNKNOWN', icon: '•', fg: '#64748b', bg: '#f8fafc', border: '#cbd5e1', bar: '#94a3b8' },
 };
 
+// Muted clinical range bar zone tokens (calm pastel tones matching status pills)
+const BAR_ZONE = {
+  low: '#FDE68A',       // Soft muted warm amber (matches reduced/low pill)
+  optimal: '#A7F3D0',   // Soft muted sage/mint (matches normal pill)
+  high: '#FECACA',      // Soft muted coral/rose (matches elevated/high pill)
+  trackBg: '#F1F5F9',   // Calm neutral base
+};
+
 const CATEGORY_COLORS: Record<string, string> = {
   'Complete Blood Count (CBC)': '#0DA58E',
   'Comprehensive Metabolic Panel (CMP)': '#06b6d4',
@@ -786,6 +794,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderBottomWidth: 0.8,
     borderBottomColor: SLATE_100,
+    alignItems: 'center',
   },
   compactTableHeaderText: {
     fontSize: 5.5,
@@ -810,19 +819,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   compactColName: {
-    width: '38%',
+    width: '32%',
     fontSize: 7,
     color: SLATE_900,
     fontWeight: 500,
+    paddingRight: 4,
   },
-  compactColRange: {
-    width: '26%',
-    fontSize: 6.5,
-    color: SLATE_500,
-    textAlign: 'center',
+  compactColBar: {
+    width: '38%',
+    paddingHorizontal: 4,
+    justifyContent: 'center',
   },
   compactColValue: {
-    width: '22%',
+    width: '17%',
     fontSize: 7,
     fontWeight: 'bold',
     color: SLATE_900,
@@ -830,8 +839,38 @@ const styles = StyleSheet.create({
     paddingRight: 6,
   },
   compactColStatus: {
-    width: '14%',
+    width: '13%',
     alignItems: 'flex-end',
+  },
+  miniBarTrack: {
+    width: '100%',
+    height: 5,
+    borderRadius: 2.5,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    position: 'relative',
+    backgroundColor: '#f1f5f9',
+  },
+  miniBarNeedle: {
+    position: 'absolute',
+    top: -1.5,
+    marginLeft: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#0f172a',
+    borderWidth: 1.2,
+    borderColor: '#ffffff',
+  },
+  miniBarLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 1.5,
+  },
+  miniBarLabelText: {
+    fontSize: 5,
+    color: SLATE_400,
+    fontWeight: 500,
   },
 
   // ── FOOTER (Fixed on all pages) ───────────────────────────────────────────
@@ -1328,7 +1367,7 @@ export function PremiumPDFDocument({
                       </View>
                     </View>
 
-                    {/* Accurate Asymmetric / Bounded Range Bar */}
+                    {/* Accurate Asymmetric / Bounded Range Bar with muted clinical tones */}
                     <View style={{ marginVertical: 4 }} wrap={false}>
                       {resolved.type === 'greater_than' ? (
                         // One-sided Greater Than Bar: Zone 1 (0 to 35% Low/Amber), Zone 2 (35% to 100% Optimal/Green)
@@ -1340,9 +1379,10 @@ export function PremiumPDFDocument({
                             borderRadius: 3.5,
                             overflow: 'hidden',
                             position: 'relative',
+                            backgroundColor: BAR_ZONE.trackBg,
                           }}>
-                            <View style={{ width: '35%', backgroundColor: '#fcd34d' }} />
-                            <View style={{ width: '65%', backgroundColor: '#34d399' }} />
+                            <View style={{ width: '35%', backgroundColor: BAR_ZONE.low }} />
+                            <View style={{ width: '65%', backgroundColor: BAR_ZONE.optimal }} />
                             <View style={{
                               position: 'absolute',
                               left: `${resolved.pct}%`,
@@ -1372,10 +1412,11 @@ export function PremiumPDFDocument({
                             borderRadius: 3.5,
                             overflow: 'hidden',
                             position: 'relative',
+                            backgroundColor: BAR_ZONE.trackBg,
                           }}>
-                            <View style={{ width: '65%', backgroundColor: '#34d399' }} />
-                            <View style={{ width: '20%', backgroundColor: '#fcd34d' }} />
-                            <View style={{ width: '15%', backgroundColor: '#f87171' }} />
+                            <View style={{ width: '65%', backgroundColor: BAR_ZONE.optimal }} />
+                            <View style={{ width: '20%', backgroundColor: BAR_ZONE.low }} />
+                            <View style={{ width: '15%', backgroundColor: BAR_ZONE.high }} />
                             <View style={{
                               position: 'absolute',
                               left: `${resolved.pct}%`,
@@ -1405,10 +1446,11 @@ export function PremiumPDFDocument({
                             borderRadius: 3.5,
                             overflow: 'hidden',
                             position: 'relative',
+                            backgroundColor: BAR_ZONE.trackBg,
                           }}>
-                            <View style={{ width: '30%', backgroundColor: '#fcd34d' }} />
-                            <View style={{ width: '40%', backgroundColor: '#34d399' }} />
-                            <View style={{ width: '30%', backgroundColor: '#f87171' }} />
+                            <View style={{ width: '30%', backgroundColor: BAR_ZONE.low }} />
+                            <View style={{ width: '40%', backgroundColor: BAR_ZONE.optimal }} />
+                            <View style={{ width: '30%', backgroundColor: BAR_ZONE.high }} />
                             <View style={{
                               position: 'absolute',
                               left: `${resolved.pct}%`,
@@ -1447,15 +1489,15 @@ export function PremiumPDFDocument({
                 );
               })}
 
-              {/* 2. COMPACT NORMAL BIOMARKERS TABLE */}
+              {/* 2. COMPACT NORMAL BIOMARKERS TABLE (WITH INLINE MINI-SLIDER FOR EVERY MARKER) */}
               {normal.length > 0 && (
                 <View style={styles.compactTableContainer} wrap={false}>
                   <View style={styles.compactTableHeader}>
                     <Text style={styles.compactColName}>
-                      <Text style={styles.compactTableHeaderText}>Optimal Biomarker</Text>
+                      <Text style={styles.compactTableHeaderText}>Biomarker Name</Text>
                     </Text>
-                    <Text style={styles.compactColRange}>
-                      <Text style={styles.compactTableHeaderText}>Reference Range</Text>
+                    <Text style={styles.compactColBar}>
+                      <Text style={styles.compactTableHeaderText}>Visual Range Position</Text>
                     </Text>
                     <Text style={styles.compactColValue}>
                       <Text style={styles.compactTableHeaderText}>Result</Text>
@@ -1473,13 +1515,66 @@ export function PremiumPDFDocument({
                         key={m.name}
                         style={isLast ? styles.compactTableRowLast : styles.compactTableRow}
                       >
+                        {/* Column 1: Biomarker Name */}
                         <Text style={styles.compactColName}>{m.name}</Text>
-                        <Text style={styles.compactColRange}>
-                          {resolved.optimalText} <Text style={{ fontSize: 5.5, color: SLATE_400 }}>{m.unit}</Text>
-                        </Text>
+
+                        {/* Column 2: Thin Mini Range Slider with Dot Indicator */}
+                        <View style={styles.compactColBar}>
+                          <View style={styles.miniBarTrack}>
+                            {resolved.type === 'greater_than' ? (
+                              <>
+                                <View style={{ width: '35%', backgroundColor: BAR_ZONE.low, height: '100%' }} />
+                                <View style={{ width: '65%', backgroundColor: BAR_ZONE.optimal, height: '100%' }} />
+                              </>
+                            ) : resolved.type === 'less_than' ? (
+                              <>
+                                <View style={{ width: '65%', backgroundColor: BAR_ZONE.optimal, height: '100%' }} />
+                                <View style={{ width: '20%', backgroundColor: BAR_ZONE.low, height: '100%' }} />
+                                <View style={{ width: '15%', backgroundColor: BAR_ZONE.high, height: '100%' }} />
+                              </>
+                            ) : (
+                              <>
+                                <View style={{ width: '30%', backgroundColor: BAR_ZONE.low, height: '100%' }} />
+                                <View style={{ width: '40%', backgroundColor: BAR_ZONE.optimal, height: '100%' }} />
+                                <View style={{ width: '30%', backgroundColor: BAR_ZONE.high, height: '100%' }} />
+                              </>
+                            )}
+
+                            {/* Result needle dot */}
+                            <View
+                              style={[
+                                styles.miniBarNeedle,
+                                { left: `${resolved.pct}%` },
+                              ]}
+                            />
+                          </View>
+
+                          {/* Range Limits subtext */}
+                          <View style={styles.miniBarLabels}>
+                            <Text style={styles.miniBarLabelText}>
+                              {resolved.type === 'greater_than'
+                                ? '0'
+                                : resolved.type === 'less_than'
+                                ? '0'
+                                : `${resolved.displayMin}`}
+                            </Text>
+                            <Text style={[styles.miniBarLabelText, { color: SLATE_500 }]}>
+                              Ref: {resolved.optimalText} {m.unit}
+                            </Text>
+                            <Text style={styles.miniBarLabelText}>
+                              {resolved.type === 'greater_than'
+                                ? '>'
+                                : `${resolved.displayMax}`}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Column 3: Patient Result Value */}
                         <Text style={styles.compactColValue}>
                           {m.value} <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 500 }}>{m.unit}</Text>
                         </Text>
+
+                        {/* Column 4: Status Badge */}
                         <View style={styles.compactColStatus}>
                           <View style={{
                             backgroundColor: '#ecfdf5',
