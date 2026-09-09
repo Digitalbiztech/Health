@@ -144,15 +144,39 @@ export function formatBiomarkerValue(val: any): string {
   return str;
 }
 
+export function formatPanelShortName(name?: string): string {
+  if (!name) return '';
+  const trimmed = name.trim();
+  if (trimmed.includes('CBC') || trimmed.toLowerCase() === 'complete blood count') return 'CBC';
+  if (trimmed.includes('CMP') || trimmed.toLowerCase() === 'comprehensive metabolic panel') return 'CMP';
+  return trimmed
+    .replace(/\s+Panel$/i, '')
+    .replace(/\s*&\s*Minerals$/i, '')
+    .trim();
+}
+
 const CATEGORY_COLORS: Record<string, string> = {
   'Complete Blood Count (CBC)': '#0DA58E',
+  'CBC': '#0DA58E',
   'Comprehensive Metabolic Panel (CMP)': '#06b6d4',
+  'CMP': '#06b6d4',
   'Lipid Panel': '#f59e0b',
-  'Thyroid Panel': '#ec4899',
-  'Hormones': '#8b5cf6',
+  'Lipid': '#f59e0b',
+  'Diabetes': '#3b82f6',
+  'Kidney': '#06b6d4',
+  'Electrolytes': '#10b981',
+  'Liver': '#ec4899',
+  'Thyroid Panel': '#8b5cf6',
+  'Thyroid': '#8b5cf6',
+  'Hormones': '#6366f1',
   'Vitamins & Minerals': '#34d399',
+  'Vitamins': '#34d399',
+  'Cardiac': '#ef4444',
+  'Inflammation': '#f97316',
+  'Iron Studies': '#a855f7',
+  'Pancreatic': '#14b8a6',
 };
-const DEFAULT_COLORS = ['#0DA58E', '#06b6d4', '#3b82f6', '#34d399', '#f59e0b', '#ec4899', '#8b5cf6', '#10b981'];
+const DEFAULT_COLORS = ['#0DA58E', '#f59e0b', '#3b82f6', '#06b6d4', '#10b981', '#ec4899', '#8b5cf6', '#6366f1', '#34d399', '#ef4444'];
 
 // ─── Reference Range Resolver ──────────────────────────────────────────────────
 export interface ResolvedBiomarkerRange {
@@ -557,6 +581,29 @@ const styles = StyleSheet.create({
     fontSize: 6.5,
     fontWeight: 'bold',
     color: SLATE_900,
+  },
+  legendItemCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2.5,
+    marginBottom: 1.5,
+  },
+  legendColorMini: {
+    width: 4.5,
+    height: 4.5,
+    borderRadius: 1.5,
+    flexShrink: 0,
+  },
+  legendLabelMini: {
+    fontSize: 5.5,
+    color: SLATE_700,
+    flex: 1,
+  },
+  legendValueMini: {
+    fontSize: 5.5,
+    fontWeight: 'bold',
+    color: SLATE_900,
+    marginLeft: 1,
   },
 
   // Body system index progress bars
@@ -1059,9 +1106,11 @@ export function PremiumPDFDocument({
   const categoryData = report.panels
     .filter(p => p.biomarkers.length > 0)
     .map((p, idx) => {
-      const color = CATEGORY_COLORS[p.name] || DEFAULT_COLORS[idx % DEFAULT_COLORS.length];
+      const shortName = formatPanelShortName(p.name);
+      const color = CATEGORY_COLORS[p.name] || CATEGORY_COLORS[shortName] || DEFAULT_COLORS[idx % DEFAULT_COLORS.length];
       return {
-        name: p.name.replace('Panel', '').trim(),
+        name: shortName,
+        fullName: p.name,
         count: p.biomarkers.length,
         color,
       };
@@ -1076,6 +1125,11 @@ export function PremiumPDFDocument({
     accumulatedPct += pct;
     return { ...item, pct, offset };
   });
+
+  const isMultiCol = categoryData.length > 5;
+  const colMid = isMultiCol ? Math.ceil(categoryData.length / 2) : categoryData.length;
+  const col1 = categoryData.slice(0, colMid);
+  const col2 = isMultiCol ? categoryData.slice(colMid) : [];
 
   return (
     <Document>
@@ -1154,7 +1208,7 @@ export function PremiumPDFDocument({
         {/* ─── Unified Hero Section (Health Score, Categories, Body Systems) ─── */}
         <View style={styles.overviewGrid}>
           {/* Card 1: Health Score Radial Gauge */}
-          <View style={styles.overviewCard}>
+          <View style={[styles.overviewCard, { flex: 0.95 }]}>
             <Text style={styles.overviewCardTitle}>Overall Health Score</Text>
             <View style={styles.chartRow}>
               <View style={styles.radialContainer}>
@@ -1210,23 +1264,23 @@ export function PremiumPDFDocument({
           </View>
 
           {/* Card 2: Biomarkers by Category Doughnut */}
-          <View style={[styles.overviewCard, { flex: 1.1 }]}>
+          <View style={[styles.overviewCard, { flex: 1.35 }]}>
             <Text style={styles.overviewCardTitle}>Panels Distribution</Text>
             <View style={styles.chartRow}>
               <View style={styles.radialContainer}>
-                <Svg width="52" height="52" viewBox="0 0 52 52">
-                  <Circle cx="26" cy="26" r="17" stroke={SLATE_100} strokeWidth="5.5" fill="none" />
+                <Svg width="48" height="48" viewBox="0 0 48 48">
+                  <Circle cx="24" cy="24" r="16" stroke={SLATE_100} strokeWidth="5" fill="none" />
                   {doughnutSegments.map((seg, sIdx) => {
                     if (seg.pct <= 0) return null;
-                    const C = 2 * Math.PI * 17;
+                    const C = 2 * Math.PI * 16;
                     const dash1 = seg.pct * C;
                     const correctedOffset = C / 4 - seg.offset * C;
                     return (
                       <CircleAny
                         key={sIdx}
-                        cx="26" cy="26" r="17"
+                        cx="24" cy="24" r="16"
                         stroke={seg.color}
-                        strokeWidth="5.5"
+                        strokeWidth="5"
                         fill="none"
                         strokeDasharray={`${dash1.toFixed(2)},${(C - dash1).toFixed(2)}`}
                         strokeDashoffset={correctedOffset.toFixed(2)}
@@ -1235,25 +1289,48 @@ export function PremiumPDFDocument({
                   })}
                 </Svg>
                 <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 10, fontWeight: 'bold', color: SLATE_900 }}>{totalCount}</Text>
-                  <Text style={{ fontSize: 4, fontWeight: 'bold', color: SLATE_400, textTransform: 'uppercase', letterSpacing: 0.3 }}>Markers</Text>
+                  <Text style={{ fontSize: 9.5, fontWeight: 'bold', color: SLATE_900 }}>{totalCount}</Text>
+                  <Text style={{ fontSize: 3.5, fontWeight: 'bold', color: SLATE_400, textTransform: 'uppercase', letterSpacing: 0.3 }}>Markers</Text>
                 </View>
               </View>
 
-              <View style={{ flex: 1, gap: 1.5 }}>
-                {categoryData.slice(0, 5).map((item, idx) => (
-                  <View key={idx} style={styles.legendItem}>
-                    <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-                    <Text style={[styles.legendLabel, { fontSize: 6 }]}>{item.name}</Text>
-                    <Text style={[styles.legendValue, { fontSize: 6 }]}>{item.count}</Text>
+              {isMultiCol ? (
+                <View style={{ flex: 1, flexDirection: 'row', gap: 5 }}>
+                  <View style={{ flex: 1, gap: 1.5 }}>
+                    {col1.map((item, idx) => (
+                      <View key={idx} style={styles.legendItemCompact}>
+                        <View style={[styles.legendColorMini, { backgroundColor: item.color }]} />
+                        <Text style={styles.legendLabelMini}>{item.name}</Text>
+                        <Text style={styles.legendValueMini}>{item.count}</Text>
+                      </View>
+                    ))}
                   </View>
-                ))}
-              </View>
+                  <View style={{ flex: 1, gap: 1.5 }}>
+                    {col2.map((item, idx) => (
+                      <View key={idx} style={styles.legendItemCompact}>
+                        <View style={[styles.legendColorMini, { backgroundColor: item.color }]} />
+                        <Text style={styles.legendLabelMini}>{item.name}</Text>
+                        <Text style={styles.legendValueMini}>{item.count}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : (
+                <View style={{ flex: 1, gap: 1.5 }}>
+                  {categoryData.map((item, idx) => (
+                    <View key={idx} style={styles.legendItem}>
+                      <View style={[styles.legendColor, { backgroundColor: item.color }]} />
+                      <Text style={[styles.legendLabel, { fontSize: 6 }]}>{item.name}</Text>
+                      <Text style={[styles.legendValue, { fontSize: 6 }]}>{item.count}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           </View>
 
           {/* Card 3: Standardized Body Systems Index with visible scale */}
-          <View style={[styles.overviewCard, { flex: 1.25 }]}>
+          <View style={[styles.overviewCard, { flex: 1.15 }]}>
             <Text style={styles.overviewCardTitle}>Body Systems Index</Text>
             <View style={{ gap: 3.5, marginTop: 1 }}>
               {systemsData.map((item) => {

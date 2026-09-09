@@ -1,70 +1,35 @@
-# Bloodwork Report — Round 4 Fixes
+# Bloodwork Report — Round 5 Fixes
 
-Context: Round 3's glyph/character corruption bug is fixed, and panel-break layout now holds together well. This round covers a new decimal-rendering bug, a data-loss issue on reference ranges, a broken slider positioning bug, a regression on the color scale, and a branding visibility issue.
+Context: Rounds 1-4 are resolved — decimals render correctly, reference ranges are intact, slider position dots now correctly reflect each result's location in range, the 5-tier color scale is restored, and the header logo is visible. One issue remains.
 
 ---
 
-## 1. CRITICAL — Decimal point dropping in rendered output
+## 1. "Panels Distribution" card legend is incomplete (page 1)
 
-**Bug:** Free Testosterone's underlying value is `57.6 pg/mL`, but the rendered PDF shows `576 pg/mL` — the decimal point is not surviving into the final render. Reference range is 46–224 pg/mL, so a patient seeing "576" next to a green "NORMAL" badge sees a number 10x outside the stated range paired with a status that says it's fine.
+**Bug:** The donut chart's center correctly shows "41 MARKERS" total, but the legend beside it only lists 5 of the 9 panels:
+- CBC — 10
+- Lipid — 7
+- Diabetes — 2
+- Kidney — 3
+- Electrolytes — 5
+
+That's 27 markers accounted for. The remaining 4 panels and 14 markers are missing from the legend entirely:
+- Liver — 8
+- Thyroid — 1
+- Hormones — 4
+- Vitamins — 1
+
+The donut ring itself appears to render more color segments than the legend has rows, so the chart is drawing correctly but the legend is truncated — likely a fixed-height container or a hardcoded/sliced list (e.g. `.slice(0, 5)`) limiting the legend to the first 5 panels instead of all 9.
+
+**Why this matters:** Anyone who adds up the visible legend numbers gets 27, not 41 — the card contradicts its own center total. It also hides 4 full panels (including Liver and Hormones, which are clinically significant) from the summary view entirely.
 
 **Fix:**
-- [ ] Find and fix wherever the decimal point is being stripped between the data layer and the rendered PDF (likely a formatting/rounding step, a font/text-rendering issue, or a string-concat bug similar to round 3's issue).
-- [ ] Audit every marker with a decimal value across all panels to confirm decimals survive in the actual rendered output, not just the underlying data — at minimum re-check: Free Testosterone (57.6), MCV (96.1), MCH (32.1), MCHC (33.4), RDW (11.7), Creatinine (1.09), TSH (2.61), Cholesterol/HDL Ratio (2.5), A/G Ratio (2.1).
-- [ ] This is a repeat category of bug from round 3 (wrong number displayed to patient) — treat as a blocker, same as last round.
+- [ ] Remove whatever length limit is truncating the legend to 5 items — render all 9 panels.
+- [ ] If vertical space is a real constraint, switch the legend to two columns (e.g. 5 + 4, or split evenly) rather than dropping items — do not silently cut off data.
+- [ ] After the fix, verify the legend's individual counts sum to 41 (matching the donut center) and that each of the 9 panel names shown elsewhere in the report (CBC, Lipid, Diabetes, Kidney, Electrolytes, Liver, Thyroid, Hormones, Vitamins) appears in this legend.
 
 ---
 
-## 2. Reference ranges silently losing their upper bound
+## Priority
 
-**Bug:** Comparing to original source data, some two-sided reference ranges have lost their upper bound and now render as open-ended:
-- Total Testosterone: originally `250 – 827 ng/dL`, now shows `Ref: > 250 ng/dL`.
-- Bioavailable Testosterone: originally `110 – 575 ng/dL`, now shows `Ref: > 110 ng/dL`.
-
-These are NOT the same as the genuinely open-ended ranges (eGFR, HDL) where the original data used an arbitrary high cap (999) as a placeholder — these two had real, meaningful upper clinical bounds that have gone missing somewhere in the pipeline.
-
-**Fix:**
-- [ ] Trace whether the upper bound is being dropped in the data layer or just in the display logic, and restore it.
-- [ ] Audit all other two-sided ranges to confirm none of them are silently losing a bound the same way.
-
----
-
-## 3. Slider position indicator not reflecting actual value
-
-**Bug:** Every biomarker's slider dot is rendering at the same starting position (far left) regardless of the marker's actual result and where it falls in the range. The dot is supposed to visually mark where the patient's result sits within the reference range, but currently it doesn't move — it's stuck at the same spot on every single row across every panel.
-
-**Fix:**
-- [ ] Debug the position-calculation logic for the slider marker — it should map `(result - range_min) / (range_max - range_min)` (or equivalent for one-sided ranges) to a horizontal position along the bar, per row.
-- [ ] Confirm visually after the fix that markers with different values in different parts of their range actually show the dot in different positions — e.g. a value near the low end of its range should show the dot near the left, a value near the high end near the right.
-- [ ] This affects every single slider in the document (all 41 markers) — high-impact bug since it makes the core visual feature currently non-functional/decorative only.
-
----
-
-## 4. Restore the 5-tier color scale (very low / low / moderate / high / very high)
-
-**Bug:** The sliders were originally spec'd to use a 5-zone scale (very low, low, moderate/optimal, high, very high), but the current version only shows 3 zones (low/yellow, moderate/green, high/red).
-
-**Fix:**
-- [ ] Restore the full 5-tier gradient: very low, low, moderate (optimal), high, very high — each a distinct zone/color intensity, not just 3 flattened bands.
-- [ ] Keep the muted/desaturated palette established in round 2 — apply the same muted tones across all 5 zones rather than reverting to bright saturated colors.
-- [ ] Make sure this 5-tier scale is applied consistently to both the compact inline sliders (normal markers) and the expanded flagged-marker card (e.g. White Blood Cells on page 1/2).
-
----
-
-## 5. Company logo not visible in header
-
-**Bug:** The "CONCIERGE" wordmark/logo in the dark navy header bar (above the patient details section, top of every page) is not visible — appears to be rendering at very low contrast/opacity against the navy background, effectively invisible.
-
-**Fix:**
-- [ ] Increase contrast of the logo against the navy header background — either lighten the logo color, add an outline/glow, or use a reversed/white version of the logo on dark backgrounds.
-- [ ] Verify visibility on all 4 pages, since the header repeats on every page.
-
----
-
-## Priority order
-
-1. Decimal rendering bug (item 1) — wrong number shown to patient, blocker.
-2. Slider position bug (item 3) — core feature is currently non-functional across all 41 markers.
-3. Dropped reference-range upper bounds (item 2) — data-integrity issue.
-4. Restore 5-tier color scale (item 4) — spec regression.
-5. Logo visibility (item 5) — branding/polish, lowest risk but easy fix.
+This is the only outstanding item — treat as a straightforward fix-and-verify (confirm legend sum = 41 and all 9 panels present) before sign-off.
