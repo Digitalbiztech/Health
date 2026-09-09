@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, TrendingUp, TrendingDown, Minus, Activity, AlertTriangle, CheckCircle2, Info, ExternalLink, ShieldAlert } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Minus, Activity, AlertTriangle, CheckCircle2, Info, ExternalLink } from 'lucide-react';
 import type { Biomarker } from '@/types/dashboard';
 import { STATUS_COLORS, CATEGORY_ICONS } from './constants';
 import { getEffectivePct } from './utils';
@@ -692,14 +692,6 @@ export function BiomarkerDetailDialog({ biomarker, onClose }: DetailDialogProps)
                 </a>
               ))}
             </div>
-          </div>
-
-          {/* Disclaimer Banner */}
-          <div className="flex items-start gap-2.5 mt-2 p-3.5 rounded-xl border border-red-500/20 bg-red-500/5">
-            <ShieldAlert className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-            <p className="text-[10px] font-extrabold tracking-wider leading-relaxed text-red-500 uppercase">
-              DISCLAIMER: IF YOU ARE CONCERNED WITH ANY OF YOUR RESULTS, PLEASE CONSULT WITH YOUR PHYSICIAN.
-            </p>
           </div>
 
           {/* Confidence score if available */}
