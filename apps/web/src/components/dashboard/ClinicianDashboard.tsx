@@ -823,11 +823,16 @@ export function ClinicianDashboard({
                                   <div className="flex justify-between text-xs mb-1 text-muted-foreground">
                                     <span>Low</span><span className="font-semibold text-foreground">Normal</span><span>High</span>
                                   </div>
-                                  <div className="relative h-1.5 rounded-full bg-border/30 flex overflow-hidden">
-                                    <div className="h-full w-[25%] bg-status-low/20" />
-                                    <div className="h-full w-[50%] bg-status-normal/20" />
-                                    <div className="h-full w-[25%] bg-status-high/20" />
-                                    <div className="absolute w-3 h-3 -top-[3px] rounded-full border border-white shadow" style={{ left: `calc(${pct}% - 6px)`, background: color }} />
+                                  <div className="relative">
+                                    <div className="relative h-1.5 rounded-full bg-border/30 flex overflow-hidden">
+                                      <div className="h-full w-[25%] bg-status-low/20" />
+                                      <div className="h-full w-[50%] bg-status-normal/20" />
+                                      <div className="h-full w-[25%] bg-status-high/20" />
+                                    </div>
+                                    <div
+                                      className="absolute w-3 h-3 top-[3px] -translate-y-1/2 rounded-full border border-white shadow pointer-events-none z-10"
+                                      style={{ left: `calc(${Math.max(2, Math.min(98, pct))}% - 6px)`, background: color }}
+                                    />
                                   </div>
                                 </div>
                               </div>

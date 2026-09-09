@@ -653,16 +653,18 @@ export default function Guide() {
 
                 {/* Slider bar */}
                 <div className="space-y-2">
-                  <div className="relative h-2 rounded-full bg-muted flex overflow-hidden">
-                    <div className="w-[15%] h-full bg-red-500/35" title="Critical Low" />
-                    <div className="w-[15%] h-full bg-amber-500/35" title="Deficient" />
-                    <div className="w-[45%] h-full bg-emerald-500/35" title="Normal" />
-                    <div className="w-[25%] h-full bg-red-500/35" title="High" />
+                  <div className="relative">
+                    <div className="relative h-2 rounded-full bg-muted flex overflow-hidden">
+                      <div className="w-[15%] h-full bg-red-500/35" title="Critical Low" />
+                      <div className="w-[15%] h-full bg-amber-500/35" title="Deficient" />
+                      <div className="w-[45%] h-full bg-emerald-500/35" title="Normal" />
+                      <div className="w-[25%] h-full bg-red-500/35" title="High" />
+                    </div>
 
                     {/* Indicator pin */}
                     <div
                       className={cn(
-                        'absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow-md transition-all duration-300',
+                        'absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow-md transition-all duration-300 pointer-events-none z-10',
                         sliderStatus === 'critical-low' && 'bg-red-500',
                         sliderStatus === 'deficient' && 'bg-amber-500',
                         sliderStatus === 'normal' && 'bg-emerald-500',

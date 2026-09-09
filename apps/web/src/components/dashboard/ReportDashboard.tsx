@@ -353,17 +353,18 @@ export function ReportDashboard({
                     </div>
                     {(() => {
                       const track = getSliderTrack(b.referenceMin, b.referenceMax);
+                      const clampedPct = Math.max(2, Math.min(98, effectivePct));
                       return (
                         <div className="relative pb-3.5">
                           <div className="relative h-2 rounded-full overflow-hidden bg-border/40 flex">
                             {track.leftPct > 0 && <div className="h-full" style={{ width: `${track.leftPct}%`, background: track.leftColor }} />}
                             {track.midPct > 0 && <div className="h-full border-x border-border/40" style={{ width: `${track.midPct}%`, background: track.midColor }} />}
                             {track.rightPct > 0 && <div className="h-full" style={{ width: `${track.rightPct}%`, background: track.rightColor }} />}
-                            <div
-                              className="absolute w-3.5 h-3.5 -top-0.5 rounded-full border border-white shadow transition-all duration-500"
-                              style={{ left: `calc(${effectivePct}% - 7px)`, background: colors.text }}
-                            />
                           </div>
+                          <div
+                            className="absolute w-3.5 h-3.5 top-1 -translate-y-1/2 rounded-full border-2 border-white shadow-md transition-all duration-500 z-10 pointer-events-none"
+                            style={{ left: `calc(${clampedPct}% - 7px)`, background: colors.text }}
+                          />
                           {/* Green corner markers */}
                           {track.leftPct > 0 && numMin !== null && !isNaN(numMin) && numMin > 0 && (
                             <div
@@ -774,14 +775,17 @@ export function ReportDashboard({
                         <div className="mt-1">
                           {(() => {
                             const track = getSliderTrack(b.referenceMin, b.referenceMax);
+                            const clampedPct = Math.max(2, Math.min(98, pct));
                             return (
-                              <div className="relative h-1.5 rounded-full bg-border/20 flex overflow-hidden">
-                                {track.leftPct > 0 && <div className="h-full" style={{ width: `${track.leftPct}%`, background: track.leftColor }} />}
-                                {track.midPct > 0 && <div className="h-full border-x border-border/40" style={{ width: `${track.midPct}%`, background: track.midColor }} />}
-                                {track.rightPct > 0 && <div className="h-full" style={{ width: `${track.rightPct}%`, background: track.rightColor }} />}
+                              <div className="relative">
+                                <div className="relative h-1.5 rounded-full bg-border/20 flex overflow-hidden">
+                                  {track.leftPct > 0 && <div className="h-full" style={{ width: `${track.leftPct}%`, background: track.leftColor }} />}
+                                  {track.midPct > 0 && <div className="h-full border-x border-border/40" style={{ width: `${track.midPct}%`, background: track.midColor }} />}
+                                  {track.rightPct > 0 && <div className="h-full" style={{ width: `${track.rightPct}%`, background: track.rightColor }} />}
+                                </div>
                                 <div
-                                  className="absolute w-2.5 h-2.5 -top-[2px] rounded-full border border-white shadow transition-all duration-300"
-                                  style={{ left: `calc(${pct}% - 5px)`, background: color }}
+                                  className="absolute w-2.5 h-2.5 top-[3px] -translate-y-1/2 rounded-full border border-white shadow transition-all duration-300 pointer-events-none z-10"
+                                  style={{ left: `calc(${clampedPct}% - 5px)`, background: color }}
                                 />
                               </div>
                             );
