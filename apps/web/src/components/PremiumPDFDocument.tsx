@@ -1,5 +1,8 @@
+import * as React from 'react';
 import { Document, Page, Text, View, StyleSheet, Font, Image, Svg, Circle, Line, Polyline } from '@react-pdf/renderer';
 import type { LabReport, LabPanel } from '@/types/lab';
+
+void React;
 
 // ─── Text Sanitization (Universal Glyph Safety) ────────────────────────────────
 export function sanitizeText(text?: string): string {
@@ -120,13 +123,26 @@ export const STATUS_META: Record<string, { label: string; fg: string; bg: string
   unknown: { label: 'UNKNOWN', fg: '#64748b', bg: '#f8fafc', border: '#cbd5e1', bar: '#94a3b8' },
 };
 
-// Muted clinical range bar zone tokens (calm pastel tones matching status pills)
+// 5-tier muted clinical range bar zone tokens (calm pastel tones matching status pills)
 const BAR_ZONE = {
-  low: '#FDE68A',       // Soft muted warm amber (matches reduced/low pill)
-  optimal: '#A7F3D0',   // Soft muted sage/mint (matches normal pill)
-  high: '#FECACA',      // Soft muted coral/rose (matches elevated/high pill)
+  veryLow: '#FED7AA',   // Soft muted peach/amber (very low)
+  low: '#FEF08A',       // Soft muted warm yellow (low)
+  optimal: '#A7F3D0',   // Soft muted sage/mint (moderate / optimal)
+  high: '#FECDD3',      // Soft muted pastel rose (high)
+  veryHigh: '#FCA5A5',  // Soft muted coral/red (very high)
   trackBg: '#F1F5F9',   // Calm neutral base
 };
+
+export function formatBiomarkerValue(val: any): string {
+  if (val === null || val === undefined || val === '') return '-';
+  const str = String(val).trim();
+  const num = Number(str);
+  if (!isNaN(num)) {
+    if (Number.isInteger(num)) return num.toString();
+    return parseFloat(num.toFixed(4)).toString();
+  }
+  return str;
+}
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Complete Blood Count (CBC)': '#0DA58E',
@@ -152,10 +168,10 @@ export interface ResolvedBiomarkerRange {
 }
 
 export function resolveBiomarkerRange(
-  _name: string,
+  name: string,
   minVal: any,
   maxVal: any,
-  value: number,
+  value: any,
   _gender: string
 ): ResolvedBiomarkerRange {
   const numMin = (minVal !== null && minVal !== undefined && minVal !== '') ? Number(minVal) : NaN;
@@ -163,11 +179,20 @@ export function resolveBiomarkerRange(
   const hasMin = !isNaN(numMin);
   const hasMax = !isNaN(numMax);
 
-  const val = typeof value === 'number' && !isNaN(value) ? value : 0;
+  const numVal = (value !== null && value !== undefined && value !== '') ? Number(value) : NaN;
+  const val = !isNaN(numVal) ? numVal : 0;
+
+  const nameLower = (name || '').toLowerCase();
+  const isExplicitGreaterThan =
+    nameLower.includes('egfr') ||
+    (nameLower.includes('hdl') && !nameLower.includes('ratio')) ||
+    nameLower.includes('vitamin d');
+
+  const isSentinelMax = !hasMax || numMax <= 0 || (isExplicitGreaterThan && numMax >= 900);
 
   // Case 1: Greater-than only (e.g. HDL > 40, eGFR > 60, Vitamin D > 30)
-  // Condition: min is defined (> 0) and max is missing or sentinel (>= 500 or <= 0)
-  if (hasMin && numMin > 0 && (!hasMax || numMax >= 500 || numMax <= 0)) {
+  // Condition: min is defined (> 0) and max is missing or true sentinel (eGFR/HDL >= 900)
+  if (hasMin && numMin > 0 && isSentinelMax) {
     const optimalMin = numMin;
     const span = Math.max(optimalMin, 20);
     const displayMax = Math.max(optimalMin + span, val * 1.25);
@@ -178,7 +203,7 @@ export function resolveBiomarkerRange(
     } else {
       const excess = val - optimalMin;
       const room = Math.max(displayMax - optimalMin, 1);
-      pct = 35 + Math.min(58, (excess / room) * 58);
+      pct = 35 + Math.min(60, (excess / room) * 60);
     }
 
     return {
@@ -189,25 +214,25 @@ export function resolveBiomarkerRange(
       displayMax: parseFloat(displayMax.toFixed(1)),
       optimalMin,
       optimalMax: Infinity,
-      optimalText: `> ${optimalMin}`,
+      optimalText: `> ${formatBiomarkerValue(optimalMin)}`,
       pct: Math.min(95, Math.max(5, pct)),
     };
   }
 
   // Case 2: Less-than only (e.g. Triglycerides < 150, LDL < 100, Ratio < 5.0, HbA1c < 5.7)
-  // Condition: max is defined (< 500) and min is missing or <= 0
+  // Condition: max is defined and min is missing or <= 0
   if (hasMax && numMax > 0 && (!hasMin || numMin <= 0)) {
     const optimalMax = numMax;
     const buffer = optimalMax * 0.4;
     const displayMax = Math.max(optimalMax + buffer, val * 1.15);
 
-    let pct = 50;
+    let pct = 40;
     if (val <= optimalMax) {
-      pct = Math.max(5, (val / optimalMax) * 65);
+      pct = Math.max(5, (val / optimalMax) * 60);
     } else {
       const excess = val - optimalMax;
       const room = Math.max(displayMax - optimalMax, 0.1);
-      pct = 65 + Math.min(30, (excess / room) * 30);
+      pct = 60 + Math.min(35, (excess / room) * 35);
     }
 
     return {
@@ -218,31 +243,31 @@ export function resolveBiomarkerRange(
       displayMax: parseFloat(displayMax.toFixed(1)),
       optimalMin: 0,
       optimalMax,
-      optimalText: `< ${optimalMax}`,
+      optimalText: `< ${formatBiomarkerValue(optimalMax)}`,
       pct: Math.min(95, Math.max(5, pct)),
     };
   }
 
-  // Case 3: Two-sided bounded (e.g. WBC 4.5 - 11.0, Potassium 3.5 - 5.0, Glucose 70 - 99)
+  // Case 3: Two-sided bounded (e.g. Total Testosterone 250 - 827, Free Testosterone 46 - 224, WBC 4.5 - 11.0)
   const min = hasMin ? Math.max(0, numMin) : 0;
   const max = hasMax ? numMax : (val > 0 ? val * 1.5 : 100);
   const span = Math.max(max - min, 0.1);
-  const buffer = Math.min(min, span * 0.35, 10);
+  const buffer = span * 0.4;
   const displayMin = Math.max(0, parseFloat((min - buffer).toFixed(2))); // Strictly non-negative!
   const displayMax = parseFloat((max + buffer).toFixed(2));
 
   let pct = 50;
   if (val < min) {
     const under = Math.max(min - displayMin, 0.1);
-    const dist = Math.max(0, val - displayMin);
-    pct = Math.max(5, (dist / under) * 30);
+    const underRatio = Math.max(0, (val - displayMin) / under);
+    pct = 5 + underRatio * 25; // Sits in Very Low (5-15%) & Low (15-30%)
   } else if (val <= max) {
-    const dist = val - min;
-    pct = 30 + (span > 0 ? (dist / span) * 40 : 20);
+    const ratio = (val - min) / span;
+    pct = 30 + ratio * 40; // Sits in Optimal / Moderate (30-70%)
   } else {
     const over = Math.max(displayMax - max, 0.1);
-    const dist = Math.min(over, val - max);
-    pct = 70 + Math.min(25, (dist / over) * 25);
+    const overRatio = Math.min(1, Math.max(0, (val - max) / over));
+    pct = 70 + overRatio * 25; // Sits in High (70-85%) & Very High (85-95%)
   }
 
   return {
@@ -253,7 +278,7 @@ export function resolveBiomarkerRange(
     displayMax,
     optimalMin: min,
     optimalMax: max,
-    optimalText: `${min} - ${max}`,
+    optimalText: `${formatBiomarkerValue(min)} - ${formatBiomarkerValue(max)}`,
     pct: Math.min(95, Math.max(5, pct)),
   };
 }
@@ -1287,7 +1312,7 @@ export function PremiumPDFDocument({
                       <Text style={styles.actionableItemName}>{sanitizeText(b.name)}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={[styles.actionableItemVal, { color: meta.fg }]}>{b.value} {b.unit}</Text>
+                      <Text style={[styles.actionableItemVal, { color: meta.fg }]}>{formatBiomarkerValue(b.value)} {b.unit}</Text>
                       <Text style={styles.actionableItemRef}>Optimal: {r.optimalText} {b.unit}</Text>
                     </View>
                   </View>
@@ -1430,7 +1455,7 @@ export function PremiumPDFDocument({
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
                         <View style={styles.flaggedValueRow}>
-                          <Text style={[styles.flaggedValue, { color: meta.fg }]}>{m.value}</Text>
+                          <Text style={[styles.flaggedValue, { color: meta.fg }]}>{formatBiomarkerValue(m.value)}</Text>
                           <Text style={styles.flaggedUnit}>{m.unit}</Text>
                         </View>
                         <View style={[styles.flaggedBadge, { backgroundColor: '#ffffff', borderColor: meta.border, flexDirection: 'row', alignItems: 'center', gap: 2.5 }]}>
@@ -1445,7 +1470,7 @@ export function PremiumPDFDocument({
                     {/* Accurate Asymmetric / Bounded Range Bar with muted clinical tones */}
                     <View style={{ marginVertical: 4 }} wrap={false}>
                       {resolved.type === 'greater_than' ? (
-                        // One-sided Greater Than Bar: Zone 1 (0 to 35% Low/Amber), Zone 2 (35% to 100% Optimal/Green)
+                        // One-sided Greater Than Bar: Zone 1 (0 to 15% Very Low), Zone 2 (15% to 35% Low), Zone 3 (35% to 100% Optimal)
                         <View>
                           <View style={{
                             flexDirection: 'row',
@@ -1456,7 +1481,8 @@ export function PremiumPDFDocument({
                             position: 'relative',
                             backgroundColor: BAR_ZONE.trackBg,
                           }}>
-                            <View style={{ width: '35%', backgroundColor: BAR_ZONE.low }} />
+                            <View style={{ width: '15%', backgroundColor: BAR_ZONE.veryLow }} />
+                            <View style={{ width: '20%', backgroundColor: BAR_ZONE.low }} />
                             <View style={{ width: '65%', backgroundColor: BAR_ZONE.optimal }} />
                             <View style={{
                               position: 'absolute',
@@ -1473,12 +1499,12 @@ export function PremiumPDFDocument({
                           </View>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
                             <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>0</Text>
-                            <Text style={{ fontSize: 5.5, color: SLATE_700, fontWeight: 'bold' }}>Optimal Threshold: &gt;= {resolved.optimalMin} {m.unit}</Text>
+                            <Text style={{ fontSize: 5.5, color: SLATE_700, fontWeight: 'bold' }}>Optimal Threshold: &gt;= {formatBiomarkerValue(resolved.optimalMin)} {m.unit}</Text>
                             <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>&gt;</Text>
                           </View>
                         </View>
                       ) : resolved.type === 'less_than' ? (
-                        // One-sided Less Than Bar: Zone 1 (0 to 65% Optimal/Green), Zone 2 (65% to 85% Elevated/Amber), Zone 3 (85% to 100% Critical/Rose)
+                        // One-sided Less Than Bar: Zone 1 (0 to 60% Optimal), Zone 2 (60% to 75% Low/Borderline), Zone 3 (75% to 88% High), Zone 4 (88% to 100% Very High)
                         <View>
                           <View style={{
                             flexDirection: 'row',
@@ -1489,9 +1515,10 @@ export function PremiumPDFDocument({
                             position: 'relative',
                             backgroundColor: BAR_ZONE.trackBg,
                           }}>
-                            <View style={{ width: '65%', backgroundColor: BAR_ZONE.optimal }} />
-                            <View style={{ width: '20%', backgroundColor: BAR_ZONE.low }} />
-                            <View style={{ width: '15%', backgroundColor: BAR_ZONE.high }} />
+                            <View style={{ width: '60%', backgroundColor: BAR_ZONE.optimal }} />
+                            <View style={{ width: '15%', backgroundColor: BAR_ZONE.low }} />
+                            <View style={{ width: '13%', backgroundColor: BAR_ZONE.high }} />
+                            <View style={{ width: '12%', backgroundColor: BAR_ZONE.veryHigh }} />
                             <View style={{
                               position: 'absolute',
                               left: `${resolved.pct}%`,
@@ -1507,12 +1534,12 @@ export function PremiumPDFDocument({
                           </View>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
                             <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>0</Text>
-                            <Text style={{ fontSize: 5.5, color: SLATE_700, fontWeight: 'bold' }}>Optimal Limit: &lt; {resolved.optimalMax} {m.unit}</Text>
+                            <Text style={{ fontSize: 5.5, color: SLATE_700, fontWeight: 'bold' }}>Optimal Limit: &lt; {formatBiomarkerValue(resolved.optimalMax)} {m.unit}</Text>
                             <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>{resolved.displayMax}</Text>
                           </View>
                         </View>
                       ) : (
-                        // Two-sided Bounded Bar: Zone 1 (Low/Amber 30%), Zone 2 (Optimal/Green 40%), Zone 3 (High/Rose 30%)
+                        // Two-sided Bounded Bar: 5 distinct pastel tiers (Very Low 15%, Low 15%, Optimal 40%, High 15%, Very High 15%)
                         <View>
                           <View style={{
                             flexDirection: 'row',
@@ -1523,9 +1550,11 @@ export function PremiumPDFDocument({
                             position: 'relative',
                             backgroundColor: BAR_ZONE.trackBg,
                           }}>
-                            <View style={{ width: '30%', backgroundColor: BAR_ZONE.low }} />
+                            <View style={{ width: '15%', backgroundColor: BAR_ZONE.veryLow }} />
+                            <View style={{ width: '15%', backgroundColor: BAR_ZONE.low }} />
                             <View style={{ width: '40%', backgroundColor: BAR_ZONE.optimal }} />
-                            <View style={{ width: '30%', backgroundColor: BAR_ZONE.high }} />
+                            <View style={{ width: '15%', backgroundColor: BAR_ZONE.high }} />
+                            <View style={{ width: '15%', backgroundColor: BAR_ZONE.veryHigh }} />
                             <View style={{
                               position: 'absolute',
                               left: `${resolved.pct}%`,
@@ -1541,7 +1570,7 @@ export function PremiumPDFDocument({
                           </View>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
                             <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>{resolved.displayMin}</Text>
-                            <Text style={{ fontSize: 5.5, color: SLATE_700, fontWeight: 'bold' }}>Optimal Range: {resolved.optimalMin} - {resolved.optimalMax} {m.unit}</Text>
+                            <Text style={{ fontSize: 5.5, color: SLATE_700, fontWeight: 'bold' }}>Optimal Range: {formatBiomarkerValue(resolved.optimalMin)} - {formatBiomarkerValue(resolved.optimalMax)} {m.unit}</Text>
                             <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>{resolved.displayMax}</Text>
                           </View>
                         </View>
@@ -1598,20 +1627,24 @@ export function PremiumPDFDocument({
                           <View style={styles.miniBarTrack}>
                             {resolved.type === 'greater_than' ? (
                               <>
-                                <View style={{ width: '35%', backgroundColor: BAR_ZONE.low, height: '100%' }} />
+                                <View style={{ width: '15%', backgroundColor: BAR_ZONE.veryLow, height: '100%' }} />
+                                <View style={{ width: '20%', backgroundColor: BAR_ZONE.low, height: '100%' }} />
                                 <View style={{ width: '65%', backgroundColor: BAR_ZONE.optimal, height: '100%' }} />
                               </>
                             ) : resolved.type === 'less_than' ? (
                               <>
-                                <View style={{ width: '65%', backgroundColor: BAR_ZONE.optimal, height: '100%' }} />
-                                <View style={{ width: '20%', backgroundColor: BAR_ZONE.low, height: '100%' }} />
-                                <View style={{ width: '15%', backgroundColor: BAR_ZONE.high, height: '100%' }} />
+                                <View style={{ width: '60%', backgroundColor: BAR_ZONE.optimal, height: '100%' }} />
+                                <View style={{ width: '15%', backgroundColor: BAR_ZONE.low, height: '100%' }} />
+                                <View style={{ width: '13%', backgroundColor: BAR_ZONE.high, height: '100%' }} />
+                                <View style={{ width: '12%', backgroundColor: BAR_ZONE.veryHigh, height: '100%' }} />
                               </>
                             ) : (
                               <>
-                                <View style={{ width: '30%', backgroundColor: BAR_ZONE.low, height: '100%' }} />
+                                <View style={{ width: '15%', backgroundColor: BAR_ZONE.veryLow, height: '100%' }} />
+                                <View style={{ width: '15%', backgroundColor: BAR_ZONE.low, height: '100%' }} />
                                 <View style={{ width: '40%', backgroundColor: BAR_ZONE.optimal, height: '100%' }} />
-                                <View style={{ width: '30%', backgroundColor: BAR_ZONE.high, height: '100%' }} />
+                                <View style={{ width: '15%', backgroundColor: BAR_ZONE.high, height: '100%' }} />
+                                <View style={{ width: '15%', backgroundColor: BAR_ZONE.veryHigh, height: '100%' }} />
                               </>
                             )}
 
@@ -1634,7 +1667,7 @@ export function PremiumPDFDocument({
 
                         {/* Column 3: Patient Result Value */}
                         <Text style={styles.compactColValue}>
-                          {m.value} <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 500 }}>{m.unit}</Text>
+                          {formatBiomarkerValue(m.value)} <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 500 }}>{m.unit}</Text>
                         </Text>
 
                         {/* Column 4: Status Badge */}

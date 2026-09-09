@@ -39,7 +39,7 @@ async function resolveMockPrincipal(accountType: 'STAFF' | 'PATIENT'): Promise<A
           create: {
             brandName: 'Health Dashboard',
             tagline: 'AI-Powered Clinical Insights',
-            logoMainUrl: '/logo/041323 YC LogoDeck_Main-WG copy.png',
+            logoMainUrl: '/logo/YC_Main_White.png',
             logoIconUrl: '/logo/040523 YC LogoDeck_Icon-GS.jpg',
             logoLetterformUrl: '/logo/YC_Letterform_WH.png',
             faviconUrl: '/logo/040523 YC LogoDeck_Icon-GS.jpg',
@@ -56,7 +56,7 @@ async function resolveMockPrincipal(accountType: 'STAFF' | 'PATIENT'): Promise<A
         organizationId: org.id,
         brandName: 'Health Dashboard',
         tagline: 'AI-Powered Clinical Insights',
-        logoMainUrl: '/logo/041323 YC LogoDeck_Main-WG copy.png',
+        logoMainUrl: '/logo/YC_Main_White.png',
         logoIconUrl: '/logo/040523 YC LogoDeck_Icon-GS.jpg',
         logoLetterformUrl: '/logo/YC_Letterform_WH.png',
         faviconUrl: '/logo/040523 YC LogoDeck_Icon-GS.jpg',

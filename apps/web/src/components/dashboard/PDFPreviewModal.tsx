@@ -42,7 +42,7 @@ export function PDFPreviewModal({
         const labReport = convertToLabReport(reportData!, healthScore);
         const logoUrl = branding.logoMainUrl
           ? (branding.logoMainUrl.startsWith('http') ? branding.logoMainUrl : window.location.origin + branding.logoMainUrl)
-          : window.location.origin + '/logo/041323 YC LogoDeck_Main-WG copy.png';
+          : window.location.origin + '/logo/YC_Main_White.png';
         const iconLogoUrl = branding.logoIconUrl
           ? (branding.logoIconUrl.startsWith('http') ? branding.logoIconUrl : window.location.origin + branding.logoIconUrl)
           : window.location.origin + '/logo/040523 YC LogoDeck_Icon-GS.jpg';

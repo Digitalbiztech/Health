@@ -43,7 +43,7 @@ export const DEFAULT_BRANDING: TenantBranding = {
   brandName: 'Health Dashboard',
   tagline: 'AI-Powered Clinical Insights',
   poweredByText: 'POWERED BY HUUMANIZE',
-  logoMainUrl: '/logo/041323 YC LogoDeck_Main-WG copy.png',
+  logoMainUrl: '/logo/YC_Main_White.png',
   logoIconUrl: '/logo/040523 YC LogoDeck_Icon-GS.jpg',
   logoLetterformUrl: '/logo/YC_Letterform_WG.png',
   faviconUrl: '/favicon.svg',
