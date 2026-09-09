@@ -1,5 +1,23 @@
-import { Document, Page, Text, View, StyleSheet, Font, Image, Svg, Circle } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Font, Image, Svg, Circle, Line, Polyline } from '@react-pdf/renderer';
 import type { LabReport, LabPanel } from '@/types/lab';
+
+// ─── Text Sanitization (Universal Glyph Safety) ────────────────────────────────
+export function sanitizeText(text?: string): string {
+  if (!text) return '';
+  return text
+    .replace(/₂/g, '2')
+    .replace(/₁/g, '1')
+    .replace(/₃/g, '3')
+    .replace(/₄/g, '4')
+    .replace(/≥/g, '>= ')
+    .replace(/≤/g, '<= ')
+    .replace(/[’‘]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[—–]/g, '-')
+    .replace(/•/g, '·')
+    .replace(/[✓▲▼→⚠️⚲]/g, '')
+    .trim();
+}
 
 // ─── Font Registrations ────────────────────────────────────────────────────────
 Font.register({
@@ -33,6 +51,51 @@ Font.register({
 // Alias for Circle to support SVG dash properties
 const CircleAny = Circle as any;
 
+// ─── Status SVG Vector Icons (Eliminates font glyph dependency) ────────────────
+function StatusIcon({ status, color }: { status: string; color: string }) {
+  switch (status) {
+    case 'normal':
+      return (
+        <Svg width="5.5" height="5.5" viewBox="0 0 10 10">
+          <Polyline
+            points="1.5,5.5 4,8 8.5,2.5"
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case 'high':
+      return (
+        <Svg width="5" height="5" viewBox="0 0 8 8">
+          <Polyline points="4,1.5 7.5,6.5 0.5,6.5" fill={color} />
+        </Svg>
+      );
+    case 'low':
+      return (
+        <Svg width="5" height="5" viewBox="0 0 8 8">
+          <Polyline points="0.5,1.5 7.5,1.5 4,6.5" fill={color} />
+        </Svg>
+      );
+    case 'critical':
+      return (
+        <Svg width="5.5" height="5.5" viewBox="0 0 8 8">
+          <Circle cx="4" cy="4" r="3.5" fill={color} />
+          <Line x1="4" y1="2" x2="4" y2="4.5" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" />
+          <Circle cx="4" cy="6" r="0.6" fill="#ffffff" />
+        </Svg>
+      );
+    default:
+      return (
+        <Svg width="4" height="4" viewBox="0 0 6 6">
+          <Circle cx="3" cy="3" r="2" fill={color} />
+        </Svg>
+      );
+  }
+}
+
 // ─── Design Tokens & Palettes ──────────────────────────────────────────────────
 const TEAL_DARK = '#065f46';
 const TEAL_PRIMARY = '#0DA58E';
@@ -48,13 +111,13 @@ const SLATE_400 = '#94a3b8';
 const SLATE_300 = '#cbd5e1';
 const SLATE_100 = '#f1f5f9';
 
-// Status styling with colorblind-accessible icons and clinical color mapping
-export const STATUS_META: Record<string, { label: string; icon: string; fg: string; bg: string; border: string; bar: string }> = {
-  normal: { label: 'NORMAL', icon: '✓', fg: '#0d9488', bg: '#ecfdf5', border: '#a7f3d0', bar: '#0d9488' },
-  high: { label: 'ELEVATED', icon: '▲', fg: '#b91c1c', bg: '#fef2f2', border: '#fca5a5', bar: '#b91c1c' },
-  low: { label: 'REDUCED', icon: '▼', fg: '#b45309', bg: '#fffbeb', border: '#fcd34d', bar: '#b45309' },
-  critical: { label: 'CRITICAL', icon: '!', fg: '#7f1d1d', bg: '#fef2f2', border: '#f87171', bar: '#7f1d1d' },
-  unknown: { label: 'UNKNOWN', icon: '•', fg: '#64748b', bg: '#f8fafc', border: '#cbd5e1', bar: '#94a3b8' },
+// Status styling with clinical color mapping
+export const STATUS_META: Record<string, { label: string; fg: string; bg: string; border: string; bar: string }> = {
+  normal: { label: 'NORMAL', fg: '#0d9488', bg: '#ecfdf5', border: '#a7f3d0', bar: '#0d9488' },
+  high: { label: 'ELEVATED', fg: '#b91c1c', bg: '#fef2f2', border: '#fca5a5', bar: '#b91c1c' },
+  low: { label: 'REDUCED', fg: '#b45309', bg: '#fffbeb', border: '#fcd34d', bar: '#b45309' },
+  critical: { label: 'CRITICAL', fg: '#7f1d1d', bg: '#fef2f2', border: '#f87171', bar: '#7f1d1d' },
+  unknown: { label: 'UNKNOWN', fg: '#64748b', bg: '#f8fafc', border: '#cbd5e1', bar: '#94a3b8' },
 };
 
 // Muted clinical range bar zone tokens (calm pastel tones matching status pills)
@@ -126,7 +189,7 @@ export function resolveBiomarkerRange(
       displayMax: parseFloat(displayMax.toFixed(1)),
       optimalMin,
       optimalMax: Infinity,
-      optimalText: `≥ ${optimalMin}`,
+      optimalText: `> ${optimalMin}`,
       pct: Math.min(95, Math.max(5, pct)),
     };
   }
@@ -190,7 +253,7 @@ export function resolveBiomarkerRange(
     displayMax,
     optimalMin: min,
     optimalMax: max,
-    optimalText: `${min} – ${max}`,
+    optimalText: `${min} - ${max}`,
     pct: Math.min(95, Math.max(5, pct)),
   };
 }
@@ -522,6 +585,9 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     paddingHorizontal: 4,
     paddingVertical: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
   },
   actionableAlertBadgeText: {
     color: '#b91c1c',
@@ -864,7 +930,7 @@ const styles = StyleSheet.create({
   },
   miniBarLabels: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginTop: 1.5,
   },
   miniBarLabelText: {
@@ -1000,7 +1066,10 @@ export function PremiumPDFDocument({
             ) : (
               <>
                 <View style={styles.headerLogoCircle}>
-                  <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: 'bold' }}>⚲</Text>
+                  <Svg width="12" height="12" viewBox="0 0 12 12">
+                    <Line x1="6" y1="2" x2="6" y2="10" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+                    <Line x1="2" y1="6" x2="10" y2="6" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+                  </Svg>
                 </View>
                 <View>
                   <Text style={styles.headerBrandName}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
@@ -1170,7 +1239,7 @@ export function PremiumPDFDocument({
                     <View style={styles.bodySystemLabelRow}>
                       <Text style={styles.bodySystemLabel}>{item.system}</Text>
                       <Text style={[styles.bodySystemVal, { color: barColor }]}>
-                        {item.score}% {isOptimal ? '✓' : '!'}
+                        {item.score}%
                       </Text>
                     </View>
                     <View style={styles.bodySystemTrack}>
@@ -1196,7 +1265,8 @@ export function PremiumPDFDocument({
           <View style={styles.actionableFollowUpCard} wrap={false}>
             <View style={styles.actionableHeader}>
               <View style={styles.actionableAlertBadge}>
-                <Text style={styles.actionableAlertBadgeText}>⚠️ CLINICAL ACTION RECOMMENDED</Text>
+                <StatusIcon status="critical" color="#b91c1c" />
+                <Text style={styles.actionableAlertBadgeText}>CLINICAL ACTION RECOMMENDED</Text>
               </View>
               <Text style={styles.actionableSubtitle}>
                 {flaggedCount} biomarker{flaggedCount !== 1 ? 's' : ''} outside standard reference interval
@@ -1210,10 +1280,11 @@ export function PremiumPDFDocument({
                 return (
                   <View key={b.name} style={styles.actionableFindingRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <View style={{ backgroundColor: meta.bg, borderColor: meta.border, borderWidth: 0.5, borderRadius: 3, paddingHorizontal: 3.5, paddingVertical: 1 }}>
-                        <Text style={{ color: meta.fg, fontSize: 5.5, fontWeight: 'bold' }}>{meta.icon} {meta.label}</Text>
+                      <View style={{ backgroundColor: meta.bg, borderColor: meta.border, borderWidth: 0.5, borderRadius: 3, paddingHorizontal: 3.5, paddingVertical: 1, flexDirection: 'row', alignItems: 'center', gap: 2.5 }}>
+                        <StatusIcon status={b.status} color={meta.fg} />
+                        <Text style={{ color: meta.fg, fontSize: 5.5, fontWeight: 'bold' }}>{meta.label}</Text>
                       </View>
-                      <Text style={styles.actionableItemName}>{b.name}</Text>
+                      <Text style={styles.actionableItemName}>{sanitizeText(b.name)}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Text style={[styles.actionableItemVal, { color: meta.fg }]}>{b.value} {b.unit}</Text>
@@ -1229,14 +1300,14 @@ export function PremiumPDFDocument({
                 Recommended Next Step: Discuss these findings with your attending physician to evaluate transient vs. persistent variation.
               </Text>
               <View style={styles.actionableButton}>
-                <Text style={styles.actionableButtonText}>SCHEDULE CLINICAL REVIEW →</Text>
+                <Text style={styles.actionableButtonText}>SCHEDULE CLINICAL REVIEW</Text>
               </View>
             </View>
           </View>
         ) : (
           <View style={styles.optimalWellnessBanner} wrap={false}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <Text style={{ fontSize: 9, color: '#0d9488', fontWeight: 'bold' }}>✓</Text>
+              <StatusIcon status="normal" color="#0d9488" />
               <Text style={{ fontSize: 8, color: '#044E45', fontWeight: 'bold', fontFamily: 'Lora' }}>
                 All Biomarkers Within Optimal Reference Range
               </Text>
@@ -1259,7 +1330,7 @@ export function PremiumPDFDocument({
             <Text style={styles.summaryText}>{report.summary}</Text>
             <View style={styles.summaryDisclaimer}>
               <Text style={styles.summaryDisclaimerText}>
-                * AI-generated clinical synthesis for informational guidance — not a formal diagnosis. Always consult your attending healthcare provider before modifying medications or treatments.
+                * AI-generated clinical synthesis for informational guidance - not a formal diagnosis. Always consult your attending healthcare provider before modifying medications or treatments.
               </Text>
             </View>
           </View>
@@ -1291,7 +1362,10 @@ export function PremiumPDFDocument({
             ) : (
               <>
                 <View style={styles.headerLogoCircle}>
-                  <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: 'bold' }}>⚲</Text>
+                  <Svg width="12" height="12" viewBox="0 0 12 12">
+                    <Line x1="6" y1="2" x2="6" y2="10" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+                    <Line x1="2" y1="6" x2="10" y2="6" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
+                  </Svg>
                 </View>
                 <View>
                   <Text style={styles.headerBrandName}>{(brandName || 'YOUR CONCIERGE MD').toUpperCase()}</Text>
@@ -1314,9 +1388,9 @@ export function PremiumPDFDocument({
           const normal = panel.biomarkers.filter(b => b.status === 'normal');
 
           return (
-            <View key={panel.name} style={styles.panelSection} wrap={true}>
+            <View key={panel.name} style={styles.panelSection} wrap={panel.biomarkers.length > 8}>
               {/* Panel Header */}
-              <View style={styles.panelHeader} wrap={false}>
+              <View style={styles.panelHeader} wrap={false} minPresenceAhead={100}>
                 <View>
                   <Text style={styles.panelTitle}>{panel.name}</Text>
                   <Text style={styles.panelMeta}>
@@ -1349,7 +1423,7 @@ export function PremiumPDFDocument({
                     {/* Top Row: Name, Value, Status badge */}
                     <View style={styles.flaggedTopRow}>
                       <View>
-                        <Text style={styles.flaggedName}>{m.name}</Text>
+                        <Text style={styles.flaggedName}>{sanitizeText(m.name)}</Text>
                         <Text style={{ fontSize: 6, color: SLATE_500, marginTop: 1 }}>
                           Reference Interval: {resolved.optimalText} {m.unit}
                         </Text>
@@ -1359,9 +1433,10 @@ export function PremiumPDFDocument({
                           <Text style={[styles.flaggedValue, { color: meta.fg }]}>{m.value}</Text>
                           <Text style={styles.flaggedUnit}>{m.unit}</Text>
                         </View>
-                        <View style={[styles.flaggedBadge, { backgroundColor: '#ffffff', borderColor: meta.border }]}>
+                        <View style={[styles.flaggedBadge, { backgroundColor: '#ffffff', borderColor: meta.border, flexDirection: 'row', alignItems: 'center', gap: 2.5 }]}>
+                          <StatusIcon status={m.status} color={meta.fg} />
                           <Text style={[styles.flaggedBadgeText, { color: meta.fg }]}>
-                            {meta.icon} {meta.label}
+                            {meta.label}
                           </Text>
                         </View>
                       </View>
@@ -1398,7 +1473,7 @@ export function PremiumPDFDocument({
                           </View>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
                             <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>0</Text>
-                            <Text style={{ fontSize: 5.5, color: SLATE_700, fontWeight: 'bold' }}>Optimal Threshold: ≥ {resolved.optimalMin} {m.unit}</Text>
+                            <Text style={{ fontSize: 5.5, color: SLATE_700, fontWeight: 'bold' }}>Optimal Threshold: &gt;= {resolved.optimalMin} {m.unit}</Text>
                             <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>&gt;</Text>
                           </View>
                         </View>
@@ -1466,7 +1541,7 @@ export function PremiumPDFDocument({
                           </View>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
                             <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>{resolved.displayMin}</Text>
-                            <Text style={{ fontSize: 5.5, color: SLATE_700, fontWeight: 'bold' }}>Optimal Range: {resolved.optimalMin} – {resolved.optimalMax} {m.unit}</Text>
+                            <Text style={{ fontSize: 5.5, color: SLATE_700, fontWeight: 'bold' }}>Optimal Range: {resolved.optimalMin} - {resolved.optimalMax} {m.unit}</Text>
                             <Text style={{ fontSize: 5.5, color: SLATE_400, fontWeight: 'bold' }}>{resolved.displayMax}</Text>
                           </View>
                         </View>
@@ -1491,13 +1566,13 @@ export function PremiumPDFDocument({
 
               {/* 2. COMPACT NORMAL BIOMARKERS TABLE (WITH INLINE MINI-SLIDER FOR EVERY MARKER) */}
               {normal.length > 0 && (
-                <View style={styles.compactTableContainer} wrap={false}>
+                <View style={styles.compactTableContainer} wrap={panel.biomarkers.length > 8}>
                   <View style={styles.compactTableHeader}>
                     <Text style={styles.compactColName}>
                       <Text style={styles.compactTableHeaderText}>Biomarker Name</Text>
                     </Text>
                     <Text style={styles.compactColBar}>
-                      <Text style={styles.compactTableHeaderText}>Visual Range Position</Text>
+                      <Text style={styles.compactTableHeaderText}>Range</Text>
                     </Text>
                     <Text style={styles.compactColValue}>
                       <Text style={styles.compactTableHeaderText}>Result</Text>
@@ -1516,7 +1591,7 @@ export function PremiumPDFDocument({
                         style={isLast ? styles.compactTableRowLast : styles.compactTableRow}
                       >
                         {/* Column 1: Biomarker Name */}
-                        <Text style={styles.compactColName}>{m.name}</Text>
+                        <Text style={styles.compactColName}>{sanitizeText(m.name)}</Text>
 
                         {/* Column 2: Thin Mini Range Slider with Dot Indicator */}
                         <View style={styles.compactColBar}>
@@ -1549,22 +1624,10 @@ export function PremiumPDFDocument({
                             />
                           </View>
 
-                          {/* Range Limits subtext */}
+                          {/* Range Limits subtext (Centered reference range, no flanking scale bounds) */}
                           <View style={styles.miniBarLabels}>
-                            <Text style={styles.miniBarLabelText}>
-                              {resolved.type === 'greater_than'
-                                ? '0'
-                                : resolved.type === 'less_than'
-                                ? '0'
-                                : `${resolved.displayMin}`}
-                            </Text>
                             <Text style={[styles.miniBarLabelText, { color: SLATE_500 }]}>
                               Ref: {resolved.optimalText} {m.unit}
-                            </Text>
-                            <Text style={styles.miniBarLabelText}>
-                              {resolved.type === 'greater_than'
-                                ? '>'
-                                : `${resolved.displayMax}`}
                             </Text>
                           </View>
                         </View>
@@ -1583,8 +1646,12 @@ export function PremiumPDFDocument({
                             paddingVertical: 1,
                             borderWidth: 0.5,
                             borderColor: '#a7f3d0',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 2,
                           }}>
-                            <Text style={{ fontSize: 5, fontWeight: 'bold', color: '#0d9488' }}>✓ NORMAL</Text>
+                            <StatusIcon status="normal" color="#0d9488" />
+                            <Text style={{ fontSize: 5, fontWeight: 'bold', color: '#0d9488' }}>NORMAL</Text>
                           </View>
                         </View>
                       </View>
